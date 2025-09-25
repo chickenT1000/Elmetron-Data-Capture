@@ -1,0 +1,141 @@
+{
+    "attempts":  [
+                     {
+                         "attempts":  [
+                                          {
+                                              "connection":  {
+                                                                 "notes":  "Waiting for data... (RX queue: 0 bytes)",
+                                                                 "data_preview":  "",
+                                                                 "opened":  true,
+                                                                 "bytes_received":  0
+                                                             },
+                                              "timestamp":  "2025-09-24T14:29:04.9660988+02:00",
+                                              "device":  {
+                                                             "description":  "CX505",
+                                                             "serial":  "EL680921"
+                                                         },
+                                              "settings":  {
+                                                               "duration_seconds":  30,
+                                                               "databits":  8,
+                                                               "baud":  9600,
+                                                               "parity":  "N",
+                                                               "stopbits":  1
+                                                           }
+                                          },
+                                          {
+                                              "timestamp":  "2025-09-24T14:31:48.8156349+02:00",
+                                              "device":  {
+                                                             "description":  "CX505",
+                                                             "serial":  "EL680921"
+                                                         },
+                                              "settings":  {
+                                                               "duration_seconds":  30,
+                                                               "databits":  8,
+                                                               "baud":  9600,
+                                                               "parity":  "N",
+                                                               "stopbits":  1
+                                                           },
+                                              "connection":  {
+                                                                 "notes":  "Waiting for data... (RX queue: 0 bytes)",
+                                                                 "data_preview":  "",
+                                                                 "opened":  true,
+                                                                 "bytes_received":  0
+                                                             }
+                                          },
+                                          {
+                                              "timestamp":  "2025-09-24T14:34:32.9404403+02:00",
+                                              "device":  {
+                                                             "description":  "CX505",
+                                                             "serial":  "EL680921"
+                                                         },
+                                              "settings":  {
+                                                               "duration_seconds":  30,
+                                                               "databits":  8,
+                                                               "baud":  9600,
+                                                               "parity":  "N",
+                                                               "stopbits":  1
+                                                           },
+                                              "connection":  {
+                                                                 "notes":  "Waiting for data... (RX queue: 0 bytes)",
+                                                                 "data_preview":  "",
+                                                                 "opened":  true,
+                                                                 "bytes_received":  0
+                                                             }
+                                          }
+                                      ]
+                     },
+                     {
+                         "timestamp":  "2025-09-24T14:36:09.7254469+02:00",
+                         "device":  {
+                                        "description":  "CX505",
+                                        "serial":  "EL680921"
+                                    },
+                         "settings":  {
+                                          "duration_seconds":  30,
+                                          "databits":  8,
+                                          "baud":  9600,
+                                          "parity":  "N",
+                                          "stopbits":  1
+                                      },
+                         "connection":  {
+                                            "notes":  [
+                                                          "Waiting for data... (RX queue: 0 bytes)"
+                                                      ],
+                                            "data_preview":  [
+
+                                                             ],
+                                            "opened":  true,
+                                            "bytes_received":  0
+                                        }
+                     },
+                     {
+                         "timestamp":  "2025-09-24T14:37:11.6296726+02:00",
+                         "device":  {
+                                        "description":  "\u003cno description\u003e",
+                                        "serial":  "\u003cunknown\u003e"
+                                    },
+                         "settings":  {
+                                          "duration_seconds":  30,
+                                          "databits":  8,
+                                          "baud":  9600,
+                                          "parity":  "N",
+                                          "stopbits":  1
+                                      },
+                         "connection":  {
+                                            "notes":  [
+                                                          "FT_Open failed with FT_STATUS=3 (device already in use?)"
+                                                      ],
+                                            "data_preview":  [
+
+                                                             ],
+                                            "opened":  false,
+                                            "bytes_received":  0
+                                        }
+                     },
+                     {
+                         "timestamp":  "2025-09-24T14:59:24.4112531+02:00",
+                         "device":  {
+                                        "description":  "CX505",
+                                        "serial":  "EL680921"
+                                    },
+                         "settings":  {
+                                          "databits":  8,
+                                          "write":  "(custom tests)",
+                                          "baud":  115200,
+                                          "parity":  "E",
+                                          "stopbits":  1,
+                                          "duration_seconds":  10
+                                      },
+                         "connection":  {
+                                            "notes":  [
+                                                          "No response after extensive STX/ETX command sweep"
+                                                      ],
+                                            "data_preview":  [
+
+                                                             ],
+                                            "opened":  true,
+                                            "bytes_received":  0
+                                        }
+                     }
+                 ]
+}
