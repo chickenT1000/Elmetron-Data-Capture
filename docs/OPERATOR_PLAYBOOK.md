@@ -1,4 +1,4 @@
-﻿# Operator Playbook
+# Operator Playbook
 
 ## Prerequisites
 - Install FTDI D2XX drivers and confirm the CX-505 enumerates in Device Manager (USB Serial Converter).
@@ -11,9 +11,18 @@
 2. Run `python cx505_capture_service.py --config config/app.toml --protocols config/protocols.toml --health-api-port 8050 --watchdog-timeout 30 --health-log`.
 3. Launch the dashboard (`cd ui && npm start` with `VITE_HEALTH_BASE_URL=http://127.0.0.1:8050`) so Service Health reflects the live meter.
 4. Wait for `ServiceRunner` to report `status=running` and `watchdog=healthy` (stdout unless `--quiet`) and confirm the Service Health > Overview card shows the same state.
-5. Confirm the first session appears in `data/elmetron.sqlite` (table `sessions`) using `sqlite3`, DB Browser for SQLite, or the dashboard’s Recent Sessions list.
+5. Confirm the first session appears in `data/elmetron.sqlite` (table `sessions`) using `sqlite3`, DB Browser for SQLite, or the dashboard's Recent Sessions list.
 6. Record the session identifier in the lab logbook.
 
+## Handshake & Poll Reference
+- The CX-505 expects the canonical poll handshake `01 23 30 23 30 23 30 23 03`. The capture service writes it once on connect and then every second.
+- Quick sanity check:
+```bash
+py -3 cx505_d2xx.py --serial <SERIAL> --baud 115200 --databits 8 --stopbits 1 --parity E --duration 10 --write-hex "01 23 30 23 30 23 30 23 03" --poll-hex "01 23 30 23 30 23 30 23 03" --json
+```
+  Decoded frames appearing immediately confirm the handshake succeeded. Use `--hex` when you only need byte-level output.
+- Instrument must be streaming: clear faults (for example `Error1` when the pH probe is missing) or switch to a measurement mode such as REDOX before polling.
+- Either `stop_bits = 2.0` (profile default) or `--stop-bits 1` works once the device is healthy; only toggle the override while diagnosing cabling or firmware quirks.
 ## Scheduled Commands & Calibrations
 - Startup commands defined in `acquisition.startup_commands` execute automatically once the device connects; monitor stdout for `startup_command=<name> completed` events.
 - The default workstation config leaves `[[acquisition.scheduled_commands]]` empty so operators choose when to calibrate; use the CLI to run calibrations on demand.
@@ -26,9 +35,9 @@
 - With `[monitoring]` enabled, verify `/health.log_rotation.status` reads `ok` (or check Service Health > Log Rotation). `stale`/`failed` means the Windows scheduled task needs attention.
 - Service Health > Event Log Stream shows capture/calibration events. The status chip indicates Streaming (green), Polling fallback (amber), or Stream error (red). Polling continues refreshing every 5 s and raises a warning until SSE reconnects.
 - Use the Event Log Stream Refresh button or filters (`level`, `category`) for tailored snapshots; download the raw feed via `/health/logs.ndjson` when QA needs archives.
-- Service Health > Command Queue provides "Download Diagnostic Bundle" (from `/health/bundle`) plus queue depth history—capture this bundle before escalating issues.
+- Service Health > Command Queue provides "Download Diagnostic Bundle" (from `/health/bundle`) plus queue depth history - capture this bundle before escalating issues.
 - Watch the Watchdog Timeline and Interface Lock cards for timeouts or lock contention before restarting hardware.
-- The Analytics Profile card highlights frame throughput, throttling, and processing times—investigate spikes before approving datasets.
+- The Analytics Profile card highlights frame throughput, throttling, and processing times - investigate spikes before approving datasets.
 - Session Evaluation (UI) lets operators compare overlays, view calibration markers, and export PNG/JSON artifacts for sign-off.
 - Retention sweeps log `category=retention` events; review payloads for deleted sessions and archive them with the rest of the audit trail.
 ```powershell
@@ -63,11 +72,14 @@ python -m elmetron.reporting.exporters export-session --session <ID> --formats c
 3. Archive the day's `captures/<date>` directory and exported reports to the lab share.
 
 ## Troubleshooting Checklist
+- **No frames after connect**: Ensure the meter display is not showing fault codes (attach the probe or switch to REDOX), then resend the poll handshake with the low-level CLI above. If traffic resumes only with `--stop-bits 1`, leave that override in place for the session and log the behaviour for maintenance.
 - **No device detected**: Re-seat USB, check Device Manager, and rerun `python cx505_capture_service.py --list-devices`.
 - **Session stalls**: Look for watchdog warnings; if present, restart the service and confirm startup commands are not blocking. Review `audit_events` for failing scheduled commands.
 - **Invalid data**: Open raw frames from `captures/<date>/raw.log` and compare with protocol expectations. Re-run calibration commands and confirm buffer values.
 - **Export errors**: Ensure the `exports/` subfolder exists and that PDF support libraries are installed. Re-run exporter with `--formats csv json` to isolate the failing format.
 - **Configuration mismatch**: Validate TOML files with `python validate_protocols.py` and double-check `transport`/`poll_hex` fields.
+
+
 
 
 

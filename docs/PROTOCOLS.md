@@ -1,4 +1,4 @@
-﻿# Protocol Registry Schema
+# Protocol Registry Schema
 
 This project reads device communication profiles from either `DEFAULT_PROFILES` (in code) or an external registry file (`config/protocols.toml`). Each profile entry is keyed by an identifier (e.g. `cx505`) and may contain the fields below:
 
@@ -26,6 +26,27 @@ The `DEFAULT_PROFILES` constant ships with:
 
 Extend `config/protocols.toml` with additional `[profiles.*]` sections and load them by passing `--protocols path/to/registry.toml` to the capture or service runners.
 
+## CX-505 Handshake Sequence
+
+The CX-505 family expects a poll-based handshake before it will stream frames over the FTDI bridge. The default profile ships with the production payload:
+
+```text
+01 23 30 23 30 23 30 23 03
+```
+
+The hardware layer writes this frame once immediately after the device opens and then re-sends it on the configured `poll_interval_s` cadence (1 s by default). This matches the capture evidence gathered with the legacy tooling (`usbpcap2_capture.pcapng`) and the reference polls stored under `captures/`.
+
+Practical notes:
+- The payload must be transmitted exactly as shown; missing bytes or re-ordered fields suppress streaming.
+- The meter only responds when it is actively reporting measurements. If the display shows fault states such as `Error1` (for example, pH mode without an electrode), clear the error or switch to a measurement mode that produces readings (e.g. REDOX) before polling.
+- Either `stop_bits = 2.0` (profile default) or `--stop-bits 1` works once the meter is in a healthy measurement state. Use the override only while diagnosing link issues.
+- Validate the handshake end-to-end with:
+```bash
+py -3 cx505_d2xx.py --serial <SERIAL> --baud 115200 --databits 8 --stopbits 1 --parity E --duration 10 --write-hex "01 23 30 23 30 23 30 23 03" --poll-hex "01 23 30 23 30 23 30 23 03" --json
+```
+  Successful handshakes surface decoded frames immediately; add `--hex` if you only need a byte dump.
+
+Update custom profiles by keeping `poll_hex` aligned with this sequence, adjusting only if future firmware revisions introduce a different poll contract.
 ## Command Definitions
 
 Add nested tables such as `[profiles.cx505.commands.calibrate_ph7]` to describe command or calibration sequences. Supported keys include:
@@ -67,6 +88,5 @@ python validate_protocols.py config/protocols.toml
 ```
 
 Add `--warnings-as-errors` to fail fast when optional fields (such as missing `transport`) should be treated as blocking issues.
-
 
 
