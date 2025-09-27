@@ -8,10 +8,10 @@
 
 ## Daily Startup Checklist
 1. Connect the CX-505 and verify the display shows the target measurement mode (pH, conductivity, O2, etc.).
-2. Run `python cx505_capture_service.py --config config/app.toml --protocols config/protocols.toml --health-api-port 8050 --watchdog-timeout 30 --health-log`.
-3. Launch the dashboard (`cd ui && npm start` with `VITE_HEALTH_BASE_URL=http://127.0.0.1:8050`) so Service Health reflects the live meter.
-4. Wait for `ServiceRunner` to report `status=running` and `watchdog=healthy` (stdout unless `--quiet`) and confirm the Service Health > Overview card shows the same state.
-5. Confirm the first session appears in `data/elmetron.sqlite` (table `sessions`) using `sqlite3`, DB Browser for SQLite, or the dashboard's Recent Sessions list.
+2. Double-click `start.bat` in the project root to open the Elmetron Launch Monitor. It starts the capture service, launches the Service Health UI, and opens the dashboard once both are healthy.
+3. Wait for the monitor to show "All services online", then click **OK** to close it. (If automation fails, fall back to the manual commands listed in Appendix A.)
+4. Confirm the Service Health > Overview card reports `status=running` and `watchdog=healthy`.
+5. Verify the first session appears in `data/elmetron.sqlite` (table `sessions`) using `sqlite3`, DB Browser, or the dashboard's Recent Sessions list.
 6. Record the session identifier in the lab logbook.
 
 ## Handshake & Poll Reference
@@ -65,6 +65,11 @@ python -m elmetron.reporting.exporters export-session --session <ID> --formats c
 - Execute `python scripts/run_bench_harness.py --config config/live_rehearsal.toml --protocols config/protocols.toml --database data/live_rehearsal.sqlite --health-port 8052 --watchdog-timeout 10 --window 2 --idle 1` for rehearsal runs; monitor `captures/live_ui_harness.log` and `/health` snapshots.
 - Follow `docs/CX505_BENCH_HARNESS.md` for simulation details and `docs/CX505_LIVE_TEST_CHECKLIST.md` for acceptance criteria and archival expectations.
 - Capture health snapshots (`Invoke-WebRequest http://127.0.0.1:8052/health`) and database summaries (`scripts/_temp_db_summary_ui.py`) to validate rehearsal results before production sign-off.
+
+## Appendix A: Manual startup fallback
+- Run `python cx505_capture_service.py --config config/app.toml --protocols config/protocols.toml --health-api-port 8050 --watchdog-timeout 30 --health-log`.
+- Launch the dashboard with `cd ui && set VITE_API_BASE_URL=http://127.0.0.1:8050 && npm run dev -- --host 127.0.0.1 --port 5173`.
+- Open `http://127.0.0.1:5173/` in a browser once the `/health` endpoint returns `state = "running"`.
 
 ## Shutdown Procedure
 1. Use `Ctrl+C` in the capture console; wait for `ServiceRunner` to report `shutdown=complete`.

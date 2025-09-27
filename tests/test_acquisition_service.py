@@ -10,6 +10,7 @@ import pytest
 from elmetron.acquisition.service import AcquisitionService, InterfaceLockStats, _InterfaceLockMonitor
 from elmetron.commands.executor import CommandDefinition, CommandResult
 from elmetron.config import AppConfig, ScheduledCommandConfig
+from elmetron.hardware import ListedDevice
 
 
 class DummyInterface:
@@ -610,3 +611,91 @@ def test_interface_lock_monitor_records_wait_and_hold(monkeypatch) -> None:
     assert stats.max_hold_s == pytest.approx(0.35)
     assert stats.average_hold_s == pytest.approx((0.35 + 0.3) / 2)
     assert stats.current_owner is None
+
+
+def test_run_retries_device_open_before_starting_session(monkeypatch) -> None:
+    class FakeDatabase:
+        def __init__(self) -> None:
+            self.initialised = False
+            self.sessions: list[FakeSessionHandle] = []
+
+        def initialise(self) -> None:
+            self.initialised = True
+
+        def start_session(self, *_args, **_kwargs):
+            handle = FakeSessionHandle()
+            self.sessions.append(handle)
+            return handle
+
+    class FakeSessionHandle:
+        def __init__(self) -> None:
+            self.id = 1
+            self.events = []
+            self.closed = False
+
+        def log_event(self, level, category, message, payload=None) -> None:
+            self.events.append((level, category, message, payload))
+
+        def close(self, *_args, **_kwargs) -> None:
+            self.closed = True
+
+    class FakeFrameIngestor:
+        def __init__(self, *_args, **_kwargs) -> None:
+            self.frames = 0
+            self.analytics_profile = None
+
+        def handle_frame(self, frame):
+            _ = frame
+            self.frames += 1
+            return {}
+
+    class TransientInterface:
+        def __init__(self) -> None:
+            self.open_calls = 0
+            self.close_calls = 0
+
+        def open(self):
+            self.open_calls += 1
+            if self.open_calls == 1:
+                raise RuntimeError("device unavailable")
+            return ListedDevice(index=0, serial="SER123", description="CX-505")
+
+        def close(self) -> None:
+            self.close_calls += 1
+
+        def run_window(self, *_args, **_kwargs) -> int:
+            return 0
+
+        def write(self, *_args, **_kwargs) -> int:
+            return 0
+
+    config = AppConfig()
+    config.acquisition.quiet = True
+    config.acquisition.max_runtime_s = 0.05
+    config.acquisition.restart_delay_s = 0.01
+    config.acquisition.status_interval_s = 0.0
+    config.analytics.enabled = False
+
+    database = FakeDatabase()
+    interface = TransientInterface()
+
+    def interface_factory():
+        return interface
+
+    service = AcquisitionService(
+        config,
+        database=database,
+        interface_factory=interface_factory,
+        command_definitions={},
+        use_async_commands=False,
+    )
+
+    monkeypatch.setattr("elmetron.acquisition.service.FrameIngestor", FakeFrameIngestor)
+    monkeypatch.setattr("elmetron.acquisition.service.time.sleep", lambda *_: None)
+
+    service.run()
+
+    assert interface.open_calls >= 2
+    assert database.initialised is True
+    assert database.sessions
+    assert database.sessions[0].closed is True

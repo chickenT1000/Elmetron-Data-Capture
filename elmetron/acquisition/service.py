@@ -1104,8 +1104,19 @@ class AcquisitionService:
                 if acquisition_cfg.max_runtime_s > 0 and (time.time() - start_time) >= acquisition_cfg.max_runtime_s:
                     break
                 if listed is None:
-                    with self._interface_lock:
-                        listed = interface.open()
+                    try:
+                        with self._interface_lock:
+                            listed = interface.open()
+                    except Exception as exc:  # pragma: no cover - defensive retry path
+                        listed = None
+                        with self._interface_lock:
+                            interface.close()
+                        if not acquisition_cfg.quiet:
+                            print(
+                                f"Warning: device open failed: {exc}. Retrying after {acquisition_cfg.restart_delay_s}s",
+                            )
+                        time.sleep(max(acquisition_cfg.restart_delay_s, 0.5))
+                        continue
                     self._start_command_worker(interface)
                     metadata = DeviceMetadata(
                         serial=listed.serial,

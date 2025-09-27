@@ -116,6 +116,18 @@ def _handler_factory(monitor: HealthMonitor):
 
         protocol_version = "HTTP/1.1"
 
+        def end_headers(self):  # noqa: D401
+            """Send standard headers plus CORS allowances."""
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.send_header('Access-Control-Allow-Methods', 'GET, OPTIONS')
+            self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+            super().end_headers()
+
+        def do_OPTIONS(self):  # pylint: disable=invalid-name
+            self.send_response(HTTPStatus.NO_CONTENT)
+            self.send_header('Content-Length', '0')
+            self.end_headers()
+
         def do_GET(self):  # pylint: disable=invalid-name
             parsed = urlparse(self.path)
             path = parsed.path.rstrip('/')

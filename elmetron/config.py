@@ -78,6 +78,8 @@ class DeviceConfig:
     poll_interval_s: Optional[float] = 1.0
     dtr: str = "set"
     rts: str = "set"
+    open_retry_attempts: int = 5
+    open_retry_backoff_s: float = 0.5
     ble_address: Optional[str] = None
     ble_read_characteristic: Optional[str] = None
     ble_write_characteristic: Optional[str] = None
@@ -101,6 +103,18 @@ class DeviceConfig:
             profiles.append(candidate)
             seen.add(lowered)
         self.fallback_profiles = tuple(profiles)
+        try:
+            attempts = int(self.open_retry_attempts)
+        except (TypeError, ValueError):
+            attempts = 1
+        self.open_retry_attempts = max(attempts, 1)
+        try:
+            backoff = float(self.open_retry_backoff_s)
+        except (TypeError, ValueError):
+            backoff = 0.5
+        if backoff < 0:
+            backoff = 0.0
+        self.open_retry_backoff_s = backoff
 
     @staticmethod
     def _normalise_control(value: Optional[str], label: str) -> str:

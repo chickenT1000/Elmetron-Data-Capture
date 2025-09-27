@@ -41,6 +41,9 @@
 | Medium | Prepare a fallback procedure to switch CX-505 profiles when malformed frames are detected | Completed |
 | High | Assemble CX-505 bench test harness with full telemetry logging and watchdog monitoring | Completed |
 | High | Execute end-to-end CX-505 rehearsal capture using lab buffers and record validation artifacts | Completed |
+| High | Monitor live CX-505 session after bottleneck removal; track `/health` frames/bytes growth (session 17) | Latest check 2025-09-27: frames 154, bytes 15338 |
+| Medium | Add FTDI device open retry/back-off logic in harness/service to recover from stale handles | Pending |
+| Medium | Ensure clean FTDI handle shutdown and add pre-flight process checks before launching harness | Pending |
 
 ### 2. Ingestion, analytics & export
 | Priority | Task | Notes |
@@ -67,6 +70,7 @@
 | Priority | Task | Notes |
 | --- | --- | --- |
 | High | Update `docs/OPERATOR_PLAYBOOK.md` with the new UI views and diagnostic tooling | Should follow completion of the UI integration |
+| High | Ship graphical launch monitor guide in `docs/OPERATOR_PLAYBOOK.md` | Completed (`start.bat`, Launch Monitor, Appendix A fallback) |
 | Medium | Add a "Troubleshooting export bundles" guide to `docs/EXPORT_ARCHIVE_PLAN.md` | Captures common packaging failure modes |
 | Low | Produce a short instructional video covering the Service Health Dashboard | Useful onboarding asset for new operators |
 | Medium | Draft CX-505 live test procedure checklist and capture acceptance criteria | Completed |
@@ -78,6 +82,10 @@
 | High | Implement the Session Evaluation screen with overlay alignment and PNG/JSON export options | Completed |
 | Medium | Add component tests (Vitest + RTL) and configure Playwright smoke tests | Vitest coverage added for API/hooks; Playwright automation pending |
 | Low | Introduce kiosk/Electron packaging and offline operation | Targeted for post-MVP deployments |
+| High | Build Windows launch monitor GUI for non-technical operators | Completed (`launcher.py` with status dashboard) |
+| High | Investigate live Service Health UI connectivity failures (intermittent 404/stale data during harness runs) | Failing UI live test – pending |
+| High | Keep Service Health UI available post-bottleneck fix; run dev server at 127.0.0.1:5173 with `VITE_API_BASE_URL=http://127.0.0.1:8050` | Live check 2025-09-27 confirmed UI load |
+| High | Resume live CX-505 testing after PC reboot (relaunch harness, verify /health, reconnect UI) | Urgent next session startup |
 
 
 

@@ -107,39 +107,107 @@ class CX505Interface(DeviceInterface):
         if self._handle is not None:
             assert self._device is not None
             return self._device
-        devices = list_devices()
-        if not devices:
-            raise RuntimeError("No FTDI D2XX devices detected")
+        attempts = max(1, self._config.open_retry_attempts)
+        backoff = max(0.0, self._config.open_retry_backoff_s)
         target: Optional[ListedDevice] = None
-        if self._config.serial:
-            for entry in devices:
-                if entry.serial and entry.serial.strip() == self._config.serial:
-                    target = entry
-                    break
-            if target is None:
-                raise RuntimeError(f"Serial '{self._config.serial}' not found among connected devices")
-            handle = cx505_d2xx.open_device(0, self._config.serial)
-        else:
-            if self._config.index >= len(devices):
-                raise RuntimeError(f"Device index {self._config.index} out of range (found {len(devices)})")
-            target = devices[self._config.index]
-            handle = cx505_d2xx.open_device(self._config.index)
-        cx505_d2xx.configure_device(
-            handle,
-            self._config.baud,
-            self._config.data_bits,
-            self._config.stop_bits,
-            self._config.parity,
-            self._config.read_timeout_ms,
-            self._config.write_timeout_ms,
-        )
-        cx505_d2xx.apply_control_lines(handle, self._config.dtr, self._config.rts)
-        self._handle = handle
+        handle: Optional[cx505_d2xx.HANDLE] = None
+        last_error: Optional[Exception] = None
+
+        for attempt in range(1, attempts + 1):
+            devices = list_devices()
+            if not devices:
+                last_error = RuntimeError("No FTDI D2XX devices detected")
+                if attempt == attempts:
+                    raise RuntimeError(
+                        f"Failed to open FTDI device after {attempts} attempts: {last_error}"
+                    ) from last_error
+                if backoff:
+                    time.sleep(backoff * attempt)
+                continue
+
+            if self._config.serial:
+                target = next(
+                    (
+                        entry
+                        for entry in devices
+                        if entry.serial and entry.serial.strip() == self._config.serial
+                    ),
+                    None,
+                )
+                if target is None:
+                    last_error = RuntimeError(
+                        f"Serial '{self._config.serial}' not found among connected devices"
+                    )
+                    if attempt == attempts:
+                        raise RuntimeError(
+                            f"Failed to open FTDI device after {attempts} attempts: {last_error}"
+                        ) from last_error
+                    if backoff:
+                        time.sleep(backoff * attempt)
+                    continue
+                open_args = (0, self._config.serial)
+            else:
+                if self._config.index >= len(devices):
+                    last_error = RuntimeError(
+                        f"Device index {self._config.index} out of range (found {len(devices)})"
+                    )
+                    if attempt == attempts:
+                        raise RuntimeError(
+                            f"Failed to open FTDI device after {attempts} attempts: {last_error}"
+                        ) from last_error
+                    if backoff:
+                        time.sleep(backoff * attempt)
+                    continue
+                target = devices[self._config.index]
+                open_args = (target.index,)
+
+            try:
+                handle = cx505_d2xx.open_device(*open_args)
+            except Exception as exc:  # pragma: no cover - exercised via tests
+                last_error = exc
+                if attempt == attempts:
+                    raise RuntimeError(
+                        f"Failed to open FTDI device after {attempts} attempts: {exc}"
+                    ) from exc
+                if backoff:
+                    time.sleep(backoff * attempt)
+                continue
+
+            try:
+                cx505_d2xx.configure_device(
+                    handle,
+                    self._config.baud,
+                    self._config.data_bits,
+                    self._config.stop_bits,
+                    self._config.parity,
+                    self._config.read_timeout_ms,
+                    self._config.write_timeout_ms,
+                )
+                cx505_d2xx.apply_control_lines(handle, self._config.dtr, self._config.rts)
+                if self._poll_payload:
+                    cx505_d2xx.write_payloads(handle, [self._poll_payload])
+                self._handle = handle
+                assert target is not None
+                target.transport = "ftdi"
+                self._device = target
+                break
+            except Exception as exc:  # pragma: no cover - cleanup on failure
+                last_error = exc
+                try:
+                    cx505_d2xx.close_device(handle)
+                finally:
+                    handle = None
+                    self._handle = None
+                    self._device = None
+                if attempt == attempts:
+                    raise RuntimeError(
+                        f"Failed to open FTDI device after {attempts} attempts: {exc}"
+                    ) from exc
+                if backoff:
+                    time.sleep(backoff * attempt)
+                continue
+        assert self._handle is not None
         assert target is not None
-        target.transport = "ftdi"
-        self._device = target
-        if self._poll_payload:
-            cx505_d2xx.write_payloads(handle, [self._poll_payload])
         return target
 
     def close(self) -> None:
