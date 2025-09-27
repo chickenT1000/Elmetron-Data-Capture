@@ -1,0 +1,29 @@
+{
+  "tables": [
+    "instruments",
+    "sessions",
+    "session_metadata",
+    "raw_frames",
+    "measurements",
+    "annotations",
+    "audit_events",
+    "derived_metrics"
+  ],
+  "instruments": 1,
+  "sessions": 1,
+  "session_metadata": 11,
+  "raw_frames": 369,
+  "measurements": 369,
+  "annotations": 0,
+  "audit_events": 186,
+  "derived_metrics": 368,
+  "latest_session": [
+    1,
+    "2025-09-27T10:32:16.778641"
+  ],
+  "latest_session_columns": [
+    "id",
+    "started_at"
+  ],
+  "latest_session_measurements": 369
+}

@@ -6,7 +6,7 @@ from typing import Any, Dict, Iterable, List, Mapping, Optional
 
 from .registry import _load_json, _load_toml, _load_yaml
 
-VALID_TRANSPORTS = {"ftdi", "ble"}
+VALID_TRANSPORTS = {"ftdi", "ble", "sim"}
 VALID_PARITIES = {"N", "E", "O", "M", "S"}
 
 
@@ -81,13 +81,25 @@ def validate_profiles(profiles: Mapping[str, Any]) -> ValidationResult:
     if not profiles:
         issues.append(ValidationIssue("error", "profiles", "No protocol profiles defined"))
         return ValidationResult(issues)
-
+    name_counts: Dict[str, int] = {}
     for name, profile in profiles.items():
         location = f"profiles.{name}"
         if not isinstance(profile, Mapping):
             issues.append(ValidationIssue("error", location, "Profile must be a mapping"))
             continue
+        lowered = name.lower()
+        name_counts[lowered] = name_counts.get(lowered, 0) + 1
         issues.extend(_validate_profile(name, profile))
+
+    for lowered, count in name_counts.items():
+        if count > 1:
+            issues.append(
+                ValidationIssue(
+                    "error",
+                    f"profiles.{lowered}",
+                    "Duplicate profile name detected (case-insensitive)",
+                )
+            )
 
     return ValidationResult(issues)
 
@@ -161,8 +173,24 @@ def _validate_profile(name: str, profile: Mapping[str, Any]) -> List[ValidationI
         if not isinstance(commands, Mapping):
             issues.append(ValidationIssue("error", f"{location}.commands", "commands must be a mapping"))
         else:
+            command_names: Dict[str, int] = {}
             for command_name, command_data in commands.items():
+                lowered = command_name.lower()
+                command_names[lowered] = command_names.get(lowered, 0) + 1
                 issues.extend(_validate_command(name, command_name, command_data))
+            for lowered, count in command_names.items():
+                if count > 1:
+                    issues.append(
+                        ValidationIssue(
+                            "error",
+                            f"{location}.commands.{lowered}",
+                            "Duplicate command name detected (case-insensitive)",
+                        )
+                    )
+    else:
+        issues.append(
+            ValidationIssue("warning", f"{location}.commands", "Profile defines no commands")
+        )
 
     return issues
 
@@ -209,6 +237,15 @@ def _validate_command(profile_name: str, command_name: str, command_data: Any) -
                 f"{location}.default_retry_backoff_s",
                 "default_retry_backoff_s must be > 0 when provided",
             )
+        )
+
+    category = command_data.get("category")
+    if category is not None and not isinstance(category, str):
+        issues.append(ValidationIssue("error", f"{location}.category", "category must be a string"))
+    calibration_label = command_data.get("calibration_label")
+    if calibration_label is not None and not isinstance(calibration_label, str):
+        issues.append(
+            ValidationIssue("error", f"{location}.calibration_label", "calibration_label must be a string"),
         )
 
     return issues

@@ -78,14 +78,43 @@ class DeviceConfig:
     poll_interval_s: Optional[float] = 1.0
     dtr: str = "set"
     rts: str = "set"
+    open_retry_attempts: int = 5
+    open_retry_backoff_s: float = 0.5
     ble_address: Optional[str] = None
     ble_read_characteristic: Optional[str] = None
     ble_write_characteristic: Optional[str] = None
     ble_notify_characteristic: Optional[str] = None
+    fallback_profiles: Tuple[str, ...] = field(default_factory=tuple)
 
     def __post_init__(self) -> None:
         self.dtr = self._normalise_control(self.dtr, "dtr")
         self.rts = self._normalise_control(self.rts, "rts")
+        profiles: list[str] = []
+        seen: set[str] = set()
+        for entry in _coerce_tuple(self.fallback_profiles):
+            if entry is None:
+                continue
+            candidate = str(entry).strip()
+            if not candidate:
+                continue
+            lowered = candidate.lower()
+            if lowered in seen:
+                continue
+            profiles.append(candidate)
+            seen.add(lowered)
+        self.fallback_profiles = tuple(profiles)
+        try:
+            attempts = int(self.open_retry_attempts)
+        except (TypeError, ValueError):
+            attempts = 1
+        self.open_retry_attempts = max(attempts, 1)
+        try:
+            backoff = float(self.open_retry_backoff_s)
+        except (TypeError, ValueError):
+            backoff = 0.5
+        if backoff < 0:
+            backoff = 0.0
+        self.open_retry_backoff_s = backoff
 
     @staticmethod
     def _normalise_control(value: Optional[str], label: str) -> str:
@@ -187,6 +216,14 @@ class AcquisitionConfig:
     quiet: bool = False
     startup_commands: list[str] = field(default_factory=list)
     scheduled_commands: list[ScheduledCommandConfig] = field(default_factory=list)
+    default_command_max_retries: int = 1
+    default_command_retry_backoff_s: float = 1.0
+    decode_failure_threshold: int = 5
+    lab_retry_enabled: bool = False
+    lab_retry_max_retries: Optional[int] = None
+    lab_retry_backoff_s: Optional[float] = None
+    lab_retry_categories: Tuple[str, ...] = ('calibration',)
+    lab_retry_commands: Tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         self.startup_commands = [cmd.strip() for cmd in self.startup_commands if isinstance(cmd, str) and cmd.strip()]
@@ -199,6 +236,37 @@ class AcquisitionConfig:
             else:
                 raise TypeError(f"Unsupported scheduled command payload: {type(entry).__name__}")
         self.scheduled_commands = normalised
+        try:
+            retries = int(self.default_command_max_retries)
+        except (TypeError, ValueError):
+            retries = 0
+        self.default_command_max_retries = max(retries, 0)
+        try:
+            backoff = float(self.default_command_retry_backoff_s)
+        except (TypeError, ValueError):
+            backoff = 1.0
+        if backoff < 0:
+            backoff = 0.0
+        self.default_command_retry_backoff_s = backoff
+        try:
+            threshold = int(self.decode_failure_threshold)
+        except (TypeError, ValueError):
+            threshold = 5
+        self.decode_failure_threshold = max(threshold, 1)
+        try:
+            overrides = int(self.lab_retry_max_retries) if self.lab_retry_max_retries is not None else None
+        except (TypeError, ValueError):
+            overrides = None
+        self.lab_retry_max_retries = overrides if overrides is None or overrides >= 0 else None
+        try:
+            backoff = float(self.lab_retry_backoff_s) if self.lab_retry_backoff_s is not None else None
+        except (TypeError, ValueError):
+            backoff = None
+        if backoff is not None and backoff < 0:
+            backoff = 0.0
+        self.lab_retry_backoff_s = backoff
+        self.lab_retry_categories = _coerce_tuple(self.lab_retry_categories)
+        self.lab_retry_commands = _coerce_tuple(self.lab_retry_commands)
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -210,6 +278,14 @@ class AcquisitionConfig:
             'quiet': self.quiet,
             'startup_commands': self.startup_commands,
             'scheduled_commands': [config.to_dict() for config in self.scheduled_commands],
+            'default_command_max_retries': self.default_command_max_retries,
+            'default_command_retry_backoff_s': self.default_command_retry_backoff_s,
+            'decode_failure_threshold': self.decode_failure_threshold,
+            'lab_retry_enabled': self.lab_retry_enabled,
+            'lab_retry_max_retries': self.lab_retry_max_retries,
+            'lab_retry_backoff_s': self.lab_retry_backoff_s,
+            'lab_retry_categories': self.lab_retry_categories,
+            'lab_retry_commands': self.lab_retry_commands,
         }
 
 
@@ -246,6 +322,8 @@ class AnalyticsConfig:
     temperature_coefficient: float = 0.0
     reference_temperature: float = 25.0
     max_history: int = 256
+    profiling_enabled: bool = False
+    max_frames_per_minute: Optional[int] = None
 
     def __post_init__(self) -> None:
         if self.moving_average_window < 1:
@@ -254,6 +332,8 @@ class AnalyticsConfig:
             self.stability_window = 2
         if self.max_history < max(self.moving_average_window, self.stability_window):
             self.max_history = max(self.moving_average_window, self.stability_window)
+        if self.max_frames_per_minute is not None and self.max_frames_per_minute <= 0:
+            self.max_frames_per_minute = None
 
 
 @dataclass(slots=True)

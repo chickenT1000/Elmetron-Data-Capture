@@ -33,6 +33,14 @@ export interface CommandScheduleEntry {
   pending_category?: string | null;
 }
 
+export interface CommandMetricsHistoryEntry {
+  timestamp: number;
+  timestamp_iso: string;
+  queue_depth?: number | null;
+  result_backlog?: number | null;
+  inflight?: number | null;
+}
+
 export interface CommandMetrics {
   queue_depth?: number | null;
   result_backlog?: number | null;
@@ -40,6 +48,24 @@ export interface CommandMetrics {
   scheduled?: CommandScheduleEntry[];
   worker_running?: boolean;
   async_enabled?: boolean;
+  history?: CommandMetricsHistoryEntry[];
+}
+
+export interface AnalyticsProfileSummary {
+  frames_processed?: number;
+  throttled_frames?: number;
+  average_processing_time_ms?: number;
+  max_processing_time_ms?: number;
+  last_processing_time_ms?: number;
+  current_rate_per_minute?: number;
+  last_throttled_at?: string;
+}
+
+export interface ResponseTimeTelemetry {
+  last_ms?: number;
+  average_ms?: number;
+  max_ms?: number;
+  samples?: number;
 }
 
 export interface HealthResponse {
@@ -53,6 +79,8 @@ export interface HealthResponse {
   log_rotation?: LogRotationStatus | null;
   watchdog_history?: HealthWatchdogEvent[] | null;
   command_metrics?: CommandMetrics | null;
+  analytics_profile?: AnalyticsProfileSummary | null;
+  response_times?: ResponseTimeTelemetry | null;
 }
 
 export const healthQueryKey = ['health-status'] as const;
@@ -90,12 +118,18 @@ export interface HealthLogEvent {
 export const healthLogQueryKey = (limit: number) => ['health-log-events', limit] as const;
 
 export async function fetchHealthLogEvents(
-  { limit = 20, sinceId }: { limit?: number; sinceId?: number },
+  { limit = 20, sinceId, level, category }: HealthLogFilterOptions = {},
   signal?: AbortSignal,
 ): Promise<HealthLogEvent[]> {
   const params = new URLSearchParams({ limit: String(limit ?? 20) });
   if (sinceId !== undefined && sinceId !== null) {
     params.set('since_id', String(sinceId));
+  }
+  if (level) {
+    params.set('level', level);
+  }
+  if (category) {
+    params.set('category', category);
   }
 
   const response = await fetch(buildApiUrl(`/health/logs?${params.toString()}`), {
@@ -116,6 +150,65 @@ export async function fetchHealthLogEvents(
 
   const payload = (await response.json()) as { events?: HealthLogEvent[] };
   return payload.events ?? [];
+}
+
+export interface HealthLogFilterOptions {
+  limit?: number;
+  level?: string;
+  category?: string;
+  sinceId?: number;
+}
+
+export async function streamHealthLogsNdjson({
+  limit = 50,
+  level,
+  category,
+  signal,
+}: HealthLogFilterOptions & { signal?: AbortSignal } = {}): Promise<ReadableStreamDefaultReader<string>> {
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (level) params.set('level', level);
+  if (category) params.set('category', category);
+  const response = await fetch(buildApiUrl(`/health/logs.ndjson?${params.toString()}`), {
+    method: 'GET',
+    headers: {
+      Accept: 'application/x-ndjson',
+    },
+    signal,
+  });
+  if (!response.ok || !response.body) {
+    const error: Error & { status?: number } = new Error(
+      `NDJSON log request failed with status ${response.status}`,
+    );
+    error.status = response.status;
+    throw error;
+  }
+  const byteReader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let done = false;
+
+  const textReader: ReadableStreamDefaultReader<string> = {
+    async read() {
+      if (done) {
+        return { value: undefined, done: true };
+      }
+      const { value, done: byteDone } = await byteReader.read();
+      if (byteDone) {
+        done = true;
+        return { value: undefined, done: true };
+      }
+      const text = decoder.decode(value, { stream: true });
+      return { value: text, done: false };
+    },
+    cancel(reason?: unknown) {
+      done = true;
+      return byteReader.cancel(reason);
+    },
+    releaseLock() {
+      return byteReader.releaseLock();
+    },
+  };
+
+  return textReader;
 }
 
 

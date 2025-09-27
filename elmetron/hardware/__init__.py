@@ -6,6 +6,7 @@ from .device_manager import (
     CX505Interface,
     DeviceInterface,
     ListedDevice,
+    SimulatedInterface,
     create_interface,
     list_devices,
 )
@@ -13,6 +14,7 @@ from .device_manager import (
 __all__ = [
     "BleBridgeInterface",
     "CX505Interface",
+    "SimulatedInterface",
     "DeviceInterface",
     "ListedDevice",
     "create_interface",

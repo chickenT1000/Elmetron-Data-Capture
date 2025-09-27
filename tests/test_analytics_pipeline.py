@@ -31,6 +31,7 @@ def test_analytics_engine_computes_metrics() -> None:
         temperature_coefficient=0.05,
         reference_temperature=25.0,
         max_history=10,
+        profiling_enabled=True,
     )
     engine = AnalyticsEngine(config)
 
@@ -69,6 +70,50 @@ def test_analytics_engine_computes_metrics() -> None:
     assert compensation['method'] == 'ph_slope'
 
 
+def test_analytics_engine_records_profiling(monkeypatch) -> None:
+    config = AnalyticsConfig(enabled=True, profiling_enabled=True)
+    engine = AnalyticsEngine(config)
+    payload = {
+        'measurement': {
+            'value': 6.8,
+            'unit': 'pH',
+        }
+    }
+
+    result = engine.process(payload)
+    assert result is not None
+    assert 'profiling' in result
+
+    summary = engine.profile_summary()
+    assert summary['frames_processed'] == 1
+    assert 'average_processing_time_ms' in summary
+
+
+def test_analytics_engine_throttles_rate(monkeypatch) -> None:
+    config = AnalyticsConfig(
+        enabled=True,
+        max_frames_per_minute=2,
+        profiling_enabled=True,
+    )
+    engine = AnalyticsEngine(config)
+
+    times = iter([0.0, 10.0, 20.0])
+    monkeypatch.setattr('elmetron.analytics.engine.time.monotonic', lambda: next(times))
+    monkeypatch.setattr('elmetron.analytics.engine.time.time', lambda: 1000.0)
+
+    payload = {'measurement': {'value': 7.0}}
+    assert engine.process(payload) is not None
+    assert engine.process(payload) is not None
+    throttled = engine.process(payload)
+    assert throttled is not None
+    assert throttled.get('throttled') is True
+
+    summary = engine.profile_summary()
+    assert summary['frames_processed'] == 2
+    assert summary['throttled_frames'] == 1
+    assert summary['current_rate_per_minute'] >= 0
+
+
 @pytest.fixture()
 def seeded_session(tmp_path, monkeypatch) -> Iterator[tuple[Database, int]]:
     storage_cfg = StorageConfig(
@@ -88,6 +133,7 @@ def seeded_session(tmp_path, monkeypatch) -> Iterator[tuple[Database, int]]:
     app_config.analytics.stability_window = 2
     app_config.analytics.max_history = 8
     app_config.analytics.temperature_coefficient = 0.02
+    app_config.analytics.profiling_enabled = True
 
     engine = AnalyticsEngine(app_config.analytics)
     ingestor = FrameIngestor(app_config.ingestion, session, analytics=engine)

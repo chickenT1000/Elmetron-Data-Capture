@@ -13,6 +13,7 @@ from typing import Optional, Tuple
 
 from .diagnostics import build_diagnostic_bundle
 from .health import HealthMonitor, health_status_to_dict
+from ..reporting.session import build_session_evaluation
 
 
 def _serialize_datetime(value):
@@ -115,6 +116,18 @@ def _handler_factory(monitor: HealthMonitor):
 
         protocol_version = "HTTP/1.1"
 
+        def end_headers(self):  # noqa: D401
+            """Send standard headers plus CORS allowances."""
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.send_header('Access-Control-Allow-Methods', 'GET, OPTIONS')
+            self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+            super().end_headers()
+
+        def do_OPTIONS(self):  # pylint: disable=invalid-name
+            self.send_response(HTTPStatus.NO_CONTENT)
+            self.send_header('Content-Length', '0')
+            self.end_headers()
+
         def do_GET(self):  # pylint: disable=invalid-name
             parsed = urlparse(self.path)
             path = parsed.path.rstrip('/')
@@ -128,6 +141,8 @@ def _handler_factory(monitor: HealthMonitor):
                 self.wfile.write(body)
             elif path == '/health/logs/stream':
                 self._handle_log_stream(parsed)
+            elif path == '/health/logs.ndjson':
+                self._handle_logs_ndjson(parsed)
             elif path == '/health/bundle':
                 self._handle_bundle(parsed)
             elif path == '/health/logs':
@@ -153,10 +168,63 @@ def _handler_factory(monitor: HealthMonitor):
                 self.send_header('Content-Length', str(len(body)))
                 self.end_headers()
                 self.wfile.write(body)
+            elif path.startswith('/sessions'):
+                if not self._handle_sessions_route(parsed):
+                    self.send_error(HTTPStatus.NOT_FOUND, 'Endpoint not found')
             else:
                 self.send_error(HTTPStatus.NOT_FOUND, 'Endpoint not found')
 
 
+
+        def _handle_logs_ndjson(self, parsed):
+            params = parse_qs(parsed.query)
+            limit_param = params.get('limit', ['200'])[-1]
+            since_param = params.get('since_id', [None])[-1]
+            level_param = params.get('level', [None])[-1]
+            category_param = params.get('category', [None])[-1]
+            try:
+                limit = max(1, min(int(limit_param), 1000))
+            except (TypeError, ValueError):
+                limit = 200
+            try:
+                since_id = int(since_param) if since_param is not None else None
+            except (TypeError, ValueError):
+                since_id = None
+
+            try:
+                events = monitor.recent_events(limit=limit, since_id=since_id)
+            except Exception as exc:  # pragma: no cover - defensive
+                self.send_error(HTTPStatus.INTERNAL_SERVER_ERROR, f'Failed to fetch events: {exc}')
+                return
+
+            if level_param or category_param:
+                filtered = []
+                for event in events:
+                    if not isinstance(event, dict):
+                        continue
+                    if level_param and str(event.get('level', '')).lower() != level_param.lower():
+                        continue
+                    if category_param and str(event.get('category', '')).lower() != category_param.lower():
+                        continue
+                    filtered.append(event)
+                events = filtered
+
+
+            self.send_response(HTTPStatus.OK)
+            self.send_header('Content-Type', 'application/x-ndjson; charset=utf-8')
+            self.send_header('Cache-Control', 'no-cache')
+            self.end_headers()
+
+            for event in events:
+                if not isinstance(event, dict):
+                    continue
+                try:
+                    payload = json.dumps(event, ensure_ascii=False)
+                except (TypeError, ValueError):  # pragma: no cover - defensive
+                    continue
+                self.wfile.write(payload.encode('utf-8') + b'\n')
+            self.wfile.flush()
+            return
 
         def _handle_bundle(self, parsed):
             params = parse_qs(parsed.query)
@@ -228,6 +296,121 @@ def _handler_factory(monitor: HealthMonitor):
                 return
             except Exception:  # pragma: no cover - defensive
                 return
+
+        def _handle_sessions_route(self, parsed):
+            segments = [segment for segment in parsed.path.split('/') if segment]
+            if not segments or segments[0] != 'sessions':
+                return False
+
+            if len(segments) == 2 and segments[1] == 'recent':
+                self._handle_sessions_recent(parsed)
+                return True
+
+            if len(segments) >= 2:
+                try:
+                    session_id = int(segments[1])
+                except (TypeError, ValueError):
+                    self.send_error(HTTPStatus.BAD_REQUEST, 'Invalid session identifier')
+                    return True
+                if len(segments) == 3 and segments[2] == 'evaluation':
+                    self._handle_session_evaluation(session_id, parsed)
+                    return True
+                if len(segments) == 4 and segments[2] == 'evaluation' and segments[3] == 'export':
+                    self._handle_session_evaluation_export(session_id, parsed)
+                    return True
+            return False
+
+        def _database(self):
+            service = getattr(monitor, 'service', None)
+            if service is None:
+                return None
+            return getattr(service, 'database', None)
+
+        def _handle_sessions_recent(self, parsed):
+            database = self._database()
+            if database is None or not hasattr(database, 'recent_sessions'):
+                self.send_error(HTTPStatus.SERVICE_UNAVAILABLE, 'Session catalogue unavailable')
+                return
+            params = parse_qs(parsed.query)
+            limit_param = params.get('limit', ['10'])[-1]
+            try:
+                limit = max(1, min(int(limit_param), 50))
+            except (TypeError, ValueError):
+                limit = 10
+            try:
+                sessions = database.recent_sessions(limit=limit)
+            except Exception as exc:  # pragma: no cover - defensive
+                self.send_error(HTTPStatus.INTERNAL_SERVER_ERROR, f'Failed to load sessions: {exc}')
+                return
+            body = json.dumps({'sessions': sessions}, ensure_ascii=False).encode('utf-8')
+            self.send_response(HTTPStatus.OK)
+            self.send_header('Content-Type', 'application/json; charset=utf-8')
+            self.send_header('Content-Length', str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def _handle_session_evaluation(self, session_id: int, parsed):
+            database = self._database()
+            if database is None:
+                self.send_error(HTTPStatus.SERVICE_UNAVAILABLE, 'Session evaluation unavailable')
+                return
+            params = parse_qs(parsed.query)
+            anchor = params.get('anchor', ['start'])[-1] or 'start'
+            try:
+                payload = build_session_evaluation(database, session_id, anchor=anchor)
+            except Exception as exc:  # pragma: no cover - defensive
+                self.send_error(HTTPStatus.INTERNAL_SERVER_ERROR, f'Failed to build evaluation: {exc}')
+                return
+            if payload is None:
+                self.send_error(HTTPStatus.NOT_FOUND, 'Session not found')
+                return
+            body = json.dumps(payload, ensure_ascii=False).encode('utf-8')
+            self.send_response(HTTPStatus.OK)
+            self.send_header('Content-Type', 'application/json; charset=utf-8')
+            self.send_header('Cache-Control', 'no-cache')
+            self.send_header('Content-Length', str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def _handle_session_evaluation_export(self, session_id: int, parsed):
+            database = self._database()
+            if database is None:
+                self.send_error(HTTPStatus.SERVICE_UNAVAILABLE, 'Session evaluation unavailable')
+                return
+            params = parse_qs(parsed.query)
+            anchor = params.get('anchor', ['start'])[-1] or 'start'
+            export_format = (params.get('format', ['json'])[-1] or 'json').lower()
+            filename_param = params.get('filename', [None])[-1]
+            try:
+                payload = build_session_evaluation(database, session_id, anchor=anchor)
+            except Exception as exc:  # pragma: no cover - defensive
+                self.send_error(HTTPStatus.INTERNAL_SERVER_ERROR, f'Failed to build evaluation: {exc}')
+                return
+            if payload is None:
+                self.send_error(HTTPStatus.NOT_FOUND, 'Session not found')
+                return
+            if export_format != 'json':
+                self.send_error(HTTPStatus.BAD_REQUEST, 'Unsupported export format')
+                return
+            body = json.dumps(payload, ensure_ascii=False, indent=2).encode('utf-8')
+            filename = self._safe_filename(
+                filename_param,
+                f'session_{session_id}_evaluation.json',
+            )
+            self.send_response(HTTPStatus.OK)
+            self.send_header('Content-Type', 'application/json; charset=utf-8')
+            self.send_header('Content-Disposition', f'attachment; filename="{filename}"')
+            self.send_header('Content-Length', str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        @staticmethod
+        def _safe_filename(candidate, default):
+            if not candidate:
+                return default
+            stripped = ''.join('_' if ch in '\\/:*?"<>|' else ch for ch in str(candidate))
+            stripped = stripped.strip() or default
+            return stripped
 
         def log_message(self, format, *args):  # noqa: A003 - silence default logging
             return

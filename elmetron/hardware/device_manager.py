@@ -55,13 +55,22 @@ class ListedDevice:
 FrameHandler = Callable[[bytes], None]
 
 
-SUPPORTED_TRANSPORTS = {"ftdi", "ble"}
+SUPPORTED_TRANSPORTS = {"ftdi", "ble", "sim"}
 
 
 def list_devices(transport: str = "ftdi") -> list[ListedDevice]:
-    """Enumerate visible devices for *transport* (currently FTDI only)."""
+    """Enumerate visible devices for *transport*."""
 
     transport = transport.lower()
+    if transport == "sim":
+        return [
+            ListedDevice(
+                index=0,
+                serial="SIM-DEVICE",
+                description="Simulated CX-505",
+                transport="sim",
+            )
+        ]
     if transport != "ftdi":
         raise ValueError(f"Device enumeration is not implemented for transport '{transport}'")
     devices: list[ListedDevice] = []
@@ -98,39 +107,107 @@ class CX505Interface(DeviceInterface):
         if self._handle is not None:
             assert self._device is not None
             return self._device
-        devices = list_devices()
-        if not devices:
-            raise RuntimeError("No FTDI D2XX devices detected")
+        attempts = max(1, self._config.open_retry_attempts)
+        backoff = max(0.0, self._config.open_retry_backoff_s)
         target: Optional[ListedDevice] = None
-        if self._config.serial:
-            for entry in devices:
-                if entry.serial and entry.serial.strip() == self._config.serial:
-                    target = entry
-                    break
-            if target is None:
-                raise RuntimeError(f"Serial '{self._config.serial}' not found among connected devices")
-            handle = cx505_d2xx.open_device(0, self._config.serial)
-        else:
-            if self._config.index >= len(devices):
-                raise RuntimeError(f"Device index {self._config.index} out of range (found {len(devices)})")
-            target = devices[self._config.index]
-            handle = cx505_d2xx.open_device(self._config.index)
-        cx505_d2xx.configure_device(
-            handle,
-            self._config.baud,
-            self._config.data_bits,
-            self._config.stop_bits,
-            self._config.parity,
-            self._config.read_timeout_ms,
-            self._config.write_timeout_ms,
-        )
-        cx505_d2xx.apply_control_lines(handle, self._config.dtr, self._config.rts)
-        self._handle = handle
+        handle: Optional[cx505_d2xx.HANDLE] = None
+        last_error: Optional[Exception] = None
+
+        for attempt in range(1, attempts + 1):
+            devices = list_devices()
+            if not devices:
+                last_error = RuntimeError("No FTDI D2XX devices detected")
+                if attempt == attempts:
+                    raise RuntimeError(
+                        f"Failed to open FTDI device after {attempts} attempts: {last_error}"
+                    ) from last_error
+                if backoff:
+                    time.sleep(backoff * attempt)
+                continue
+
+            if self._config.serial:
+                target = next(
+                    (
+                        entry
+                        for entry in devices
+                        if entry.serial and entry.serial.strip() == self._config.serial
+                    ),
+                    None,
+                )
+                if target is None:
+                    last_error = RuntimeError(
+                        f"Serial '{self._config.serial}' not found among connected devices"
+                    )
+                    if attempt == attempts:
+                        raise RuntimeError(
+                            f"Failed to open FTDI device after {attempts} attempts: {last_error}"
+                        ) from last_error
+                    if backoff:
+                        time.sleep(backoff * attempt)
+                    continue
+                open_args = (0, self._config.serial)
+            else:
+                if self._config.index >= len(devices):
+                    last_error = RuntimeError(
+                        f"Device index {self._config.index} out of range (found {len(devices)})"
+                    )
+                    if attempt == attempts:
+                        raise RuntimeError(
+                            f"Failed to open FTDI device after {attempts} attempts: {last_error}"
+                        ) from last_error
+                    if backoff:
+                        time.sleep(backoff * attempt)
+                    continue
+                target = devices[self._config.index]
+                open_args = (target.index,)
+
+            try:
+                handle = cx505_d2xx.open_device(*open_args)
+            except Exception as exc:  # pragma: no cover - exercised via tests
+                last_error = exc
+                if attempt == attempts:
+                    raise RuntimeError(
+                        f"Failed to open FTDI device after {attempts} attempts: {exc}"
+                    ) from exc
+                if backoff:
+                    time.sleep(backoff * attempt)
+                continue
+
+            try:
+                cx505_d2xx.configure_device(
+                    handle,
+                    self._config.baud,
+                    self._config.data_bits,
+                    self._config.stop_bits,
+                    self._config.parity,
+                    self._config.read_timeout_ms,
+                    self._config.write_timeout_ms,
+                )
+                cx505_d2xx.apply_control_lines(handle, self._config.dtr, self._config.rts)
+                if self._poll_payload:
+                    cx505_d2xx.write_payloads(handle, [self._poll_payload])
+                self._handle = handle
+                assert target is not None
+                target.transport = "ftdi"
+                self._device = target
+                break
+            except Exception as exc:  # pragma: no cover - cleanup on failure
+                last_error = exc
+                try:
+                    cx505_d2xx.close_device(handle)
+                finally:
+                    handle = None
+                    self._handle = None
+                    self._device = None
+                if attempt == attempts:
+                    raise RuntimeError(
+                        f"Failed to open FTDI device after {attempts} attempts: {exc}"
+                    ) from exc
+                if backoff:
+                    time.sleep(backoff * attempt)
+                continue
+        assert self._handle is not None
         assert target is not None
-        target.transport = "ftdi"
-        self._device = target
-        if self._poll_payload:
-            cx505_d2xx.write_payloads(handle, [self._poll_payload])
         return target
 
     def close(self) -> None:
@@ -321,6 +398,8 @@ def create_interface(
         return CX505Interface(config)
     if transport == "ble":
         return BleBridgeInterface(config, adapter_factory=adapter_factory)
+    if transport == "sim":
+        return SimulatedInterface(config)
     raise ValueError(f"Unsupported transport '{config.transport}'")
 
 
@@ -348,4 +427,67 @@ def _parse_hex_bytes(payload: str) -> Optional[bytes]:
         return None
     parts = payload.replace(",", " ").split()
     return bytes(int(part, 16) for part in parts)
+
+
+class SimulatedInterface(DeviceInterface):
+    """In-memory simulation of a CX-505 interface for bench harness runs."""
+
+    def __init__(self, config: DeviceConfig) -> None:
+        self._config = config
+        self._device = ListedDevice(
+            index=config.index,
+            serial=config.serial or "SIM-DEVICE",
+            description="Simulated CX-505",
+            transport="sim",
+        )
+        self._opened = False
+        self._frame_counter = 0
+
+    def open(self) -> ListedDevice:
+        self._opened = True
+        return self._device
+
+    def close(self) -> None:
+        self._opened = False
+
+    def run_window(
+        self,
+        duration_s: float,
+        frame_handler: Optional[FrameHandler],
+        log_path: Optional[str] = None,
+        print_raw: bool = False,
+    ) -> int:
+        _ = print_raw
+        self.open()
+        samples = max(int(duration_s * 5), 1)
+        frames: list[bytes] = []
+        total = 0
+        for _ in range(samples):
+            frame = self._generate_frame()
+            frames.append(frame)
+            total += len(frame)
+            if frame_handler:
+                frame_handler(frame)
+        if log_path:
+            with open(log_path, "ab") as handle:
+                for frame in frames:
+                    handle.write(frame + b"\n")
+        return total
+
+    def write(self, payloads: Iterable[bytes]) -> int:
+        return sum(len(payload) for payload in payloads)
+
+    def __enter__(self) -> "SimulatedInterface":
+        self.open()
+        return self
+
+    def __exit__(self, exc_type, exc, tb) -> None:  # type: ignore[override]
+        self.close()
+
+    def _generate_frame(self) -> bytes:
+        self._frame_counter += 1
+        value = 700 + (self._frame_counter % 50)
+        timestamp = int(time.time())
+        payload = f"SIM:{self._frame_counter:04d}:{value:03d}:{timestamp}".encode("ascii")
+        return payload[:64]
 

@@ -34,6 +34,20 @@ transport = "ble"
 handshake = "connect"
 poll_interval_s = 5.0
 
+[profiles.cx505_sim]
+description = "Simulation profile for bench harness"
+transport = "sim"
+poll_hex = "01 23 30 23 30 23 30 23 03"
+poll_interval_s = 1.0
+baud = 115200
+data_bits = 8
+stop_bits = 2.0
+parity = "E"
+latency_timer_ms = 2
+read_timeout_ms = 500
+write_timeout_ms = 500
+chunk_size = 256
+
 [profiles.cx505.commands.calibrate_ph7]
 description = "Request pH 7 calibration (CX-505)"
 write_hex = "02 43 41 4C 37 03"
@@ -52,3 +66,8 @@ description = "Request BLE bridge to synchronise its clock"
 write_ascii = "SYNC\n"
 read_duration_s = 1.0
 
+[profiles.cx505_sim.commands.simulated_window]
+description = "Simulated capture window for bench harness"
+write_hex = "AA BB"
+post_delay_s = 0.1
+read_duration_s = 1.0

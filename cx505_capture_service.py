@@ -129,6 +129,7 @@ def main(argv: list[str]) -> int:
         config,
         database,
         command_definitions=command_definitions,
+        protocol_registry=registry,
     )
 
     watchdog_timeout = args.watchdog_timeout if args.watchdog_timeout and args.watchdog_timeout > 0 else 0.0

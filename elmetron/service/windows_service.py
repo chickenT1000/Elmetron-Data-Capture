@@ -37,7 +37,7 @@ def main(argv: list[str]) -> int:
         return 2
 
     database = Database(config.storage)
-    service = AcquisitionService(config, database)
+    service = AcquisitionService(config, database, protocol_registry=registry)
 
     watchdog_timeout = args.watchdog_timeout if args.watchdog_timeout and args.watchdog_timeout > 0 else 0.0
     watchdog_poll = args.watchdog_poll if args.watchdog_poll and args.watchdog_poll > 0 else 2.0
