@@ -443,6 +443,7 @@ def read_stream(
     poll_interval: float,
     frame_handler: Optional[Callable[[bytes], None]] = None,
     print_raw: bool = True,
+    status_handler: Optional[Callable[[str], None]] = None,
 ) -> int:
     deadline = time.time() + duration
     buffer = (ctypes.c_ubyte * chunk)()
@@ -493,7 +494,11 @@ def read_stream(
                 if first:
                     queue = DWORD()
                     _check_status(_ft_queue_status(handle, ctypes.byref(queue)), 'FT_GetQueueStatus')
-                    print(f'Waiting for data... (RX queue: {queue.value} bytes)')
+                    message = f'Waiting for data... (RX queue: {queue.value} bytes)'
+                    if status_handler:
+                        status_handler(message)
+                    else:
+                        print(message)
                     first = False
                 time.sleep(0.1)
     finally:
@@ -523,10 +528,17 @@ def main(argv: list[str]) -> int:
     parser.add_argument('--poll-interval', type=float, default=1.0, help='Seconds between poll transmissions when --poll-hex is set (default: 1.0)')
     parser.add_argument('--no-read', action='store_true', help='Do not read; just perform the write and exit')
     parser.add_argument('--log', type=str, help='Append raw bytes to this file')
+    parser.add_argument('--quiet', action='store_true', help='Suppress status output (stdout reserved for data)')
     parser.add_argument('--json', action='store_true', help='Decode CX-505 frames and print newline-delimited JSON to stdout')
     parser.add_argument('--json-out', type=str, help='Append decoded frames as JSON Lines to this file')
     args = parser.parse_args(argv)
     json_enabled = bool(args.json or args.json_out)
+
+    def emit_status(message: str) -> None:
+        if not args.quiet:
+            print(message, file=sys.stderr)
+
+    status_handler = None if args.quiet else emit_status
 
     if args.list:
         devices = enumerate_devices()
@@ -555,7 +567,7 @@ def main(argv: list[str]) -> int:
         else:
             description = devices[args.index]['description']
         label = args.serial if args.serial else str(args.index)
-        print(f"Opening device {label}: {description or '<no description>'} (S/N {target_serial or '<unknown>'})")
+        emit_status(f"Opening device {label}: {description or '<no description>'} (S/N {target_serial or '<unknown>'})")
         handle = open_device(args.index if not args.serial else 0, args.serial)
         configure_device(handle, args.baud, args.databits, args.stopbits, args.parity, args.timeouts[0], args.timeouts[1])
         apply_control_lines(handle, args.dtr, args.rts)
@@ -595,15 +607,26 @@ def main(argv: list[str]) -> int:
         payloads = list(_prepare_payloads(args.write, args.write_hex))
         if payloads:
             written = write_payloads(handle, payloads)
-            print(f'Sent {written} byte(s) to device')
+            emit_status(f'Sent {written} byte(s) to device')
             if args.write_delay > 0:
                 time.sleep(args.write_delay)
         if args.no_read:
             return 0
-        print(f'Reading for {args.duration} second(s)...')
+        emit_status(f'Reading for {args.duration} second(s)...')
         print_raw = not (json_enabled and not args.hex)
-        total = read_stream(handle, args.duration, args.chunk, args.hex, args.log, poll_payload, args.poll_interval, frame_handler, print_raw)
-        print(f'Finished: received {total} byte(s)')
+        total = read_stream(
+            handle,
+            args.duration,
+            args.chunk,
+            args.hex,
+            args.log,
+            poll_payload,
+            args.poll_interval,
+            frame_handler,
+            print_raw,
+            status_handler=status_handler,
+        )
+        emit_status(f'Finished: received {total} byte(s)')
     except Exception as exc:
         print(f'Error: {exc}', file=sys.stderr)
         return 1

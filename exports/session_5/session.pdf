@@ -1,0 +1,67 @@
+%PDF-1.4
+1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj
+2 0 obj << /Type /Pages /Count 1 /Kids [3 0 R] >> endobj
+3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >> endobj
+4 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> endobj
+5 0 obj << /Length 790 >> stream
+BT
+/F1 12 Tf
+14 TL
+72 720 Td
+(Elmetron Session Report #5) Tj
+T*
+() Tj
+T*
+(Started: 2025-09-26T08:57:54.255849) Tj
+T*
+(Ended: 2025-09-26T08:58:10.357585) Tj
+T*
+(Instrument: 00308/25, CX-505, CX505) Tj
+T*
+(Measurements: 16) Tj
+T*
+() Tj
+T*
+(Recent measurements:) Tj
+T*
+( - 2025-09-26T08:57:57.079Z: n/a S/N00308/25) Tj
+T*
+( - 2025-09-26T10:52:29: 0.0 µS/cm) Tj
+T*
+( - 2025-09-26T10:52:30: 0.0 µS/cm) Tj
+T*
+( - 2025-09-26T10:52:32: 0.0 µS/cm) Tj
+T*
+( - 2025-09-26T10:52:33: 0.0 µS/cm) Tj
+T*
+( - 2025-09-26T10:52:34: 0.0 µS/cm) Tj
+T*
+( - 2025-09-26T10:52:35: 0.0 µS/cm) Tj
+T*
+( - 2025-09-26T10:52:36: 0.0 µS/cm) Tj
+T*
+( - 2025-09-26T10:52:37: 0.0 µS/cm) Tj
+T*
+( - 2025-09-26T10:52:37: 0.0 µS/cm) Tj
+T*
+(... \(6 more measurements\)) Tj
+T*
+() Tj
+T*
+(Generated: 2025-09-26T08:58:28Z) Tj
+ET
+endstream
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000241 00000 n 
+0000000311 00000 n 
+trailer
+<< /Size 6 /Root 1 0 R >>
+startxref
+1152
+%%EOF

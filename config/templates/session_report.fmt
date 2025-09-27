@@ -1,0 +1,17 @@
+﻿Elmetron Session Report
+=======================
+
+Session ID: {session_id}
+Generated: {generated_at}
+
+Instrument: {summary_instrument_description} (Serial: {summary_instrument_serial})
+Operator: {summary_metadata_operator}
+Measurements captured: {summary_measurements}
+Last recorded at: {summary_last_recorded_at}
+
+Recent Highlights:
+{default_lines_0}
+{default_lines_1}
+{default_lines_2}
+{default_lines_3}
+{default_lines_4}

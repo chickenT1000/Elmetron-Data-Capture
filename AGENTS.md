@@ -1,28 +1,33 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-The workspace centers on scripting direct FTDI access for the Elmetron CX-505.
-- `cx505_d2xx.py` exposes the D2XX bindings and command-line interface.
-- `probe_commands.py` reuses the transport to sweep command frames.
-- `connectivity_report.json` archives raw probe metrics for replay.
-- `usbpcap*.pcapng` store USB handshake captures gathered with USBPcap/Wireshark.
-Cache files produced by runs (`capture.log`, `*.pcapng`) stay alongside the scripts; prefer naming runs with timestamps (for example `usbpcap_20250925T1129.pcapng`) to avoid overwrites.
+`elmetron/` mirrors the architecture described in SPEC.md:
+- `elmetron/hardware/device_manager.py` handles the FTDI CX-505 link layer.
+- `elmetron/acquisition/service.py` orchestrates capture windows, reconnect logic, session metadata, and audit logging.
+- `elmetron/ingestion/pipeline.py` decodes frames, enriches metadata, and surfaces decode failures.
+- `elmetron/storage/database.py` owns the SQLite schema (instruments, sessions, metadata, raw frames, measurements, annotations, audit events).
+- `elmetron/protocols/registry.py` loads profile registries (`config/protocols.toml`); see `docs/PROTOCOLS.md` for the schema.
+- `elmetron/api/` and `elmetron/service/` provide the health monitor, watchdog, supervisor, runner, and console/Windows-service stubs.
+- `elmetron/reporting/session.py` streams session summaries and measurements for exports/dashboards.
+Support scripts live at the root (`cx505_d2xx.py`, `cx505_capture_service.py`, `probe_commands.py`). Config files live in `config/`; capture/export artifacts belong in `captures/` and `exports/`.
 
 ## Build, Test, and Development Commands
-- `python cx505_d2xx.py --list` enumerates FTDI interfaces and validates driver visibility.
-- `python cx505_d2xx.py --baud 115200 --parity E --log logs\\session.bin` reproduces the legacy link parameters while recording raw bytes.
-- `python probe_commands.py` sweeps the current STX/ETX payload set and prints any responses.
-- `tshark -i \\USBPcap1 -a duration:30 -w captures\\handshake.pcapng` records the vendor handshake for later decoding.
-Keep scripts runnable on bare Python 3.11 without external dependencies.
+- `python cx505_capture_service.py --list-devices` validates D2XX visibility.
+- `python cx505_capture_service.py --config config/app.toml --protocols config/protocols.toml --watchdog-timeout 30 --health-api-port 8050 --health-log` runs the acquisition supervisor with watchdog logging and the `/health` endpoint.
+- `python run_protocol_command.py --config config/app.toml --protocols config/protocols.toml calibrate_ph7` fires a command/calibration sequence defined in the active profile.
+- `python -c "from elmetron.reporting.exporters import export_session_csv; export_session_csv(Path('data/elmetron.sqlite'), 1, Path('exports/session1.csv'))"` exports a session snapshot for quick analysis.
+- `python elmetron/service/windows_service.py --config config/app.toml --protocols config/protocols.toml --watchdog-timeout 30 --health-api-port 8050` exercises the forthcoming Windows-service wrapper from the console.
+- `python -m compileall elmetron cx505_capture_service.py` performs a quick syntax check.
+Add richer tests with `pytest` under `tests/` once suites are stubbed.
 
 ## Coding Style & Naming Conventions
-Follow PEP 8 and type-hint new functions. Keep modules and files in `snake_case`. Document non-obvious protocol constants with short comments. Prefer using reusable helpers in `cx505_d2xx` instead of duplicating ctypes boilerplate. Generated artifacts should use lowercase, hyphen-free filenames (e.g., `connectivity_report.json`).
+Follow PEP 8 with type hints on public APIs. Keep modules `snake_case`; export symbols via `__all__`. Document non-obvious protocol constants and schema changes with concise comments. Avoid embedding meter-specific values outside the protocol registry.
 
 ## Testing Guidelines
-No automated tests exist yet; add `tests/` with `pytest` as scenarios emerge. Cover both successful reads and error handling around FTDI status codes. When adding new command sequences, provide fixtures that mock `_ft_read` / `_ft_write` so unit tests can run without hardware.
+Adopt `pytest`. Minimum coverage: (1) `FrameIngestor.handle_frame` with synthetic frames and failure cases, (2) storage retention/audit logic using in-memory SQLite, (3) watchdog/supervisor/health API behaviour via mocked `AcquisitionService` stats. For hardware-dependent tests, inject fakes through `ServiceRunner`.
 
 ## Commit & Pull Request Guidelines
-Adopt conventional commits (e.g., `feat: add amplitude sweep parser`) to clarify intent. Each PR should summarize scope, note captured hardware scenarios, and attach sample logs or pcaps when behavior changes. Reference task IDs or issue numbers in the body, list manual validation steps (`python probe_commands.py`, `tshark ...`), and highlight any new dependencies.
+Use conventional commits (`feat:`, `fix:`, `refactor:`). PRs should summarise scope, record manual validation (`python cx505_capture_service.py ...`), attach relevant JSON/SQLite excerpts, and mention driver prerequisites. Document schema migrations and protocol registry updates explicitly.
 
-## Capture & Analysis Workflow
-Always start captures after the legacy S457s app has begun exchanging data to ensure the initial handshake is recorded. Store raw `.pcapng` in versioned directories (e.g., `captures/2025-09-25/`) and annotate findings in `connectivity_report.json` so later agents can replay conditions accurately.
+
+
