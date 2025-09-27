@@ -1,0 +1,65 @@
+[device]
+profile = "cx505"
+use_profile_defaults = true
+index = 0
+baud = 115200
+data_bits = 8
+stop_bits = 2.0
+parity = "E"
+read_timeout_ms = 500
+write_timeout_ms = 500
+chunk_size = 256
+latency_timer_ms = 2
+
+[acquisition]
+window_s = 10.0
+idle_s = 0.0
+restart_delay_s = 2.0
+status_interval_s = 30.0
+max_runtime_s = 0.0
+quiet = false
+startup_commands = []
+
+[storage]
+database_path = "data/elmetron.sqlite"
+ensure_directories = true
+vacuum_on_start = false
+retention_days = 90
+
+[ingestion]
+annotate_device = true
+enrich_with_timestamp = true
+emit_raw_frame = true
+
+[export]
+default_format = "csv"
+export_directory = "exports"
+csv_mode = "compact"
+csv_include_payload_json = false
+csv_include_analytics_json = false
+csv_flatten_payload = ["measurement.mode"]
+csv_flatten_analytics = [
+  "moving_average",
+  "stability_index",
+  "temperature_compensation.adjusted_value"
+]
+csv_compact_fields = [
+  "measurement_id",
+  "measurement_timestamp",
+  "captured_at",
+  "value",
+  "unit",
+  "temperature",
+  "temperature_unit",
+  "analytics_moving_average",
+  "analytics_stability_index",
+  "analytics_temperature_compensation_adjusted_value"
+]
+pdf_recent_limit = 10
+pdf_template = "config/templates/session_report.fmt"
+lims_template = "config/templates/session_lims.xml.fmt"
+
+[monitoring]
+log_rotation_task = "ElmetronLogRotate"
+log_rotation_max_age_minutes = 180
+log_rotation_probe_interval_s = 300

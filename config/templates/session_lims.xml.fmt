@@ -1,0 +1,7 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<SessionExport generated_at="{generated_at}" session_id="{session_id}">
+  <Instrument serial="{summary_instrument_serial}" model="{summary_instrument_model}">{summary_instrument_description}</Instrument>
+  <Operator>{summary_metadata_operator}</Operator>
+  <Metrics measurements="{summary_measurements}" last_recorded_at="{summary_last_recorded_at}" />
+  <RecentMeasurement value="{recent_measurements_0_value}" unit="{recent_measurements_0_unit}" temperature="{recent_measurements_0_temperature}" temperature_unit="{recent_measurements_0_temperature_unit}" timestamp="{recent_measurements_0_measurement_timestamp}" />
+</SessionExport>

@@ -1,0 +1,54 @@
+# Example protocol registry demonstrating multiple meter profiles.
+
+[profiles.cx505]
+description = "Default CX-505 handshake and serial parameters"
+transport = "ftdi"
+poll_hex = "01 23 30 23 30 23 30 23 03"
+poll_interval_s = 1.0
+baud = 115200
+data_bits = 8
+stop_bits = 2.0
+parity = "E"
+latency_timer_ms = 2
+read_timeout_ms = 500
+write_timeout_ms = 500
+chunk_size = 256
+
+[profiles.cx705]
+description = "CX-705 dissolved oxygen meter"
+transport = "ftdi"
+poll_hex = "01 23 31 23 31 23 31 23 03"
+poll_interval_s = 2.0
+baud = 9600
+data_bits = 8
+stop_bits = 1.0
+parity = "N"
+latency_timer_ms = 4
+read_timeout_ms = 750
+write_timeout_ms = 750
+chunk_size = 128
+
+[profiles.ph_ble_handheld]
+description = "Bluetooth LE bridge for handheld pH/ORP meters"
+transport = "ble"
+handshake = "connect"
+poll_interval_s = 5.0
+
+[profiles.cx505.commands.calibrate_ph7]
+description = "Request pH 7 calibration (CX-505)"
+write_hex = "02 43 41 4C 37 03"
+post_delay_s = 0.5
+read_duration_s = 2.0
+expect_hex = "01"
+
+[profiles.cx705.commands.start_logging]
+description = "Begin streaming dissolved oxygen measurements"
+write_ascii = "START\r\n"
+post_delay_s = 0.2
+read_duration_s = 3.0
+
+[profiles.ph_ble_handheld.commands.sync_time]
+description = "Request BLE bridge to synchronise its clock"
+write_ascii = "SYNC\n"
+read_duration_s = 1.0
+

@@ -1,0 +1,100 @@
+﻿name: Release Bundle
+
+on:
+  workflow_dispatch:
+    inputs:
+      latest_sessions:
+        description: "Number of latest sessions to export"
+        default: "1"
+        required: true
+      release_version:
+        description: "Manifest version label (defaults to git ref if empty)"
+        default: ""
+        required: false
+      config_path:
+        description: "Override config file path (optional)"
+        default: ""
+        required: false
+      protocols_path:
+        description: "Override protocols file path (optional)"
+        default: ""
+        required: false
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build-bundle:
+    runs-on: ubuntu-latest
+    env:
+      RELEASE_STAMP: ${{ github.run_id }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          fi
+          if [ -f requirements-release.txt ]; then
+            pip install -r requirements-release.txt
+          fi
+
+      - name: Build release bundle
+        id: build
+        shell: bash
+        env:
+          LATEST: ${{ inputs.latest_sessions }}
+          RELEASE_VERSION: ${{ inputs.release_version }}
+          CONFIG_OVERRIDE: ${{ inputs.config_path }}
+          PROTOCOLS_OVERRIDE: ${{ inputs.protocols_path }}
+        run: |
+          set -euo pipefail
+          SELECTION_ARGS=("--latest" "${LATEST}")
+          CONFIG_ARGS=()
+          if [ -n "$CONFIG_OVERRIDE" ]; then
+            CONFIG_ARGS+=("--config" "$CONFIG_OVERRIDE")
+          elif [ -f "config/app.toml" ]; then
+            CONFIG_ARGS+=("--config" "config/app.toml")
+          fi
+          if [ -n "$PROTOCOLS_OVERRIDE" ]; then
+            CONFIG_ARGS+=("--protocols" "$PROTOCOLS_OVERRIDE")
+          elif [ -f "config/protocols.toml" ]; then
+            CONFIG_ARGS+=("--protocols" "config/protocols.toml")
+          fi
+          VERSION_LABEL="$RELEASE_VERSION"
+          if [ -z "$VERSION_LABEL" ]; then
+            VERSION_LABEL="${GITHUB_REF_NAME:-${GITHUB_SHA}}"
+          fi
+          python scripts/build_release_bundle.py \
+            "${SELECTION_ARGS[@]}" \
+            --manifest-version "$VERSION_LABEL" \
+            --stamp "${RELEASE_STAMP}" \
+            "${CONFIG_ARGS[@]}"
+          SUMMARY_PATH="exports/releases/${RELEASE_STAMP}/release_bundle.json"
+          if [ -f "$SUMMARY_PATH" ]; then
+            echo "summary_path=$SUMMARY_PATH" >> "$GITHUB_OUTPUT"
+            echo "Release bundle summary"
+            python -m json.tool "$SUMMARY_PATH"
+          fi
+
+      - name: Upload artefacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-bundle-${{ env.RELEASE_STAMP }}
+          path: exports/releases/${{ env.RELEASE_STAMP }}
+          if-no-files-found: error
+
+      - name: Output manifest path
+        if: steps.build.outputs.summary_path != ''
+        shell: bash
+        run: |
+          echo "Summary located at ${{ steps.build.outputs.summary_path }}"
