@@ -22,15 +22,20 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     result = validate_registry_file(args.registry)
+    errors = result.errors
+    warnings = result.warnings
+
     for issue in result.issues:
         print(_format_issue(issue))
 
-    if result.errors or (args.warnings_as_errors and result.warnings):
-        if not result.errors:
+    print(f"Summary: {len(errors)} error(s), {len(warnings)} warning(s)")
+
+    if errors or (args.warnings_as_errors and warnings):
+        if not errors and warnings:
             print("Warnings treated as errors")
         return 1
 
-    print(f"Validation OK ({len(result.warnings)} warnings)")
+    print("Validation OK")
     return 0
 
 

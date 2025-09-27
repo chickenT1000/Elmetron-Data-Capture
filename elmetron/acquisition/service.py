@@ -3,10 +3,11 @@ from __future__ import annotations
 
 import time
 import threading
-from dataclasses import dataclass
+from collections import deque
+from dataclasses import dataclass, field
 from datetime import datetime
 from queue import Empty, Queue
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Deque, Dict, List, Optional
 
 from ..analytics.engine import AnalyticsEngine
 from ..config import AppConfig, ScheduledCommandConfig
@@ -14,6 +15,78 @@ from ..commands.executor import CommandDefinition, CommandResult, execute_comman
 from ..hardware import DeviceInterface, ListedDevice, create_interface
 from ..ingestion.pipeline import FrameIngestor
 from ..storage.database import Database, DeviceMetadata, SessionHandle
+from ..protocols.registry import ProtocolRegistry
+
+
+@dataclass(slots=True)
+class InterfaceLockStats:
+    """Track interface lock contention for diagnostics."""
+
+    current_owner: Optional[str] = None
+    last_wait_s: float = 0.0
+    max_wait_s: float = 0.0
+    average_wait_s: float = 0.0
+    total_wait_s: float = 0.0
+    wait_events: int = 0
+    last_hold_s: float = 0.0
+    max_hold_s: float = 0.0
+    average_hold_s: float = 0.0
+    total_hold_s: float = 0.0
+    hold_events: int = 0
+
+
+class _InterfaceLockMonitor:
+    """Maintain lock timing metrics for asynchronous capture windows."""
+
+    def __init__(self, stats: InterfaceLockStats) -> None:
+        self._stats = stats
+        self._wait_started_at: Optional[float] = None
+        self._hold_started_at: Optional[float] = None
+        self._owner: Optional[str] = None
+
+    def contend(self) -> None:
+        if self._wait_started_at is None:
+            self._wait_started_at = time.perf_counter()
+
+    def acquired(self, owner: str) -> None:
+        now = time.perf_counter()
+        stats = self._stats
+        stats.current_owner = owner
+        if self._wait_started_at is not None:
+            wait = max(0.0, now - self._wait_started_at)
+            stats.last_wait_s = wait
+            if wait > stats.max_wait_s:
+                stats.max_wait_s = wait
+            stats.total_wait_s += wait
+            stats.wait_events += 1
+            stats.average_wait_s = stats.total_wait_s / stats.wait_events
+            self._wait_started_at = None
+        else:
+            stats.last_wait_s = 0.0
+        self._hold_started_at = now
+        self._owner = owner
+
+    def released(self, owner: str) -> None:
+        stats = self._stats
+        now = time.perf_counter()
+        if self._owner != owner:
+            self._owner = None
+            self._hold_started_at = None
+            stats.current_owner = None
+            return
+        if self._hold_started_at is not None:
+            hold = max(0.0, now - self._hold_started_at)
+            stats.last_hold_s = hold
+            if hold > stats.max_hold_s:
+                stats.max_hold_s = hold
+            stats.total_hold_s += hold
+            stats.hold_events += 1
+            stats.average_hold_s = stats.total_hold_s / stats.hold_events
+        else:
+            stats.last_hold_s = 0.0
+        stats.current_owner = None
+        self._owner = None
+        self._hold_started_at = None
 
 
 @dataclass(slots=True)
@@ -23,6 +96,8 @@ class ServiceStats:
     last_window_bytes: int = 0
     last_window_started: Optional[datetime] = None
     last_frame_at: Optional[datetime] = None
+    interface_lock: InterfaceLockStats = field(default_factory=InterfaceLockStats)
+    analytics_profile: Optional[Dict[str, Any]] = None
 
 
 
@@ -37,6 +112,7 @@ class CommandExecutionContext:
     calibration_label: Optional[str]
     category: str
     schedule_payload: Dict[str, Any]
+    lab_retry_applied: bool = False
 
 
 @dataclass(slots=True)
@@ -56,6 +132,7 @@ class CommandExecutionEvent:
     result: Optional[CommandResult]
     error: Optional[str]
     completed_at: float
+    error_type: Optional[str] = None
 
 
 class CommandExecutionFailure(RuntimeError):
@@ -134,6 +211,7 @@ class AcquisitionService:
         database: Database,
         interface_factory: Optional[Callable[[], DeviceInterface]] = None,
         command_definitions: Optional[Dict[str, CommandDefinition]] = None,
+        protocol_registry: Optional[ProtocolRegistry] = None,
         command_runner: Optional[Callable[[DeviceInterface, CommandDefinition], CommandResult]] = None,
         *,
         use_async_commands: bool = True,
@@ -144,14 +222,22 @@ class AcquisitionService:
         self._command_definitions = command_definitions or {}
         self._command_runner = command_runner or (lambda interface, definition: execute_command(interface, definition))
         self._use_async_commands = use_async_commands
+        self._protocol_registry = protocol_registry
         self._stop_requested = False
         self._stats = ServiceStats()
         self._interface_lock = threading.RLock()
+        self._lock_monitor = _InterfaceLockMonitor(self._stats.interface_lock)
         self._command_queue: Queue[_CommandTask | None] = Queue()
         self._command_results: Queue[CommandExecutionEvent] = Queue()
         self._command_worker: Optional[threading.Thread] = None
         self._command_worker_stop = threading.Event()
         self._scheduled_states = [ScheduledCommandState(command) for command in config.acquisition.scheduled_commands]
+        self._decode_failure_count = 0
+        self._fallback_disabled = False
+        self._profile_sequence = self._build_profile_sequence()
+        self._current_profile_index = self._determine_current_profile_index()
+        self._profile_switch_pending: Optional[str] = None
+        self._command_metrics_history: Deque[Dict[str, Any]] = deque(maxlen=120)
 
     @property
     def stats(self) -> ServiceStats:
@@ -207,6 +293,17 @@ class AcquisitionService:
         metrics['inflight'] = inflight
         metrics['scheduled'] = scheduled_payload
 
+        timestamp = time.time()
+        history_entry = {
+            'timestamp': timestamp,
+            'timestamp_iso': datetime.utcfromtimestamp(timestamp).isoformat() + 'Z',
+            'queue_depth': metrics['queue_depth'],
+            'result_backlog': metrics['result_backlog'],
+            'inflight': inflight,
+        }
+        self._command_metrics_history.append(history_entry)
+        metrics['history'] = list(self._command_metrics_history)
+
         return metrics
 
     def _reset_schedule(self, base_time: float) -> None:
@@ -225,14 +322,55 @@ class AcquisitionService:
             self._stats.last_frame_at = datetime.utcnow()
 
 
+    def _apply_lab_retry_overrides(
+        self,
+        definition: CommandDefinition,
+        category: str,
+        retries_value: int,
+        backoff_value: float,
+    ) -> tuple[int, float, bool]:
+        acquisition_cfg = self._config.acquisition
+        lab_enabled = getattr(acquisition_cfg, 'lab_retry_enabled', False)
+        lab_applied = False
+        if not lab_enabled:
+            return retries_value, backoff_value, lab_applied
+        categories = {
+            str(entry).lower()
+            for entry in getattr(acquisition_cfg, 'lab_retry_categories', ())
+            if isinstance(entry, str)
+        }
+        commands = {
+            str(entry).lower()
+            for entry in getattr(acquisition_cfg, 'lab_retry_commands', ())
+            if isinstance(entry, str)
+        }
+        category_lower = str(category or '').lower()
+        command_lower = definition.name.lower()
+        category_match = not categories or category_lower in categories
+        command_match = bool(commands) and command_lower in commands
+        if category_match or command_match:
+            override_retries = getattr(acquisition_cfg, 'lab_retry_max_retries', None)
+            if override_retries is not None and override_retries > retries_value:
+                retries_value = override_retries
+                lab_applied = True
+            override_backoff = getattr(acquisition_cfg, 'lab_retry_backoff_s', None)
+            if override_backoff is not None and override_backoff > backoff_value:
+                backoff_value = override_backoff
+                lab_applied = True
+        return retries_value, backoff_value, lab_applied
+
     def _build_command_context(
         self,
         state: ScheduledCommandState,
         definition: CommandDefinition,
     ) -> CommandExecutionContext:
+        acquisition_cfg = self._config.acquisition
         retries = state.config.max_retries
         if retries is None:
-            retries = definition.default_max_retries or 0
+            if definition.default_max_retries is not None:
+                retries = definition.default_max_retries
+            else:
+                retries = acquisition_cfg.default_command_max_retries
         try:
             retries_value = int(retries)
         except (TypeError, ValueError):
@@ -241,7 +379,10 @@ class AcquisitionService:
 
         backoff = state.config.retry_backoff_s
         if backoff is None:
-            backoff = definition.default_retry_backoff_s or 1.0
+            if definition.default_retry_backoff_s is not None:
+                backoff = definition.default_retry_backoff_s
+            else:
+                backoff = acquisition_cfg.default_command_retry_backoff_s
         try:
             backoff_value = float(backoff)
         except (TypeError, ValueError):
@@ -255,6 +396,13 @@ class AcquisitionService:
 
         schedule_payload = state.config.to_dict()
 
+        retries_value, backoff_value, lab_retry_applied = self._apply_lab_retry_overrides(
+            definition,
+            category,
+            retries_value,
+            backoff_value,
+        )
+
         return CommandExecutionContext(
             definition=definition,
             retries=retries_value,
@@ -262,7 +410,111 @@ class AcquisitionService:
             calibration_label=calibration_label,
             category=category,
             schedule_payload=schedule_payload,
+            lab_retry_applied=lab_retry_applied,
         )
+
+    def _build_profile_sequence(self) -> List[str]:
+        device = self._config.device
+        sequence: List[str] = []
+        seen: set[str] = set()
+
+        def _append(name: Optional[str]) -> None:
+            if not name:
+                return
+            candidate = name.strip()
+            if not candidate:
+                return
+            lowered = candidate.lower()
+            if lowered in seen:
+                return
+            sequence.append(candidate)
+            seen.add(lowered)
+
+        _append(device.profile)
+        for fallback in device.fallback_profiles:
+            _append(fallback)
+        return sequence or ['cx505']
+
+    def _determine_current_profile_index(self) -> int:
+        current = (self._config.device.profile or '').strip().lower()
+        for index, name in enumerate(self._profile_sequence):
+            if name.lower() == current:
+                return index
+        return 0
+
+    def _reset_scheduled_inflight(self) -> None:
+        for state in self._scheduled_states:
+            state.in_flight = False
+            state.pending_source = None
+            state.pending_context = None
+
+    def _apply_profile(self, profile_name: str) -> Optional[str]:
+        if not self._protocol_registry:
+            return None
+        device = self._config.device
+        previous_profile = device.profile
+        device.profile = profile_name
+        try:
+            profile = self._protocol_registry.apply_to_device(device)
+        except KeyError:
+            device.profile = previous_profile
+            return None
+        self._command_definitions = profile.commands or {}
+        return profile.name
+
+    def _handle_decode_failure(self, frame: bytes, exc: Exception, session_handle: SessionHandle) -> None:
+        _ = frame  # frame already logged by ingestor
+        if self._profile_switch_pending or self._fallback_disabled:
+            return
+        self._decode_failure_count += 1
+        threshold = self._config.acquisition.decode_failure_threshold
+        if self._decode_failure_count < threshold:
+            return
+        next_index = self._current_profile_index + 1
+        if next_index >= len(self._profile_sequence):
+            self._decode_failure_count = 0
+            return
+        next_profile = self._profile_sequence[next_index]
+        if not self._protocol_registry:
+            payload = {
+                'attempted_profile': next_profile,
+                'reason': 'protocol registry unavailable',
+                'decode_failures': threshold,
+            }
+            session_handle.log_event('warning', 'session', 'Profile fallback unavailable', payload)
+            self._decode_failure_count = 0
+            self._fallback_disabled = True
+            return
+        applied = self._apply_profile(next_profile)
+        if applied is None:
+            payload = {
+                'attempted_profile': next_profile,
+                'reason': 'profile not found in registry',
+                'decode_failures': self._config.acquisition.decode_failure_threshold,
+            }
+            session_handle.log_event('warning', 'session', 'Profile fallback failed', payload)
+            self._decode_failure_count = 0
+            self._fallback_disabled = True
+            return
+        previous_profile = self._profile_sequence[self._current_profile_index]
+        self._current_profile_index = next_index
+        self._profile_sequence[self._current_profile_index] = applied
+        self._profile_switch_pending = applied
+        self._decode_failure_count = 0
+        self._reset_scheduled_inflight()
+        if self._use_async_commands:
+            self._shutdown_command_worker()
+        payload = {
+            'previous_profile': previous_profile,
+            'next_profile': applied,
+            'decode_failures': threshold,
+        }
+        session_handle.log_event('info', 'session', 'Activating fallback profile', payload)
+        if not self._config.acquisition.quiet:
+            print(f"Switching to fallback profile '{applied}' after {threshold} decode failures")
+
+    def _reset_decode_failures(self) -> None:
+        self._decode_failure_count = 0
 
     def _queue_command_task(
         self,
@@ -289,13 +541,19 @@ class AcquisitionService:
                 break
             context = task.context
             try:
-                with self._interface_lock:
+                self._lock_monitor.contend()
+                self._interface_lock.acquire()
+                self._lock_monitor.acquired('command')
+                try:
                     result, attempts = self._execute_command_with_policy(
                         interface,
                         context.definition,
                         context.retries,
                         context.backoff_s,
                     )
+                finally:
+                    self._lock_monitor.released('command')
+                    self._interface_lock.release()
             except CommandExpectationError as exc:
                 event = CommandExecutionEvent(
                     state_index=task.state_index,
@@ -306,6 +564,7 @@ class AcquisitionService:
                     result=exc.result,
                     error='expectation mismatch',
                     completed_at=time.time(),
+                    error_type='CommandExpectationError',
                 )
             except CommandExecutionFailure as exc:
                 event = CommandExecutionEvent(
@@ -317,6 +576,7 @@ class AcquisitionService:
                     result=None,
                     error=str(exc.original),
                     completed_at=time.time(),
+                    error_type=type(exc.original).__name__,
                 )
             except Exception as exc:  # pylint: disable=broad-except
                 event = CommandExecutionEvent(
@@ -328,6 +588,7 @@ class AcquisitionService:
                     result=None,
                     error=str(exc),
                     completed_at=time.time(),
+                    error_type=type(exc).__name__,
                 )
             else:
                 event = CommandExecutionEvent(
@@ -339,6 +600,7 @@ class AcquisitionService:
                     result=result,
                     error=None,
                     completed_at=time.time(),
+                    error_type=None,
                 )
             finally:
                 self._command_queue.task_done()
@@ -419,7 +681,10 @@ class AcquisitionService:
             'source': event.source,
             'attempts': event.attempts,
             'schedule': context.schedule_payload,
+            'timestamp': datetime.utcnow().isoformat(),
+            'lab_retry_applied': context.lab_retry_applied,
         }
+        retry_policy = {'max_retries': context.retries, 'backoff_s': context.backoff_s}
 
         state.in_flight = False
         state.pending_source = None
@@ -438,6 +703,7 @@ class AcquisitionService:
                 'matched_expectation': result.matched_expectation,
                 'runs_completed': state.runs,
                 'next_due': state.next_due,
+                'retry_policy': retry_policy,
             }
             if calibration_label:
                 payload['calibration_label'] = calibration_label
@@ -463,6 +729,9 @@ class AcquisitionService:
                 'frames': result.frames_as_hex,
                 'expected_hex': result.expected_hex,
                 'matched_expectation': result.matched_expectation,
+                'error_type': event.error_type or 'CommandExpectationError',
+                'retry_policy': retry_policy,
+                'exception_repr': repr(exc),
             }
             if calibration_label:
                 payload['calibration_label'] = calibration_label
@@ -473,7 +742,14 @@ class AcquisitionService:
 
         state.mark_attempt(event.completed_at, False)
         state.last_error = event.error or 'failure'
-        payload = {**base_payload, 'error': event.error or 'unknown error'}
+        payload = {
+            **base_payload,
+            'error': event.error or 'unknown error',
+            'error_message': event.error or 'unknown error',
+            'error_type': event.error_type,
+            'retry_policy': retry_policy,
+            'exception_repr': event.error,
+        }
         if calibration_label:
             payload['calibration_label'] = calibration_label
         session_handle.log_event('warning', category, f'{label} command failed', payload)
@@ -573,6 +849,7 @@ class AcquisitionService:
             return
 
         context = self._build_command_context(state, definition)
+        retry_policy = {'max_retries': context.retries, 'backoff_s': context.backoff_s}
 
         if self._use_async_commands and source != 'startup':
             if state_index is None:
@@ -606,6 +883,11 @@ class AcquisitionService:
                 'expected_hex': result.expected_hex,
                 'matched_expectation': result.matched_expectation,
                 'schedule': context.schedule_payload,
+                'error_type': 'CommandExpectationError',
+                'retry_policy': retry_policy,
+                'lab_retry_applied': context.lab_retry_applied,
+                'exception_repr': repr(exc),
+                'timestamp': datetime.utcnow().isoformat(),
             }
             if context.calibration_label:
                 payload['calibration_label'] = context.calibration_label
@@ -621,7 +903,13 @@ class AcquisitionService:
                 'source': source,
                 'attempts': exc.attempts,
                 'error': str(exc.original),
+                'error_message': str(exc.original),
                 'schedule': context.schedule_payload,
+                'error_type': type(exc.original).__name__,
+                'retry_policy': retry_policy,
+                'lab_retry_applied': context.lab_retry_applied,
+                'exception_repr': repr(exc.original),
+                'timestamp': datetime.utcnow().isoformat(),
             }
             if context.calibration_label:
                 payload['calibration_label'] = context.calibration_label
@@ -644,6 +932,9 @@ class AcquisitionService:
             'schedule': context.schedule_payload,
             'runs_completed': state.runs,
             'next_due': state.next_due,
+            'retry_policy': retry_policy,
+            'lab_retry_applied': context.lab_retry_applied,
+            'timestamp': datetime.utcnow().isoformat(),
         }
         if context.calibration_label:
             payload['calibration_label'] = context.calibration_label
@@ -678,10 +969,45 @@ class AcquisitionService:
                         profile = self._config.device.profile or '<unspecified>'
                         print(f"Startup command '{name}' not defined for profile {profile}")
                     continue
-                retries = definition.default_max_retries or 0
-                backoff = definition.default_retry_backoff_s or 1.0
+                raw_retries = (
+                    definition.default_max_retries
+                    if definition.default_max_retries is not None
+                    else acquisition_cfg.default_command_max_retries
+                )
+                raw_backoff = (
+                    definition.default_retry_backoff_s
+                    if definition.default_retry_backoff_s is not None
+                    else acquisition_cfg.default_command_retry_backoff_s
+                )
                 try:
-                    result, attempts = self._execute_command_with_policy(interface, definition, retries, backoff)
+                    retries_value = int(raw_retries)
+                except (TypeError, ValueError):
+                    retries_value = acquisition_cfg.default_command_max_retries
+                retries_value = max(retries_value, 0)
+                try:
+                    backoff_value = float(raw_backoff)
+                except (TypeError, ValueError):
+                    backoff_value = acquisition_cfg.default_command_retry_backoff_s
+                backoff_value = max(backoff_value, 0.0)
+                category = definition.category or 'command'
+                if definition.calibration_label or (
+                    definition.category and 'calibration' in definition.category.lower()
+                ):
+                    category = 'calibration'
+                retries_value, backoff_value, lab_retry_applied = self._apply_lab_retry_overrides(
+                    definition,
+                    category,
+                    retries_value,
+                    backoff_value,
+                )
+                retry_policy = {'max_retries': retries_value, 'backoff_s': backoff_value}
+                try:
+                    result, attempts = self._execute_command_with_policy(
+                        interface,
+                        definition,
+                        retries_value,
+                        backoff_value,
+                    )
                 except CommandExpectationError as exc:
                     result = exc.result
                     self._ingest_command_result(result, ingestor)
@@ -694,6 +1020,11 @@ class AcquisitionService:
                         'frames': result.frames_as_hex,
                         'expected_hex': result.expected_hex,
                         'matched_expectation': result.matched_expectation,
+                        'retry_policy': retry_policy,
+                        'lab_retry_applied': lab_retry_applied,
+                        'error_type': 'CommandExpectationError',
+                        'exception_repr': repr(exc),
+                        'timestamp': datetime.utcnow().isoformat(),
                     }
                     session_handle.log_event('warning', 'command', 'Startup command expectation mismatch', payload)
                     if not quiet:
@@ -704,6 +1035,12 @@ class AcquisitionService:
                         'command': name,
                         'attempts': exc.attempts,
                         'error': str(exc.original),
+                        'error_message': str(exc.original),
+                        'error_type': type(exc.original).__name__,
+                        'retry_policy': retry_policy,
+                        'lab_retry_applied': lab_retry_applied,
+                        'exception_repr': repr(exc.original),
+                        'timestamp': datetime.utcnow().isoformat(),
                     }
                     session_handle.log_event('warning', 'command', 'Startup command failed', payload)
                     if not quiet:
@@ -717,6 +1054,9 @@ class AcquisitionService:
                     'bytes_read': result.bytes_read,
                     'duration_s': result.duration_s,
                     'frames': result.frames_as_hex,
+                    'retry_policy': retry_policy,
+                    'lab_retry_applied': lab_retry_applied,
+                    'timestamp': datetime.utcnow().isoformat(),
                 }
                 if result.expected_hex:
                     event_payload['expected_hex'] = result.expected_hex
@@ -766,6 +1106,7 @@ class AcquisitionService:
                 if listed is None:
                     with self._interface_lock:
                         listed = interface.open()
+                    self._start_command_worker(interface)
                     metadata = DeviceMetadata(
                         serial=listed.serial,
                         description=listed.description,
@@ -785,7 +1126,13 @@ class AcquisitionService:
                     analytics_engine = None
                     if getattr(self._config, 'analytics', None) and self._config.analytics.enabled:
                         analytics_engine = AnalyticsEngine(self._config.analytics)
-                    ingestor = FrameIngestor(self._config.ingestion, session_handle, analytics=analytics_engine)
+                    ingestor = FrameIngestor(
+                        self._config.ingestion,
+                        session_handle,
+                        analytics=analytics_engine,
+                        decode_error_callback=lambda frame, exc, sh=session_handle: self._handle_decode_failure(frame, exc, sh),
+                    )
+                    self._stats.analytics_profile = None
                     self._reset_schedule(time.time())
                     session_handle.log_event(
                         'info',
@@ -809,21 +1156,28 @@ class AcquisitionService:
                     record = ingestor.handle_frame(frame)
                     if record is None:
                         return
+                    self._reset_decode_failures()
                     self._stats.frames = ingestor.frames
                     self._stats.last_frame_at = datetime.utcnow()
+                    analytics_profile = ingestor.analytics_profile
+                    if analytics_profile is not None:
+                        self._stats.analytics_profile = analytics_profile
 
                 try:
                     lock_acquired = False
                     if self._use_async_commands:
                         lock_acquired = self._interface_lock.acquire(blocking=False)
                         if not lock_acquired:
+                            self._lock_monitor.contend()
                             time.sleep(0.05)
                             if self._use_async_commands and session_handle is not None:
                                 self._drain_command_results(session_handle, ingestor)
                             continue
+                        self._lock_monitor.acquired('window')
                     else:
                         self._interface_lock.acquire()
                         lock_acquired = True
+                        self._lock_monitor.acquired('window')
                     try:
                         bytes_read = interface.run_window(
                             acquisition_cfg.window_s,
@@ -833,6 +1187,7 @@ class AcquisitionService:
                         )
                     finally:
                         if lock_acquired:
+                            self._lock_monitor.released('window')
                             self._interface_lock.release()
                     self._stats.bytes_read += bytes_read
                     self._stats.last_window_bytes = bytes_read
@@ -849,6 +1204,27 @@ class AcquisitionService:
                     if self._use_async_commands:
                         self._drain_command_results(session_handle, ingestor)
                     self._process_scheduled_commands(interface, session_handle, ingestor, time.time())
+
+                    if self._profile_switch_pending:
+                        fallback_profile = self._profile_switch_pending
+                        if session_handle is not None:
+                            session_handle.log_event(
+                                'info',
+                                'session',
+                                'Session restarting with fallback profile',
+                                {
+                                    'profile': fallback_profile,
+                                },
+                            )
+                            session_handle.close(datetime.utcnow())
+                        with self._interface_lock:
+                            interface.close()
+                        listed = None
+                        session_handle = None
+                        ingestor = None
+                        analytics_engine = None
+                        self._profile_switch_pending = None
+                        continue
 
                 except KeyboardInterrupt:
                     self.request_stop()

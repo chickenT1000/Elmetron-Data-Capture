@@ -1,0 +1,41 @@
+[device]
+profile = "cx505"
+use_profile_defaults = true
+transport = "ftdi"
+# override index/serial at runtime via --extra-args
+index = 0
+
+[acquisition]
+window_s = 2.0
+idle_s = 1.0
+restart_delay_s = 2.0
+status_interval_s = 5.0
+startup_commands = []
+default_command_max_retries = 1
+default_command_retry_backoff_s = 1.0
+decode_failure_threshold = 3
+
+[storage]
+database_path = "data/live_rehearsal.sqlite"
+ensure_directories = true
+vacuum_on_start = false
+retention_days = 0
+
+[ingestion]
+annotate_device = true
+enrich_with_timestamp = true
+emit_raw_frame = true
+
+[analytics]
+enabled = true
+moving_average_window = 5
+stability_window = 12
+temperature_coefficient = 0.0
+reference_temperature = 25.0
+profiling_enabled = true
+max_frames_per_minute = 120
+
+[monitoring]
+log_rotation_task = ""
+log_rotation_max_age_minutes = 0
+log_rotation_probe_interval_s = 120

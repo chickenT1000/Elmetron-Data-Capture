@@ -4,10 +4,7 @@ import textwrap
 
 import pytest
 
-from elmetron.protocols.validator import (  # type: ignore
-    ValidationResult,
-    validate_profiles,
-)
+from elmetron.protocols.validator import ValidationResult, validate_profiles
 from validate_protocols import main as validate_cli
 
 
@@ -58,6 +55,26 @@ def test_validate_profiles_flags_command_issues() -> None:
     assert any("write_hex" in issue.location for issue in result.errors)
 
 
+def test_validate_profiles_duplicate_commands() -> None:
+    profile = _valid_profile()
+    profile["commands"]["repeat"] = {
+        "write_hex": "AA CC",
+        "read_duration_s": 1.0,
+    }
+    profile["commands"]["REPEAT"] = {
+        "write_hex": "AA DD",
+        "read_duration_s": 1.0,
+    }
+    result = validate_profiles({"cx505": profile})
+    assert any("Duplicate command name" in issue.message for issue in result.errors)
+
+
+def test_validate_profiles_duplicate_profiles() -> None:
+    profile = _valid_profile()
+    result = validate_profiles({"cx505": profile, "CX505": profile})
+    assert any("Duplicate profile name" in issue.message for issue in result.errors)
+
+
 def test_validate_profiles_reports_missing_command_payload() -> None:
     profile = _valid_profile()
     profile["commands"]["noop"] = {}  # type: ignore[index]
@@ -87,6 +104,7 @@ def test_cli_reports_errors(tmp_path, capsys) -> None:
     assert "Unknown transport" in captured.out
     assert "poll_interval_s" in captured.out
     assert "write_ascii" in captured.out
+    assert "Summary:" in captured.out
 
 
 def test_cli_warnings_toggle(tmp_path, capsys) -> None:
@@ -115,9 +133,10 @@ def test_cli_warnings_toggle(tmp_path, capsys) -> None:
     )
 
     exit_code = validate_cli([str(registry)])
-    assert exit_code == 0
     captured = capsys.readouterr()
+    assert exit_code == 0
     assert "Validation OK" in captured.out
+    assert "Summary:" in captured.out
 
     exit_code = validate_cli([str(registry), "--warnings-as-errors"])
     captured = capsys.readouterr()

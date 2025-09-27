@@ -1,0 +1,51 @@
+{
+  "state": "running",
+  "frames": 365,
+  "bytes_read": 36438,
+  "last_frame_at": "2025-09-27T10:42:23.687377",
+  "last_window_started": "2025-09-27T10:42:23.129787",
+  "watchdog_alert": null,
+  "command_metrics": {
+    "queue_depth": 0,
+    "result_backlog": 0,
+    "inflight": 0,
+    "history": [
+      {
+        "timestamp": 1758969744.6215994,
+        "timestamp_iso": "2025-09-27T10:42:24.621599Z",
+        "queue_depth": 0,
+        "result_backlog": 0,
+        "inflight": 0
+      }
+    ],
+    "worker_running": true,
+    "async_enabled": true
+  },
+  "interface_lock": {
+    "current_owner": "window",
+    "last_wait_s": 0.0,
+    "max_wait_s": 0.0,
+    "average_wait_s": 0.0,
+    "total_wait_s": 0.0,
+    "wait_events": 0,
+    "last_hold_s": 2.337600899976678,
+    "max_hold_s": 2.346050299995113,
+    "average_hold_s": 2.3292321978011525,
+    "total_hold_s": 423.9202599998098,
+    "hold_events": 182
+  },
+  "analytics_profile": {
+    "frames_processed": 364,
+    "throttled_frames": 0,
+    "current_rate_per_minute": 36.698,
+    "average_processing_time_ms": 0.17,
+    "max_processing_time_ms": 0.454,
+    "last_processing_time_ms": 0.137
+  },
+  "response_times": {
+    "last_ms": 0.068,
+    "average_ms": 0.068,
+    "max_ms": 0.068,
+    "samples": 1
+  }
+}

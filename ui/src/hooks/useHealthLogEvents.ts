@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { buildApiUrl } from '../config';
-import { fetchHealthLogEvents, type HealthLogEvent } from '../api/health';
+import {
+  fetchHealthLogEvents,
+  streamHealthLogsNdjson,
+  type HealthLogEvent,
+} from '../api/health';
 
 const DEFAULT_LIMIT = 25;
 const DEFAULT_REFRESH_MS = 5000;
@@ -72,10 +76,17 @@ export interface UseHealthLogEventsResult {
   lastEventId: number | null;
 }
 
+export interface UseHealthLogEventsOptions {
+  limit?: number;
+  fallbackMs?: number;
+  level?: string;
+  category?: string;
+}
+
 export const useHealthLogEvents = (
-  limit: number = DEFAULT_LIMIT,
-  fallbackMs: number = DEFAULT_REFRESH_MS,
+  options: UseHealthLogEventsOptions = {},
 ): UseHealthLogEventsResult => {
+  const { limit = DEFAULT_LIMIT, fallbackMs = DEFAULT_REFRESH_MS, level, category } = options;
   const [events, setEvents] = useState<HealthLogEvent[]>([]);
   const [connectionState, setConnectionState] = useState<HealthLogConnectionState>('idle');
   const [error, setError] = useState<Error | null>(null);
@@ -110,7 +121,7 @@ export const useHealthLogEvents = (
       setConnectionState('loading');
     }
     try {
-      const snapshot = await fetchHealthLogEvents({ limit });
+      const snapshot = await fetchHealthLogEvents({ limit, level, category });
       updateEvents(snapshot, true);
       setError(null);
     } catch (err) {
@@ -118,13 +129,14 @@ export const useHealthLogEvents = (
       setError(nextError);
       setConnectionState('error');
     }
-  }, [limit, updateEvents]);
+  }, [category, level, limit, updateEvents]);
 
   useEffect(() => {
     let cancelled = false;
     let eventSource: EventSource | null = null;
     let pollTimer: number | null = null;
     let reconnectTimer: number | null = null;
+    let ndjsonReader: ReadableStreamDefaultReader<string> | null = null;
 
     const cleanupSource = () => {
       if (eventSource) {
@@ -155,7 +167,12 @@ export const useHealthLogEvents = (
       const poll = async () => {
         try {
           const since = lastEventIdRef.current;
-          const payload = await fetchHealthLogEvents({ limit, sinceId: since ?? undefined });
+          const payload = await fetchHealthLogEvents({
+            limit,
+            sinceId: since ?? undefined,
+            level,
+            category,
+          });
           if (!cancelled && payload.length) {
             updateEvents(payload);
           }
@@ -197,6 +214,12 @@ export const useHealthLogEvents = (
       const params = new URLSearchParams({ limit: String(limit) });
       if (lastEventIdRef.current !== null) {
         params.set('since_id', String(lastEventIdRef.current));
+      }
+      if (level) {
+        params.set('level', level);
+      }
+      if (category) {
+        params.set('category', category);
       }
       const streamUrl = `${buildApiUrl('/health/logs/stream')}?${params.toString()}`;
       const source = new window.EventSource(streamUrl);
@@ -242,7 +265,7 @@ export const useHealthLogEvents = (
       setConnectionState('loading');
       setError(null);
       try {
-        const initial = await fetchHealthLogEvents({ limit });
+        const initial = await fetchHealthLogEvents({ limit, sinceId: undefined, level, category });
         if (!cancelled) {
           updateEvents(initial, true);
         }
@@ -256,8 +279,52 @@ export const useHealthLogEvents = (
           return;
         }
       }
-      if (!cancelled) {
+      if (!cancelled && typeof window !== 'undefined' && typeof window.EventSource === 'function') {
         connectStream();
+      } else if (!cancelled) {
+        // fallback to NDJSON stream
+        setConnectionState('connecting');
+        (async () => {
+          while (!cancelled) {
+            try {
+              ndjsonReader = await streamHealthLogsNdjson({ limit, level, category });
+              setConnectionState('streaming');
+              let buffer = '';
+              while (!cancelled && ndjsonReader) {
+                const { value, done } = await ndjsonReader.read();
+                if (done) break;
+                if (value) {
+                  buffer += value;
+                  const lines = buffer.split('\n');
+                  buffer = lines.pop() ?? '';
+                  const parsed: HealthLogEvent[] = [];
+                  for (const line of lines) {
+                    if (!line.trim()) continue;
+                    try {
+                      parsed.push(JSON.parse(line) as HealthLogEvent);
+                    } catch (parseErr) {
+                      console.warn('Failed to parse NDJSON line', parseErr);
+                    }
+                  }
+                  if (parsed.length) {
+                    updateEvents(parsed);
+                  }
+                }
+              }
+            } catch (streamErr) {
+              if (!cancelled) {
+                setError(streamErr instanceof Error ? streamErr : new Error('NDJSON stream error'));
+                setConnectionState('error');
+                await new Promise((resolve) => setTimeout(resolve, Math.max(fallbackMsRef.current, 1000)));
+              }
+            } finally {
+              if (ndjsonReader) {
+                ndjsonReader.cancel().catch(() => undefined);
+                ndjsonReader = null;
+              }
+            }
+          }
+        })().catch((err) => console.error('NDJSON stream failed', err));
       }
     };
 
@@ -268,9 +335,13 @@ export const useHealthLogEvents = (
       clearPolling();
       cleanupSource();
       clearReconnect();
+      if (ndjsonReader) {
+        ndjsonReader.cancel().catch(() => undefined);
+        ndjsonReader = null;
+      }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [limit, updateEvents]);
+  }, [limit, updateEvents, category, level]);
 
   const isStreaming = connectionState === 'streaming';
   const isPolling = connectionState === 'polling';

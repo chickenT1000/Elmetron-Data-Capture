@@ -55,13 +55,22 @@ class ListedDevice:
 FrameHandler = Callable[[bytes], None]
 
 
-SUPPORTED_TRANSPORTS = {"ftdi", "ble"}
+SUPPORTED_TRANSPORTS = {"ftdi", "ble", "sim"}
 
 
 def list_devices(transport: str = "ftdi") -> list[ListedDevice]:
-    """Enumerate visible devices for *transport* (currently FTDI only)."""
+    """Enumerate visible devices for *transport*."""
 
     transport = transport.lower()
+    if transport == "sim":
+        return [
+            ListedDevice(
+                index=0,
+                serial="SIM-DEVICE",
+                description="Simulated CX-505",
+                transport="sim",
+            )
+        ]
     if transport != "ftdi":
         raise ValueError(f"Device enumeration is not implemented for transport '{transport}'")
     devices: list[ListedDevice] = []
@@ -321,6 +330,8 @@ def create_interface(
         return CX505Interface(config)
     if transport == "ble":
         return BleBridgeInterface(config, adapter_factory=adapter_factory)
+    if transport == "sim":
+        return SimulatedInterface(config)
     raise ValueError(f"Unsupported transport '{config.transport}'")
 
 
@@ -348,4 +359,67 @@ def _parse_hex_bytes(payload: str) -> Optional[bytes]:
         return None
     parts = payload.replace(",", " ").split()
     return bytes(int(part, 16) for part in parts)
+
+
+class SimulatedInterface(DeviceInterface):
+    """In-memory simulation of a CX-505 interface for bench harness runs."""
+
+    def __init__(self, config: DeviceConfig) -> None:
+        self._config = config
+        self._device = ListedDevice(
+            index=config.index,
+            serial=config.serial or "SIM-DEVICE",
+            description="Simulated CX-505",
+            transport="sim",
+        )
+        self._opened = False
+        self._frame_counter = 0
+
+    def open(self) -> ListedDevice:
+        self._opened = True
+        return self._device
+
+    def close(self) -> None:
+        self._opened = False
+
+    def run_window(
+        self,
+        duration_s: float,
+        frame_handler: Optional[FrameHandler],
+        log_path: Optional[str] = None,
+        print_raw: bool = False,
+    ) -> int:
+        _ = print_raw
+        self.open()
+        samples = max(int(duration_s * 5), 1)
+        frames: list[bytes] = []
+        total = 0
+        for _ in range(samples):
+            frame = self._generate_frame()
+            frames.append(frame)
+            total += len(frame)
+            if frame_handler:
+                frame_handler(frame)
+        if log_path:
+            with open(log_path, "ab") as handle:
+                for frame in frames:
+                    handle.write(frame + b"\n")
+        return total
+
+    def write(self, payloads: Iterable[bytes]) -> int:
+        return sum(len(payload) for payload in payloads)
+
+    def __enter__(self) -> "SimulatedInterface":
+        self.open()
+        return self
+
+    def __exit__(self, exc_type, exc, tb) -> None:  # type: ignore[override]
+        self.close()
+
+    def _generate_frame(self) -> bytes:
+        self._frame_counter += 1
+        value = 700 + (self._frame_counter % 50)
+        timestamp = int(time.time())
+        payload = f"SIM:{self._frame_counter:04d}:{value:03d}:{timestamp}".encode("ascii")
+        return payload[:64]
 

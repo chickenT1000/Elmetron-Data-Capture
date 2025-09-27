@@ -1,8 +1,9 @@
-﻿"""SQLite persistence layer for Elmetron capture sessions."""
+"""SQLite persistence layer for Elmetron capture sessions."""
 from __future__ import annotations
 
 import json
 import sqlite3
+from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -144,6 +145,7 @@ class Database:
                 CREATE INDEX IF NOT EXISTS idx_audit_events_session ON audit_events(session_id);
                 """
             )
+            self._apply_migrations(conn)
         if self._config.vacuum_on_start:
             with conn:
                 conn.execute('VACUUM')
@@ -155,26 +157,217 @@ class Database:
             return
         cutoff = now - timedelta(days=self._config.retention_days)
         conn = self.connect()
+        cutoff_iso = cutoff.isoformat()
+
+        def _initial_summary() -> Dict[str, Any]:
+            return {
+                'session_id': None,
+                'removed_measurements': 0,
+                'removed_frames': 0,
+                'removed_derived_metrics': 0,
+                'removed_annotations': 0,
+                'removed_metadata': 0,
+                'removed_audit_events': 0,
+                'session_deleted': False,
+            }
+
+        summaries = defaultdict(_initial_summary)
+
         with conn:
+            measurement_rows = conn.execute(
+                """
+                SELECT session_id, COUNT(*) AS removed
+                FROM measurements
+                WHERE measurement_timestamp IS NOT NULL AND measurement_timestamp < ?
+                GROUP BY session_id
+                """,
+                (cutoff_iso,),
+            ).fetchall()
+            for row in measurement_rows:
+                session_id = int(row['session_id'])
+                summary = summaries[session_id]
+                if summary['session_id'] is None:
+                    summary['session_id'] = session_id
+                summary['removed_measurements'] = int(row['removed'])
+
+            derived_rows = conn.execute(
+                """
+                SELECT m.session_id, COUNT(dm.measurement_id) AS removed
+                FROM derived_metrics dm
+                JOIN measurements m ON m.id = dm.measurement_id
+                WHERE m.measurement_timestamp IS NOT NULL AND m.measurement_timestamp < ?
+                GROUP BY m.session_id
+                """,
+                (cutoff_iso,),
+            ).fetchall()
+            for row in derived_rows:
+                session_id = int(row['session_id'])
+                summary = summaries[session_id]
+                if summary['session_id'] is None:
+                    summary['session_id'] = session_id
+                summary['removed_derived_metrics'] = int(row['removed'])
+
+            annotation_rows = conn.execute(
+                """
+                SELECT m.session_id, COUNT(a.id) AS removed
+                FROM annotations a
+                JOIN measurements m ON m.id = a.measurement_id
+                WHERE m.measurement_timestamp IS NOT NULL AND m.measurement_timestamp < ?
+                GROUP BY m.session_id
+                """,
+                (cutoff_iso,),
+            ).fetchall()
+            for row in annotation_rows:
+                session_id = int(row['session_id'])
+                summary = summaries[session_id]
+                if summary['session_id'] is None:
+                    summary['session_id'] = session_id
+                summary['removed_annotations'] = int(row['removed'])
+
+            frame_rows = conn.execute(
+                """
+                SELECT session_id, COUNT(*) AS removed
+                FROM raw_frames
+                WHERE captured_at < ?
+                GROUP BY session_id
+                """,
+                (cutoff_iso,),
+            ).fetchall()
+            for row in frame_rows:
+                session_id = int(row['session_id'])
+                summary = summaries[session_id]
+                if summary['session_id'] is None:
+                    summary['session_id'] = session_id
+                summary['removed_frames'] = int(row['removed'])
+
+            ended_session_rows = conn.execute(
+                "SELECT id FROM sessions WHERE ended_at IS NOT NULL AND ended_at < ?",
+                (cutoff_iso,),
+            ).fetchall()
+            ended_session_ids = {int(row['id']) for row in ended_session_rows}
+            for session_id in ended_session_ids:
+                summary = summaries[session_id]
+                if summary['session_id'] is None:
+                    summary['session_id'] = session_id
+                summary['session_deleted'] = True
+
+            metadata_rows = conn.execute(
+                """
+                SELECT session_id, COUNT(*) AS removed
+                FROM session_metadata
+                WHERE session_id IN (
+                    SELECT id FROM sessions WHERE ended_at IS NOT NULL AND ended_at < ?
+                )
+                GROUP BY session_id
+                """,
+                (cutoff_iso,),
+            ).fetchall()
+            for row in metadata_rows:
+                session_id = int(row['session_id'])
+                summary = summaries[session_id]
+                if summary['session_id'] is None:
+                    summary['session_id'] = session_id
+                summary['removed_metadata'] = int(row['removed'])
+
+            audit_rows = conn.execute(
+                """
+                SELECT session_id, COUNT(*) AS removed
+                FROM audit_events
+                WHERE session_id IN (
+                    SELECT id FROM sessions WHERE ended_at IS NOT NULL AND ended_at < ?
+                )
+                GROUP BY session_id
+                """,
+                (cutoff_iso,),
+            ).fetchall()
+            for row in audit_rows:
+                session_id = int(row['session_id'])
+                summary = summaries[session_id]
+                if summary['session_id'] is None:
+                    summary['session_id'] = session_id
+                summary['removed_audit_events'] = int(row['removed'])
+
+            if not summaries and not frame_rows and not ended_session_ids:
+                return
+
+            conn.execute(
+                """
+                DELETE FROM derived_metrics
+                WHERE measurement_id IN (
+                    SELECT id FROM measurements
+                    WHERE measurement_timestamp IS NOT NULL AND measurement_timestamp < ?
+                )
+                """,
+                (cutoff_iso,),
+            )
+            conn.execute(
+                """
+                DELETE FROM annotations
+                WHERE measurement_id IN (
+                    SELECT id FROM measurements
+                    WHERE measurement_timestamp IS NOT NULL AND measurement_timestamp < ?
+                )
+                """,
+                (cutoff_iso,),
+            )
             conn.execute(
                 "DELETE FROM measurements WHERE measurement_timestamp IS NOT NULL AND measurement_timestamp < ?",
-                (cutoff.isoformat(),),
+                (cutoff_iso,),
             )
             conn.execute(
                 "DELETE FROM raw_frames WHERE captured_at < ?",
-                (cutoff.isoformat(),),
+                (cutoff_iso,),
             )
             conn.execute(
                 "DELETE FROM session_metadata WHERE session_id IN (SELECT id FROM sessions WHERE ended_at IS NOT NULL AND ended_at < ?)",
-                (cutoff.isoformat(),),
+                (cutoff_iso,),
             )
             conn.execute(
                 "DELETE FROM audit_events WHERE session_id IN (SELECT id FROM sessions WHERE ended_at IS NOT NULL AND ended_at < ?)",
-                (cutoff.isoformat(),),
+                (cutoff_iso,),
+            )
+            if ended_session_ids:
+                conn.executemany(
+                    "DELETE FROM sessions WHERE id = ?",
+                    ((session_id,) for session_id in ended_session_ids),
+                )
+
+            retention_entries = [
+                {
+                    key: value
+                    for key, value in summary.items()
+                    if not (key == 'session_id' and value is None)
+                }
+                for summary in summaries.values()
+            ]
+            retention_entries = [entry for entry in retention_entries if entry.get('session_id') is not None]
+
+            retention_entries.sort(key=lambda item: item.get('session_id') or 0)
+
+            if not retention_entries:
+                return
+
+            retention_session_id = self._ensure_retention_session(conn)
+            payload = json.dumps(
+                {
+                    'cutoff': cutoff_iso,
+                    'retention_days': self._config.retention_days,
+                    'changes': retention_entries,
+                },
+                ensure_ascii=False,
             )
             conn.execute(
-                "DELETE FROM sessions WHERE ended_at IS NOT NULL AND ended_at < ?",
-                (cutoff.isoformat(),),
+                """
+                INSERT INTO audit_events (session_id, level, category, message, payload_json)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (
+                    retention_session_id,
+                    'info',
+                    'retention',
+                    'Applied data retention policy',
+                    payload,
+                ),
             )
 
     def start_session(
@@ -303,6 +496,20 @@ class Database:
                 'created_at': row['created_at'],
             })
         return events
+
+    def _apply_migrations(self, conn: sqlite3.Connection) -> None:
+        row = conn.execute('PRAGMA user_version').fetchone()
+        current_version = int(row[0]) if row is not None else 0
+        if current_version < 1:
+            conn.executescript(
+                """
+                CREATE INDEX IF NOT EXISTS idx_measurements_session_timestamp
+                    ON measurements(session_id, measurement_timestamp);
+                CREATE INDEX IF NOT EXISTS idx_raw_frames_session_captured_at
+                    ON raw_frames(session_id, captured_at);
+                """
+            )
+            conn.execute('PRAGMA user_version = 1')
 
     def recent_sessions(
         self,
@@ -436,6 +643,26 @@ class Database:
             f"UPDATE instruments SET {assignments}, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
             params,
         )
+
+    def _ensure_retention_session(self, conn: sqlite3.Connection) -> int:
+        row = conn.execute(
+            "SELECT id FROM sessions WHERE note = ? LIMIT 1",
+            ('Retention log',),
+        ).fetchone()
+        if row:
+            return int(row['id']) if isinstance(row, sqlite3.Row) else int(row[0])
+
+        metadata = DeviceMetadata(
+            serial='SYSTEM-RETENTION',
+            description='Retention log',
+            model='system',
+        )
+        instrument_id = self._ensure_instrument(conn, metadata)
+        cursor = conn.execute(
+            "INSERT INTO sessions (instrument_id, started_at, note) VALUES (?, ?, ?)",
+            (instrument_id, datetime.utcnow().isoformat(), 'Retention log'),
+        )
+        return int(cursor.lastrowid)
 
 
 class SessionHandle:

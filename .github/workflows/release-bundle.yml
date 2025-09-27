@@ -24,10 +24,43 @@ on:
       - "v*"
 
 jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install test dependencies
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          fi
+          if [ -f requirements-dev.txt ]; then
+            pip install -r requirements-dev.txt
+          fi
+
+      - name: Run test suite
+        shell: bash
+        run: |
+          python -m pytest
+
   build-bundle:
     runs-on: ubuntu-latest
+    needs: tests
     env:
       RELEASE_STAMP: ${{ github.run_id }}
+      LATEST_SESSIONS: ${{ github.event_name == 'workflow_dispatch' && inputs.latest_sessions || '1' }}
+      RELEASE_VERSION_INPUT: ${{ github.event_name == 'workflow_dispatch' && inputs.release_version || '' }}
+      CONFIG_OVERRIDE_INPUT: ${{ github.event_name == 'workflow_dispatch' && inputs.config_path || '' }}
+      PROTOCOLS_OVERRIDE_INPUT: ${{ github.event_name == 'workflow_dispatch' && inputs.protocols_path || '' }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -41,6 +74,7 @@ jobs:
         shell: bash
         run: |
           python -m pip install --upgrade pip
+          pip install pytest
           if [ -f requirements.txt ]; then
             pip install -r requirements.txt
           fi
@@ -48,14 +82,50 @@ jobs:
             pip install -r requirements-release.txt
           fi
 
+      - name: Prepare sample dataset
+        shell: bash
+        run: |
+          python - <<'PY'
+from datetime import datetime, timedelta
+from pathlib import Path
+
+from elmetron.config import AppConfig
+from elmetron.storage.database import Database, DeviceMetadata
+
+config = AppConfig()
+database = Database(config.storage)
+database.initialise()
+
+session = database.start_session(
+    datetime.utcnow() - timedelta(minutes=5),
+    DeviceMetadata(serial="CI-DEVICE", description="CI export dataset", model="CX-505"),
+    {"ci": "true"},
+)
+session.log_event('info', 'ci', 'CI session initialised', {'source': 'ci'})
+
+payload = {
+    'raw_hex': '01020304',
+    'measurement': {
+        'timestamp': datetime.utcnow().isoformat(timespec='seconds') + 'Z',
+        'value': 7.05,
+        'unit': 'pH',
+        'temperature': 25.0,
+        'temperature_unit': 'C',
+    },
+}
+
+session.store_capture(datetime.utcnow(), bytes.fromhex('01020304'), payload, derived_metrics={'moving_average': 7.04})
+session.close()
+PY
+
       - name: Build release bundle
         id: build
         shell: bash
         env:
-          LATEST: ${{ inputs.latest_sessions }}
-          RELEASE_VERSION: ${{ inputs.release_version }}
-          CONFIG_OVERRIDE: ${{ inputs.config_path }}
-          PROTOCOLS_OVERRIDE: ${{ inputs.protocols_path }}
+          LATEST: ${{ env.LATEST_SESSIONS }}
+          RELEASE_VERSION: ${{ env.RELEASE_VERSION_INPUT }}
+          CONFIG_OVERRIDE: ${{ env.CONFIG_OVERRIDE_INPUT }}
+          PROTOCOLS_OVERRIDE: ${{ env.PROTOCOLS_OVERRIDE_INPUT }}
         run: |
           set -euo pipefail
           SELECTION_ARGS=("--latest" "${LATEST}")

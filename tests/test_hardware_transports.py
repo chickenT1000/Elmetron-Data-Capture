@@ -9,7 +9,7 @@ from typing import Deque, List
 import pytest
 
 from elmetron.config import DeviceConfig
-from elmetron.hardware import BleBridgeInterface, CX505Interface, create_interface
+from elmetron.hardware import BleBridgeInterface, CX505Interface, SimulatedInterface, create_interface
 
 
 class FakeBleAdapter:
@@ -42,6 +42,19 @@ def test_create_interface_ftdi_returns_cx505() -> None:
     config = DeviceConfig()
     interface = create_interface(config)
     assert isinstance(interface, CX505Interface)
+
+
+def test_create_interface_simulated_generates_frames(tmp_path) -> None:
+    config = DeviceConfig(transport="sim", profile="cx505_sim")
+    interface = create_interface(config)
+    assert isinstance(interface, SimulatedInterface)
+
+    frames: list[bytes] = []
+    total = interface.run_window(1.0, frame_handler=frames.append, log_path=str(tmp_path / "sim.log"))
+    assert total > 0
+    assert frames
+    assert frames[0].startswith(b"SIM:")
+    interface.close()
 
 
 def test_create_interface_ble_uses_supplied_adapter_factory() -> None:

@@ -25,11 +25,23 @@ class _DummyService:
 
 def test_snapshot_without_monitoring_returns_no_log_rotation():
     service = _DummyService()
+    service.stats.interface_lock.max_wait_s = 1.25
+    service.stats.interface_lock.average_hold_s = 0.5
+    service.stats.analytics_profile = {'frames_processed': 5, 'average_processing_time_ms': 2.5}
+    service.stats.interface_lock.max_wait_s = 1.25
+    service.stats.interface_lock.average_hold_s = 0.5
     monitor = HealthMonitor(service)
 
     snapshot = monitor.snapshot()
-
-    assert snapshot.log_rotation is None
+    assert snapshot.interface_lock is not None
+    assert snapshot.interface_lock['max_wait_s'] == pytest.approx(1.25)
+    assert snapshot.interface_lock['average_hold_s'] == pytest.approx(0.5)
+    assert snapshot.analytics_profile is not None
+    assert snapshot.analytics_profile['frames_processed'] == 5
+    assert snapshot.response_times is not None
+    assert snapshot.response_times['samples'] >= 1
+    assert snapshot.interface_lock['max_wait_s'] == pytest.approx(1.25)
+    assert snapshot.interface_lock['average_hold_s'] == pytest.approx(0.5)
 
 
 def test_log_rotation_status_cached(monkeypatch):

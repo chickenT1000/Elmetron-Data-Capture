@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import platform
 import subprocess
+import time
 from collections import deque
 from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta
@@ -148,6 +149,9 @@ class HealthStatus:
     log_rotation: Optional[Dict[str, Any]] = None
     watchdog_history: Optional[List[Dict[str, Any]]] = None
     command_metrics: Optional[Dict[str, Any]] = None
+    interface_lock: Optional[Dict[str, Any]] = None
+    analytics_profile: Optional[Dict[str, Any]] = None
+    response_times: Optional[Dict[str, Any]] = None
 
 
 class HealthMonitor:
@@ -161,6 +165,7 @@ class HealthMonitor:
         self._watchdog_events: Deque[Dict[str, Any]] = deque(maxlen=32)
         self._log_rotation_cache: Optional[Dict[str, Any]] = None
         self._log_rotation_checked_at: Optional[datetime] = None
+        self._response_times: Deque[float] = deque(maxlen=64)
 
     @property
     def service(self) -> AcquisitionService:
@@ -247,9 +252,17 @@ class HealthMonitor:
         return database.recent_audit_events(limit=limit, since_id=since_id)
 
     def snapshot(self) -> HealthStatus:
+        start = time.perf_counter()
         stats = self._service.stats
         state = 'running' if not self._service._stop_requested else 'stopping'  # pylint: disable=protected-access
-        return HealthStatus(
+        lock_metrics: Optional[Dict[str, Any]] = None
+        lock_stats = getattr(stats, 'interface_lock', None)
+        if lock_stats is not None:
+            try:
+                lock_metrics = asdict(lock_stats)
+            except TypeError:  # pragma: no cover - defensive fallback
+                lock_metrics = None
+        status = HealthStatus(
             state=state,
             frames=stats.frames,
             bytes_read=stats.bytes_read,
@@ -260,7 +273,24 @@ class HealthMonitor:
             log_rotation=self._log_rotation_status(),
             watchdog_history=list(self._watchdog_events),
             command_metrics=self._command_metrics(),
+            interface_lock=lock_metrics,
+            analytics_profile=getattr(stats, 'analytics_profile', None),
         )
+        duration = time.perf_counter() - start
+        self._response_times.append(duration)
+        status.response_times = self._response_time_payload(duration)
+        return status
+
+    def _response_time_payload(self, last_duration: float) -> Dict[str, Any]:
+        samples = list(self._response_times)
+        average = sum(samples) / len(samples) if samples else 0.0
+        maximum = max(samples) if samples else 0.0
+        return {
+            'last_ms': round(last_duration * 1000, 3),
+            'average_ms': round(average * 1000, 3),
+            'max_ms': round(maximum * 1000, 3),
+            'samples': len(samples),
+        }
 
 
 

@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any, Callable, Dict, Optional
 
 from ..analytics.engine import AnalyticsEngine
 from ..config import IngestionConfig
@@ -14,11 +14,20 @@ import cx505_d2xx
 class FrameIngestor:
     """Decode CX-505 frames and push them into the storage layer."""
 
-    def __init__(self, config: IngestionConfig, session: SessionHandle, analytics: Optional[AnalyticsEngine] = None):
+    def __init__(
+        self,
+        config: IngestionConfig,
+        session: SessionHandle,
+        analytics: Optional[AnalyticsEngine] = None,
+        *,
+        decode_error_callback: Optional[Callable[[bytes, Exception], None]] = None,
+    ) -> None:
         self._config = config
         self._session = session
         self._analytics = analytics
+        self._decode_error_callback = decode_error_callback
         self._frames = 0
+        self._analytics_profile: Optional[Dict[str, object]] = None
 
     @property
     def frames(self) -> int:
@@ -38,6 +47,11 @@ class FrameIngestor:
                     'frame_hex': frame.hex(),
                 },
             )
+            if self._decode_error_callback:
+                try:
+                    self._decode_error_callback(frame, exc)
+                except Exception:  # pragma: no cover - defensive
+                    pass
             return None
 
         header = decoded.get('header', {})
@@ -79,6 +93,7 @@ class FrameIngestor:
 
         if self._analytics:
             analytics_payload = self._analytics.process(decoded)
+            self._analytics_profile = self._analytics.profile_summary()
             if analytics_payload:
                 decoded['analytics'] = analytics_payload
         else:
@@ -98,3 +113,11 @@ class FrameIngestor:
 
         self._frames += 1
         return decoded
+
+    @property
+    def analytics_profile(self) -> Optional[Dict[str, object]]:
+        if self._analytics is None:
+            return None
+        if self._analytics_profile is None:
+            self._analytics_profile = self._analytics.profile_summary()
+        return self._analytics_profile

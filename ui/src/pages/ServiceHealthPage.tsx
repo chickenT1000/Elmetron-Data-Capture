@@ -177,7 +177,7 @@ export default function ServiceHealthPage() {
     isFetching: logsFetching,
     error: logsErrorDetail,
     refetch: refetchLogs,
-  } = useHealthLogEvents(LOG_LIST_LIMIT);
+  } = useHealthLogEvents({ limit: LOG_LIST_LIMIT });
 
   const [bundleLoading, setBundleLoading] = useState(false);
   const [bundleError, setBundleError] = useState<string | null>(null);
