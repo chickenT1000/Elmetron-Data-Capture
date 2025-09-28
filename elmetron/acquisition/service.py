@@ -1083,6 +1083,22 @@ class AcquisitionService:
                 state_index=index,
             )
 
+    def _compute_open_retry_delay(self, failure_count: int) -> float:
+        """Return delay (seconds) before the next open attempt."""
+
+        acquisition_cfg = self._config.acquisition
+        device_cfg = self._config.device
+
+        base_delay = max(acquisition_cfg.restart_delay_s, 0.5)
+        step = max(device_cfg.open_retry_backoff_s, 0.5)
+        exponent = max(failure_count - 1, 0)
+        backoff_delay = step * (2 ** exponent)
+        delay = max(base_delay, backoff_delay)
+        cap = max(acquisition_cfg.restart_backoff_max_s, base_delay)
+        if delay > cap:
+            delay = cap
+        return delay
+
     def run(self) -> None:
         acquisition_cfg = self._config.acquisition
         device_cfg = self._config.device
@@ -1094,6 +1110,7 @@ class AcquisitionService:
         ingestor: Optional[FrameIngestor] = None
         analytics_engine: Optional[AnalyticsEngine] = None
         start_time = time.time()
+        open_failure_count = 0
         next_status: Optional[float] = (
             time.time() + acquisition_cfg.status_interval_s
             if acquisition_cfg.status_interval_s > 0
@@ -1111,12 +1128,16 @@ class AcquisitionService:
                         listed = None
                         with self._interface_lock:
                             interface.close()
+                        open_failure_count += 1
+                        delay = self._compute_open_retry_delay(open_failure_count)
                         if not acquisition_cfg.quiet:
                             print(
-                                f"Warning: device open failed: {exc}. Retrying after {acquisition_cfg.restart_delay_s}s",
+                                "Warning: device open failed: "
+                                f"{exc}. Retrying in {delay:.1f}s (attempt {open_failure_count})",
                             )
-                        time.sleep(max(acquisition_cfg.restart_delay_s, 0.5))
+                        time.sleep(delay)
                         continue
+                    open_failure_count = 0
                     self._start_command_worker(interface)
                     metadata = DeviceMetadata(
                         serial=listed.serial,
@@ -1244,6 +1265,7 @@ class AcquisitionService:
                 except Exception as exc:  # pylint: disable=broad-except
                     with self._interface_lock:
                         interface.close()
+                    open_failure_count = 0
                     if session_handle is not None:
                         session_handle.log_event(
                             'warning',
@@ -1278,6 +1300,11 @@ class AcquisitionService:
                 session_handle.log_event('info', 'session', 'Session closing')
                 session_handle.close(datetime.utcnow())
             self._shutdown_command_worker()
+            try:
+                with self._interface_lock:
+                    interface.close()
+            except Exception:  # pragma: no cover - defensive cleanup
+                pass
             analytics_engine = None
             with self._interface_lock:
                 interface.close()

@@ -211,6 +211,24 @@ def test_process_scheduled_command_runs_when_due() -> None:
     config = AppConfig()
     config.acquisition.startup_commands = []
     config.acquisition.quiet = True
+
+def test_open_retry_backoff_increases_until_cap() -> None:
+    config = AppConfig()
+    config.acquisition.restart_delay_s = 2.0
+    config.acquisition.restart_backoff_max_s = 10.0
+    config.device.open_retry_backoff_s = 1.0
+
+    service = AcquisitionService(
+        config,
+        database=object(),
+        interface_factory=None,
+        command_definitions={},
+        use_async_commands=False,
+    )
+
+    delays = [service._compute_open_retry_delay(count) for count in range(1, 6)]  # pylint: disable=protected-access
+    assert delays == pytest.approx([2.0, 2.0, 4.0, 8.0, 10.0])
+
     config.device.profile = 'cx505'
     config.acquisition.scheduled_commands = [
         ScheduledCommandConfig(

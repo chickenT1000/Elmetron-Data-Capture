@@ -45,6 +45,10 @@ def _apply_overrides(config: AppConfig, args: argparse.Namespace) -> AppConfig:
         device.read_timeout_ms, device.write_timeout_ms = args.timeouts
     if args.chunk_size is not None:
         device.chunk_size = args.chunk_size
+    if args.open_retry_attempts is not None:
+        device.open_retry_attempts = args.open_retry_attempts
+    if args.open_retry_backoff is not None:
+        device.open_retry_backoff_s = args.open_retry_backoff
 
     if args.window is not None:
         acquisition.window_s = args.window
@@ -52,6 +56,8 @@ def _apply_overrides(config: AppConfig, args: argparse.Namespace) -> AppConfig:
         acquisition.idle_s = args.idle
     if args.restart_delay is not None:
         acquisition.restart_delay_s = args.restart_delay
+    if args.restart_backoff_max is not None:
+        acquisition.restart_backoff_max_s = args.restart_backoff_max
     if args.status_every is not None:
         acquisition.status_interval_s = args.status_every
     if args.max_runtime is not None:
@@ -83,9 +89,12 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument('--latency', type=int, help='FTDI latency timer in milliseconds (1-255)')
     parser.add_argument('--timeouts', type=int, nargs=2, metavar=('READ_MS', 'WRITE_MS'), help='Read/write timeouts in milliseconds')
     parser.add_argument('--chunk-size', dest='chunk_size', type=int, help='Read chunk size in bytes')
+    parser.add_argument('--open-retry-attempts', type=int, help='Number of retries when opening the FTDI device')
+    parser.add_argument('--open-retry-backoff', type=float, help='Base backoff in seconds between FTDI open attempts')
     parser.add_argument('--window', type=float, help='Seconds per capture window')
     parser.add_argument('--idle', type=float, help='Seconds to sleep between windows')
     parser.add_argument('--restart-delay', type=float, help='Seconds to wait before reconnecting after failure')
+    parser.add_argument('--restart-backoff-max', type=float, help='Maximum delay applied after repeated reconnect failures')
     parser.add_argument('--status-every', type=float, help='Status print interval in seconds (0 disables)')
     parser.add_argument('--max-runtime', type=float, help='Stop after N seconds (0 keeps running)')
     parser.add_argument('--database', type=Path, help='SQLite database path override')
