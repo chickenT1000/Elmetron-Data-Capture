@@ -1,12 +1,15 @@
-import { Box, Card, CardContent, CircularProgress, Stack, Typography, Alert, Divider, Chip } from '@mui/material';
-import ShowChartIcon from '@mui/icons-material/ShowChart';
-import SensorsIcon from '@mui/icons-material/Sensors';
-import WarningAmberIcon from '@mui/icons-material/WarningAmber';
-import StorageIcon from '@mui/icons-material/Storage';
-import AccessTimeIcon from '@mui/icons-material/AccessTime';
-import type { HealthLogEvent } from '../api/health';
+import { Stack, Typography } from '@mui/material';
 import { useHealthStatus } from '../hooks/useHealthStatus';
-import { useHealthLogEvents } from '../hooks/useHealthLogEvents';
+import { useHealthLogEvents, type HealthLogConnectionState } from '../hooks/useHealthLogEvents';
+import { MeasurementPanel } from '../components/MeasurementPanel';
+import { CommandHistory } from '../components/CommandHistory';
+import { LogFeed } from '../components/LogFeed';
+import type {
+  CommandHistoryEntryState,
+  DiagnosticLogRowState,
+  MeasurementPanelState,
+  MetricIndicatorState,
+} from '../components/contracts';
 
 const formatNumber = (value?: number | null, digits = 2): string => {
   if (value === undefined || value === null || Number.isNaN(value)) {
@@ -23,53 +26,25 @@ const formatDurationMs = (value?: number | null): string => {
   return `${value.toFixed(1)} ms`;
 };
 
-const renderMetricCard = (
-  label: string,
-  value: string,
-  helper?: string,
-  Icon?: typeof SensorsIcon,
-) => (
-  <Card key={label}>
-    <CardContent>
-      <Stack direction="row" spacing={1} alignItems="center" mb={1}>
-        {Icon ? <Icon color="primary" fontSize="small" /> : null}
-        <Typography variant="subtitle2" color="text.secondary">
-          {label}
-        </Typography>
-      </Stack>
-      <Typography variant="h4" fontWeight={600}>
-        {value}
-      </Typography>
-      {helper ? (
-        <Typography variant="caption" color="text.secondary">
-          {helper}
-        </Typography>
-      ) : null}
-    </CardContent>
-  </Card>
-);
+const normaliseLogStream = (state: HealthLogConnectionState): MeasurementPanelState['logStream'] => {
+  if (state === 'streaming' || state === 'polling') {
+    return state;
+  }
+  return 'idle';
+};
 
-const renderLogRow = (event: HealthLogEvent) => (
-  <Stack key={event.id} direction="row" spacing={1} alignItems="flex-start">
-    <Chip
-      size="small"
-      label={event.level}
-      color={event.level === 'warning' || event.level === 'error' ? 'warning' : 'default'}
-      sx={{ textTransform: 'capitalize' }}
-    />
-    <Box>
-      <Typography variant="body2" fontWeight={600}>
-        {event.category}
-      </Typography>
-      <Typography variant="body2" color="text.secondary">
-        {event.message}
-      </Typography>
-      <Typography variant="caption" color="text.secondary">
-        {event.created_at}
-      </Typography>
-    </Box>
-  </Stack>
-);
+const normaliseLogLevel = (level?: string | null): DiagnosticLogRowState['level'] => {
+  switch ((level ?? 'info').toLowerCase()) {
+    case 'success':
+      return 'success';
+    case 'warning':
+      return 'warning';
+    case 'error':
+      return 'error';
+    default:
+      return 'info';
+  }
+};
 
 export default function DashboardPage() {
   const {
@@ -79,7 +54,7 @@ export default function DashboardPage() {
     commandHistory,
     analyticsProfile,
     responseTimes,
-  } = useHealthStatus();
+  } = useHealthStatus(2000);
 
   const logLimit = 25;
   const {
@@ -90,152 +65,120 @@ export default function DashboardPage() {
     error: logsErrorObj,
   } = useHealthLogEvents({ limit: logLimit, fallbackMs: 5000 });
 
-  const metricCards = [
+  const logStream = normaliseLogStream(connectionState);
+
+  const metricCards: MetricIndicatorState[] = [
     {
+      id: 'frames',
       label: 'Frames Processed',
       value: formatNumber(health?.frames, 0),
-      helper: `Bytes read ${formatNumber(health?.bytes_read, 0)}`,
-      Icon: SensorsIcon,
+      helperText: `Bytes read ${formatNumber(health?.bytes_read, 0)}`,
+      iconToken: 'frames',
     },
     {
+      id: 'queue',
       label: 'Command queue depth',
       value: formatNumber(health?.command_metrics?.queue_depth, 0),
-      helper: `Inflight ${formatNumber(health?.command_metrics?.inflight, 0)}`,
-      Icon: StorageIcon,
+      helperText: `Inflight ${formatNumber(health?.command_metrics?.inflight, 0)}`,
+      iconToken: 'queue',
     },
     {
+      id: 'processing',
       label: 'Avg processing time',
       value: formatDurationMs(analyticsProfile?.average_processing_time_ms),
-      helper: `Max ${formatDurationMs(analyticsProfile?.max_processing_time_ms)} • throttled ${formatNumber(
+      helperText: `Max ${formatDurationMs(analyticsProfile?.max_processing_time_ms)} • throttled ${formatNumber(
         analyticsProfile?.throttled_frames,
         0,
       )}`,
-      Icon: WarningAmberIcon,
+      iconToken: 'processing-time',
     },
     {
+      id: 'latency',
       label: 'Health response latency',
       value: formatDurationMs(responseTimes?.average_ms),
-      helper: `Last ${formatDurationMs(responseTimes?.last_ms)} • Max ${formatDurationMs(responseTimes?.max_ms)}`,
-      Icon: AccessTimeIcon,
+      helperText: `Last ${formatDurationMs(responseTimes?.last_ms)} • Max ${formatDurationMs(
+        responseTimes?.max_ms,
+      )}`,
+      iconToken: 'latency',
     },
   ];
 
+  const measurementState: MeasurementPanelState = (() => {
+    if (healthLoading) {
+      return { status: 'loading' };
+    }
+    if (healthError || !health) {
+      return { status: 'error', message: 'Health data unavailable.' };
+    }
+
+    const measurement = health.latest_measurement ?? null;
+    if (!measurement) {
+      return { status: 'empty', message: 'No measurements recorded yet.' };
+    }
+
+    return {
+      status: 'ready',
+      autosaveEnabled: true,
+      connection: health.state === 'running' ? 'connected' : 'offline',
+      logStream,
+      measurement: {
+        value: typeof measurement.value === 'number' ? measurement.value : undefined,
+        valueText:
+          measurement.value_text ??
+          (typeof measurement.value === 'number'
+            ? measurement.value.toString()
+            : measurement.value != null
+            ? String(measurement.value)
+            : null),
+        unit: measurement.unit ?? null,
+        temperature: {
+          value: measurement.temperature ?? null,
+          unit: measurement.temperature_unit ?? null,
+        },
+        timestampIso: measurement.timestamp ?? null,
+        capturedAtIso: measurement.captured_at ?? null,
+        sequence: measurement.sequence ?? measurement.measurement_id ?? null,
+        mode: measurement.mode ?? null,
+        status: measurement.status ?? null,
+        range: measurement.range ?? null,
+      },
+    };
+  })();
+
+  const commandHistoryEntries: CommandHistoryEntryState[] = commandHistory.map((entry) => ({
+    timestampIso: entry.timestamp_iso,
+    queueDepth: entry.queue_depth ?? null,
+    inflight: entry.inflight ?? null,
+    backlog: entry.result_backlog ?? null,
+  }));
+
+  const logEntries: DiagnosticLogRowState[] = logEvents.map((event) => ({
+    id: String(event.id ?? event.created_at ?? Date.now()),
+    level: normaliseLogLevel(event.level),
+    category: event.category ?? 'log',
+    message: event.message ?? '',
+    createdAtIso: event.created_at ?? new Date().toISOString(),
+  }));
+
+  const logEmptyMessage = logEntries.length
+    ? undefined
+    : logStream === 'idle'
+    ? 'No recent frames detected from the instrument.'
+    : 'No recent log events.';
+
   return (
-    <Stack spacing={3}>
-      <Card>
-        <CardContent>
-          <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" spacing={2}>
-            <Box>
-              <Typography variant="h5" fontWeight={600} gutterBottom>
-                Live Monitoring & Telemetry
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Observability across the CX-505 capture stack, including throughput, command activity, and alert stream.
-              </Typography>
-            </Box>
-            <Stack direction="row" spacing={2} alignItems="center">
-              {healthLoading ? <CircularProgress size={20} /> : null}
-              {healthError ? <Chip color="error" label="Health data unavailable" /> : null}
-              <Chip
-                color={connectionState === 'streaming' ? 'success' : connectionState === 'polling' ? 'warning' : 'default'}
-                label={`Logs: ${connectionState}`}
-                sx={{ textTransform: 'capitalize' }}
-              />
-            </Stack>
-          </Stack>
-        </CardContent>
-      </Card>
-
-      <Box
-        sx={{
-          display: 'grid',
-          gap: 3,
-          gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-        }}
-      >
-        {metricCards.map((metric) =>
-          renderMetricCard(metric.label, metric.value, metric.helper, metric.Icon),
-        )}
-      </Box>
-
-      <Card sx={{ minHeight: 360 }}>
-        <CardContent>
-          <Stack direction="row" alignItems="center" spacing={1} mb={2}>
-            <ShowChartIcon color="primary" />
-            <Typography variant="h6">Command Throughput (History)</Typography>
-          </Stack>
-          {commandHistory.length === 0 ? (
-            <Box
-              sx={{
-                borderRadius: 2,
-                border: '1px dashed',
-                borderColor: 'divider',
-                height: 240,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: 'text.secondary',
-              }}
-            >
-              {healthLoading ? 'Loading telemetry…' : 'No command history available yet.'}
-            </Box>
-          ) : (
-            <Box
-              sx={{
-                borderRadius: 2,
-                border: '1px solid',
-                borderColor: 'divider',
-                height: 240,
-                p: 2,
-                overflow: 'auto',
-                display: 'grid',
-                gap: 1,
-              }}
-            >
-              {commandHistory.map((entry) => (
-                <Stack key={entry.timestamp} direction="row" spacing={2} alignItems="center">
-                  <Typography variant="body2" sx={{ minWidth: 180 }} color="text.secondary">
-                    {entry.timestamp_iso}
-                  </Typography>
-                  <Typography variant="body2">Queue {formatNumber(entry.queue_depth, 0)}</Typography>
-                  <Typography variant="body2">Inflight {formatNumber(entry.inflight, 0)}</Typography>
-                  <Typography variant="body2">Backlog {formatNumber(entry.result_backlog, 0)}</Typography>
-                </Stack>
-              ))}
-            </Box>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card sx={{ minHeight: 320 }}>
-        <CardContent>
-          <Stack direction="row" alignItems="center" spacing={1} mb={2}>
-            <WarningAmberIcon color="warning" />
-            <Typography variant="h6">Live Alerts & Diagnostics</Typography>
-          </Stack>
-          {logsError ? (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {logsErrorObj?.message ?? 'Failed to load log stream'}
-            </Alert>
-          ) : null}
-          <Stack spacing={2} divider={<Divider flexItem light />}>
-            {logsLoading && logEvents.length === 0 ? (
-              <Stack alignItems="center" py={4} spacing={1}>
-                <CircularProgress size={24} />
-                <Typography variant="body2" color="text.secondary">
-                  Connecting to log stream…
-                </Typography>
-              </Stack>
-            ) : logEvents.length === 0 ? (
-              <Typography variant="body2" color="text.secondary">
-                No recent log events.
-              </Typography>
-            ) : (
-              logEvents.map((event) => renderLogRow(event))
-            )}
-          </Stack>
-        </CardContent>
-      </Card>
+    <Stack spacing={3} sx={{ py: 3 }}>
+      <Typography variant="h4" component="h1" fontWeight={600}>
+        Service Health Dashboard
+      </Typography>
+      <MeasurementPanel state={measurementState} metrics={metricCards} />
+      <CommandHistory entries={commandHistoryEntries} loading={healthLoading} />
+      <LogFeed
+        entries={logEntries}
+        loading={logsLoading}
+        errorMessage={logsError ? logsErrorObj?.message ?? 'Failed to load log stream' : null}
+        emptyMessage={logEmptyMessage}
+      />
     </Stack>
   );
 }

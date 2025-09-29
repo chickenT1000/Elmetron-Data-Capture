@@ -98,6 +98,7 @@ class ServiceStats:
     last_frame_at: Optional[datetime] = None
     interface_lock: InterfaceLockStats = field(default_factory=InterfaceLockStats)
     analytics_profile: Optional[Dict[str, Any]] = None
+    latest_measurement: Optional[Dict[str, Any]] = None
 
 
 
@@ -318,6 +319,9 @@ class AcquisitionService:
             record = ingestor.handle_frame(frame)
             if record is None:
                 continue
+            summary = self._build_latest_measurement(record)
+            if summary:
+                self._stats.latest_measurement = summary
             self._stats.frames = ingestor.frames
             self._stats.last_frame_at = datetime.utcnow()
 
@@ -1083,6 +1087,45 @@ class AcquisitionService:
                 state_index=index,
             )
 
+    def _build_latest_measurement(self, record: Dict[str, Any]) -> Dict[str, Any]:
+        measurement = record.get('measurement') or {}
+        header = record.get('header') or {}
+        storage = record.get('storage') or {}
+        summary = {
+            'value': measurement.get('value'),
+            'value_text': measurement.get('value_text') or measurement.get('raw'),
+            'unit': measurement.get('value_unit') or measurement.get('unit'),
+            'temperature': measurement.get('temperature'),
+            'temperature_unit': measurement.get('temperature_unit'),
+            'timestamp': measurement.get('timestamp'),
+            'captured_at': record.get('captured_at'),
+            'sequence': measurement.get('sequence'),
+            'mode': header.get('mode'),
+            'status': header.get('status'),
+            'range': header.get('range'),
+            'frame_id': storage.get('frame_id'),
+            'measurement_id': storage.get('measurement_id'),
+        }
+        if summary['timestamp'] is None and summary['captured_at'] is not None:
+            summary['timestamp'] = summary['captured_at']
+        return {key: value for key, value in summary.items() if value is not None}
+
+    def _compute_open_retry_delay(self, failure_count: int) -> float:
+        """Return delay (seconds) before the next open attempt."""
+
+        acquisition_cfg = self._config.acquisition
+        device_cfg = self._config.device
+
+        base_delay = max(acquisition_cfg.restart_delay_s, 0.5)
+        step = max(device_cfg.open_retry_backoff_s, 0.5)
+        exponent = max(failure_count - 1, 0)
+        backoff_delay = step * (2 ** exponent)
+        delay = max(base_delay, backoff_delay)
+        cap = max(acquisition_cfg.restart_backoff_max_s, base_delay)
+        if delay > cap:
+            delay = cap
+        return delay
+
     def run(self) -> None:
         acquisition_cfg = self._config.acquisition
         device_cfg = self._config.device
@@ -1094,6 +1137,7 @@ class AcquisitionService:
         ingestor: Optional[FrameIngestor] = None
         analytics_engine: Optional[AnalyticsEngine] = None
         start_time = time.time()
+        open_failure_count = 0
         next_status: Optional[float] = (
             time.time() + acquisition_cfg.status_interval_s
             if acquisition_cfg.status_interval_s > 0
@@ -1111,12 +1155,17 @@ class AcquisitionService:
                         listed = None
                         with self._interface_lock:
                             interface.close()
+                        open_failure_count += 1
+                        self._stats.latest_measurement = None
+                        delay = self._compute_open_retry_delay(open_failure_count)
                         if not acquisition_cfg.quiet:
                             print(
-                                f"Warning: device open failed: {exc}. Retrying after {acquisition_cfg.restart_delay_s}s",
+                                "Warning: device open failed: "
+                                f"{exc}. Retrying in {delay:.1f}s (attempt {open_failure_count})",
                             )
-                        time.sleep(max(acquisition_cfg.restart_delay_s, 0.5))
+                        time.sleep(delay)
                         continue
+                    open_failure_count = 0
                     self._start_command_worker(interface)
                     metadata = DeviceMetadata(
                         serial=listed.serial,
@@ -1144,6 +1193,7 @@ class AcquisitionService:
                         decode_error_callback=lambda frame, exc, sh=session_handle: self._handle_decode_failure(frame, exc, sh),
                     )
                     self._stats.analytics_profile = None
+                    self._stats.latest_measurement = None
                     self._reset_schedule(time.time())
                     session_handle.log_event(
                         'info',
@@ -1167,6 +1217,9 @@ class AcquisitionService:
                     record = ingestor.handle_frame(frame)
                     if record is None:
                         return
+                    summary = self._build_latest_measurement(record)
+                    if summary:
+                        self._stats.latest_measurement = summary
                     self._reset_decode_failures()
                     self._stats.frames = ingestor.frames
                     self._stats.last_frame_at = datetime.utcnow()
@@ -1234,6 +1287,7 @@ class AcquisitionService:
                         session_handle = None
                         ingestor = None
                         analytics_engine = None
+                        self._stats.latest_measurement = None
                         self._profile_switch_pending = None
                         continue
 
@@ -1244,6 +1298,7 @@ class AcquisitionService:
                 except Exception as exc:  # pylint: disable=broad-except
                     with self._interface_lock:
                         interface.close()
+                    open_failure_count = 0
                     if session_handle is not None:
                         session_handle.log_event(
                             'warning',
@@ -1255,6 +1310,7 @@ class AcquisitionService:
                             },
                         )
                     listed = None
+                    self._stats.latest_measurement = None
                     if not acquisition_cfg.quiet:
                         print(
                             f"Warning: capture window failed: {exc}. Retrying after {acquisition_cfg.restart_delay_s}s",
@@ -1277,7 +1333,13 @@ class AcquisitionService:
                     self._drain_command_results(session_handle, ingestor)
                 session_handle.log_event('info', 'session', 'Session closing')
                 session_handle.close(datetime.utcnow())
+            self._stats.latest_measurement = None
             self._shutdown_command_worker()
+            try:
+                with self._interface_lock:
+                    interface.close()
+            except Exception:  # pragma: no cover - defensive cleanup
+                pass
             analytics_engine = None
             with self._interface_lock:
                 interface.close()

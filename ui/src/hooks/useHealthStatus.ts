@@ -4,7 +4,6 @@ import {
   fetchHealthStatus,
   healthQueryKey,
   type AnalyticsProfileSummary,
-  type CommandMetrics,
   type HealthResponse,
   type ResponseTimeTelemetry,
   type CommandMetricsHistoryEntry,

@@ -31,6 +31,9 @@
 - Created live rehearsal configuration (`config/live_rehearsal.toml`) and bench harness script updates to support CX-505 hardware runs.
 - Executed CX-505 live rehearsal capture, archived health snapshot/database summary artifacts, and validated watchdog/telemetry stability.
 - Authored CX-505 live test checklist documenting setup, acceptance criteria, and post-run archival steps.
+- Introduced a component-driven UI lab with shared design tokens (`ui/tokens.json`), Storybook 9.x, and Chromatic publishing so visual baselines are versioned alongside code.
+- Added Playwright component screenshot harness (`npm run test:ui`) that snapshots typography, measurement panel states, command history, log feed, and full dashboard compositions on every run.
+- Refactored the dashboard to reusable `MeasurementPanel`, `CommandHistory`, and `LogFeed` components, exposing health telemetry, queues, and logs consistently across the UI and stories.
 
 ## Work plan by area
 
@@ -43,7 +46,7 @@
 | High | Execute end-to-end CX-505 rehearsal capture using lab buffers and record validation artifacts | Completed |
 | High | Monitor live CX-505 session after bottleneck removal; track `/health` frames/bytes growth (session 17) | Latest check 2025-09-27: frames 154, bytes 15338 |
 | Medium | Add FTDI device open retry/back-off logic in harness/service to recover from stale handles | Pending |
-| Medium | Ensure clean FTDI handle shutdown and add pre-flight process checks before launching harness | Pending |
+| Medium | Ensure clean FTDI handle shutdown and add pre-flight process checks before launching harness | Completed (auto-close + harness process guard 2025-09-27) |
 
 ### 2. Ingestion, analytics & export
 | Priority | Task | Notes |
@@ -80,12 +83,35 @@
 | --- | --- | --- |
 | High | Connect the dashboard to live endpoints (telemetry, logs, manifest) with full loading/error state management | Completed |
 | High | Implement the Session Evaluation screen with overlay alignment and PNG/JSON export options | Completed |
-| Medium | Add component tests (Vitest + RTL) and configure Playwright smoke tests | Vitest coverage added for API/hooks; Playwright automation pending |
+| Medium | Add component tests (Vitest + RTL) and configure Playwright smoke tests | Completed 2025-09-29: Vitest hover/API suites plus stable Playwright story captures wired into `npm run ui:check`. |
 | Low | Introduce kiosk/Electron packaging and offline operation | Targeted for post-MVP deployments |
 | High | Build Windows launch monitor GUI for non-technical operators | Completed (`launcher.py` with status dashboard) |
-| High | Investigate live Service Health UI connectivity failures (intermittent 404/stale data during harness runs) | Failing UI live test – pending |
+| High | Investigate live Service Health UI connectivity failures (intermittent 404/stale data during harness runs) | Completed (CORS headers + launcher/env fixes 2025-09-27) |
 | High | Keep Service Health UI available post-bottleneck fix; run dev server at 127.0.0.1:5173 with `VITE_API_BASE_URL=http://127.0.0.1:8050` | Live check 2025-09-27 confirmed UI load |
 | High | Resume live CX-505 testing after PC reboot (relaunch harness, verify /health, reconnect UI) | Urgent next session startup |
+| High | Surface live CX-505 measurements on the landing view | Replace the current connectivity-first layout with primary readouts for pH/Redox/Conductivity/Solution temperature, updating in real time from the active session. |
+| High | Add 10-minute rolling charts beneath the live readouts | Auto-refresh plots for each measured channel; continue plotting even when a channel has no frames (gap visualization). |
+| High | Auto-start continuous session recording on launch | Ensure measurement logging begins immediately; provide context so users know recording is live without manual action. |
+| High | Enable adjustable chart scales and time axes | Allow users to tune vertical ranges per channel and switch between absolute timestamps and local clock labels. |
+| Medium | Show live connectivity indicator for CX-505 | Present a green icon (with tooltip) when instrument link is healthy, so operators confirm streaming status immediately. |
+| Medium | Display autosave status indicator | Reuse the connectivity-style icon to confirm session logging is active; provide hover text describing autosave behaviour. |
+| Medium | Provide interactive export tooling for sessions | Default to the active session, allow picking historical sessions, and select channel subsets for export (pH, Redox, Conductivity, Temp). |
+| Medium | Add graphical time-range selection to exports | Let users crop the export window via chart brushing plus manual start/end timestamps; reflect selected range in previews. |
+| Medium | Support multiple export formats (CSV, PNG charts, etc.) | Offer CSV for data tables and PNG (possibly PDF/SVG) renders for charts; respect channel choices and time range selections. |
+| Medium | Annotate mode transitions across the UI | Persist data for all channels and mark intervals where a channel was inactive (e.g., mode switches), both in live view and exports. |
+| High | Add session timeline notes with chart annotations | Allow users to drop timestamped notes (up to 400 chars) that render as numbered pointers beneath the time axis, showing a short label while full text lives in a notes log; notes can be scheduled in the future and are stored with the session. |
+| High | Sync notes into session data at creation/edition time | Every note addition or edit should be written immediately to the session record so exports and downstream tools capture the updated metadata. |
+| Medium | Keep a lean Cypress/Playwright E2E suite that exercises 5–10 production flows with trace review | Maintains end-to-end confidence without slowing component iteration. |
+| Medium | Provide a structured UI JSON DSL plus deterministic mocks for agents | Lets automated contributors define components via contract instead of the full app surface. |
+| Medium | Extend dashboard visuals with rolling charts and advanced measurement analytics | Follow-up once core real-time readouts are stabilised. |
+| High | Migrate front-end stack to shadcn/ui + Radix + Tailwind and remove ad-hoc MUI styling | Aligns with the contract-first workflow and enables Tailwind-only determinism during tests. |
+| High | Implement JSON-based UI DSL and runner that mounts stories, captures diffs, and returns pass/fail for agents | Unlocks the self-test loop described in the Factory/Codex workflow. |
+| High | Finalise VS Code IDE workspace (tasks, extensions, launch/debug configs) for repeatable UI workflows | Ensures contributors have a single command centre for Storybook, Playwright, Chromatic, and pytest operations. |
+| High | Restore UI lint/TypeScript baseline after dashboard refactor | Completed 2025-09-29 (`npm run lint` now passes). |
+| Medium | Add `npm run ui:check` wrapper to build Storybook, run Playwright screenshots, and emit markdown diff reports for CI agents | Completed 2025-09-29: Wrapper orchestrates lint, Vitest, and Playwright with deterministic stories. |
+| Medium | Introduce Playwright/Cypress end-to-end suite covering 5–10 critical flows with trace artifacts | Completes the “Wire E2E only for flows” requirement. |
+| Medium | Harden determinism: Tailwind containment, frozen dates/random seeds, and shared mock data | Completed 2025-09-29: Shared deterministic mocks, Storybook global freeze, Playwright init script, and reduced-motion CSS. |
+| Medium | Add launcher session controller that keeps the window open and terminates capture/UI processes when closed | Prevents orphaned backend processes when operators stop work from the browser. |
 
 
 

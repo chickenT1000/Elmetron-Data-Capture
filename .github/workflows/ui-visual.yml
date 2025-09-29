@@ -1,0 +1,46 @@
+name: UI Visual Checks
+
+on:
+  pull_request:
+    paths:
+      - 'ui/**'
+      - '.github/workflows/ui-visual.yml'
+
+jobs:
+  visual-tests:
+    name: Playwright Visual + Chromatic
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: ui/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ui
+        run: npm ci
+
+      - name: Build Storybook
+        working-directory: ui
+        run: npm run build-storybook
+
+      - name: Run Playwright visual tests
+        working-directory: ui
+        env:
+          PLAYWRIGHT_BROWSERS_PATH: 0
+        run: |
+          npx playwright install --with-deps
+          npm run test:ui
+
+      - name: Publish to Chromatic
+        if: ${{ secrets.CHROMATIC_PROJECT_TOKEN != '' }}
+        working-directory: ui
+        env:
+          CHROMATIC_PROJECT_TOKEN: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
+        run: npm run chromatic

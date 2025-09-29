@@ -152,6 +152,7 @@ class HealthStatus:
     interface_lock: Optional[Dict[str, Any]] = None
     analytics_profile: Optional[Dict[str, Any]] = None
     response_times: Optional[Dict[str, Any]] = None
+    latest_measurement: Optional[Dict[str, Any]] = None
 
 
 class HealthMonitor:
@@ -275,6 +276,7 @@ class HealthMonitor:
             command_metrics=self._command_metrics(),
             interface_lock=lock_metrics,
             analytics_profile=getattr(stats, 'analytics_profile', None),
+            latest_measurement=getattr(stats, 'latest_measurement', None),
         )
         duration = time.perf_counter() - start
         self._response_times.append(duration)

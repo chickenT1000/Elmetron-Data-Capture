@@ -1,0 +1,94 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "UI: Dev server",
+      "type": "pwa-node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/ui",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
+      "env": {
+        "VITE_API_BASE_URL": "http://127.0.0.1:8050"
+      },
+      "console": "integratedTerminal",
+      "serverReadyAction": {
+        "action": "debugWithChrome",
+        "pattern": "Local:\\s+http://127.0.0.1:5173",
+        "uriFormat": "http://127.0.0.1:5173"
+      }
+    },
+    {
+      "name": "UI: Launch Chrome",
+      "type": "pwa-chrome",
+      "request": "launch",
+      "url": "http://127.0.0.1:5173",
+      "webRoot": "${workspaceFolder}/ui/src"
+    },
+    {
+      "name": "Storybook: Launch Chrome",
+      "type": "pwa-chrome",
+      "request": "launch",
+      "url": "http://127.0.0.1:6006",
+      "webRoot": "${workspaceFolder}/ui",
+      "preLaunchTask": "npm: storybook"
+    },
+    {
+      "name": "Playwright: headed tests",
+      "type": "pwa-node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/ui",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "playwright",
+        "test",
+        "--project=chromium",
+        "--headed"
+      ],
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Python: acquisition supervisor",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/cx505_capture_service.py",
+      "args": [
+        "--config",
+        "config/app.toml",
+        "--protocols",
+        "config/protocols.toml",
+        "--watchdog-timeout",
+        "30",
+        "--health-api-port",
+        "8050",
+        "--health-log"
+      ],
+      "console": "integratedTerminal",
+      "justMyCode": false
+    },
+    {
+      "name": "Python: pytest",
+      "type": "python",
+      "request": "launch",
+      "module": "pytest",
+      "args": [
+        "-q"
+      ],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "justMyCode": false
+    }
+  ],
+  "compounds": [
+    {
+      "name": "UI: Dev + Chrome",
+      "configurations": [
+        "UI: Dev server",
+        "UI: Launch Chrome"
+      ]
+    }
+  ]
+}

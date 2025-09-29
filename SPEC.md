@@ -80,13 +80,20 @@ The Elmetron Data Acquisition and Analysis Suite is a Windows-native application
 - Front-end unit tests run under Vitest with React Testing Library (jsdom) to cover component-level state and accessibility.
 - Durability tests: 24 hour soak, high-frequency polling stress, database growth benchmarks.
 
-## 14. Delivery Roadmap
+## 14. Front-End Design System & Visual Workflow
+- Design tokens live in `ui/tokens.json` and drive palette, spacing, radii, and typography consistently across MUI theme, global CSS, and component stories.
+- Reusable dashboard widgets (`MeasurementPanel`, `CommandHistory`, `LogFeed`) expose typed contracts that the dashboard consumes directly and are documented via Storybook 9.x.
+- Storybook serves as the canonical component lab; Chromatic publishes snapshots on each PR to guard regressions and provide hosted previews.
+- Playwright component tests (`npm run test:ui`) mount Storybook iframes and capture deterministic screenshots for baseline diffing inside CI.
+- Agents and contributors use these stories plus Chromatic/Playwright baselines as the source of truth before they touch page-level code, ensuring the UI contract stays frozen.
+
+## 15. Delivery Roadmap
 - Phase 1 (MVP): CX-505 support, background logging, basic charting/export, manual calibration logs.
 - Phase 2: Additional meter catalog, calibration workflow, audit trail, advanced charts, plugin framework.
 - Phase 3: Rules engine, REST/LIMS integration, OPC-UA adaptor, report scheduling, full BLE transport integration (beyond the adapter scaffolding delivered in Phase 2).
 - Phase 4: Cloud sync optional module, predictive diagnostics, mobile dashboards, enterprise deployment tooling.
 
-## 15. Open Questions
+## 16. Open Questions
 - Confirm exact meter models/firmware for launch and prioritised roadmap.
 - Determine regulatory profile per deployment (GLP, ISO 17025, CFR 21 Part 11) to scope validation effort.
 - Decide service topology (per station vs. central logger) and network backup policies.

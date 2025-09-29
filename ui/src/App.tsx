@@ -1,4 +1,5 @@
-﻿import { Navigate, Route, Routes } from 'react-router-dom';
+﻿import './App.css';
+import { Navigate, Route, Routes } from 'react-router-dom';
 import { AppLayout } from './layouts/AppLayout';
 import DashboardPage from './pages/DashboardPage';
 import SessionEvaluationPage from './pages/SessionEvaluationPage';

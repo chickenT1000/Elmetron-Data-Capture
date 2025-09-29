@@ -40,11 +40,8 @@ const formatDateTime = (value?: string | null): string => {
   if (!value) {
     return 'Unknown';
   }
-  try {
-    return new Date(value).toLocaleString();
-  } catch (_error) {
-    return value;
-  }
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
 };
 
 const formatNumber = (value?: number | null, digits = 2): string => {

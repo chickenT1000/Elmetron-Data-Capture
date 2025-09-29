@@ -1,0 +1,6 @@
+{
+  "projectToken": "${CHROMATIC_PROJECT_TOKEN}",
+  "autoAcceptChanges": false,
+  "exitZeroOnChanges": false,
+  "storybookBuildCommand": "npm run build-storybook"
+}

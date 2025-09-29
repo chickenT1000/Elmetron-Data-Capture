@@ -15,3 +15,83 @@
 
   [32m➜[39m  [1mLocal[22m:   [36mhttp://127.0.0.1:[1m5173[22m/[39m
 [2m[32m  ➜[39m[22m[2m  press [22m[1mh + enter[22m[2m to show help[22m
+
+> ui@0.0.0 dev
+> vite --host 127.0.0.1 --port 5173 --strictPort
+
+
+  [32m[1mVITE[22m v7.1.7[39m  [2mready in [0m[1m265[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://127.0.0.1:[1m5173[22m/[39m
+[2m[32m  ➜[39m[22m[2m  press [22m[1mh + enter[22m[2m to show help[22m
+
+> ui@0.0.0 dev
+> vite --host 127.0.0.1 --port 5173 --strictPort
+
+
+> ui@0.0.0 dev
+> vite --host 127.0.0.1 --port 5173 --strictPort
+
+
+> ui@0.0.0 dev
+> vite --host 127.0.0.1 --port 5173 --strictPort
+
+
+> ui@0.0.0 dev
+> vite --host 127.0.0.1 --port 5173 --strictPort
+
+
+> ui@0.0.0 dev
+> vite --host 127.0.0.1 --port 5173 --strictPort
+
+[2m08:02:16[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m Re-optimizing dependencies because lockfile has changed
+
+  [32m[1mVITE[22m v7.1.7[39m  [2mready in [0m[1m407[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://127.0.0.1:[1m5173[22m/[39m
+[2m[32m  ➜[39m[22m[2m  press [22m[1mh + enter[22m[2m to show help[22m
+[2m08:02:24[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32m✨ new dependencies optimized: [33mreact-dom/client, react-router-dom, @mui/material, @tanstack/react-query, @mui/material/styles, @mui/icons-material/Menu, @mui/icons-material/FiberManualRecord, @mui/icons-material/Brightness4, @mui/icons-material/Brightness7, @mui/icons-material/Science, @mui/icons-material/History, @mui/icons-material/CloudUpload, @mui/icons-material/Archive, @mui/icons-material/Download, @mui/icons-material/Image, @mui/icons-material/Timeline, recharts, html-to-image, @mui/icons-material/Refresh, @mui/icons-material/BugReport, @mui/icons-material/SpaceDashboardOutlined, @mui/icons-material/InsightsOutlined, @mui/icons-material/ScienceOutlined, @mui/icons-material/CloudUploadOutlined, @mui/icons-material/StackedLineChartOutlined, @mui/icons-material/SettingsOutlined, jszip[32m[39m
+[2m08:02:24[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32m✨ optimized dependencies changed. reloading[39m
+
+> ui@0.0.0 dev
+> vite --host 127.0.0.1 --port 5173 --strictPort
+
+
+  [32m[1mVITE[22m v7.1.7[39m  [2mready in [0m[1m260[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://127.0.0.1:[1m5173[22m/[39m
+[2m[32m  ➜[39m[22m[2m  press [22m[1mh + enter[22m[2m to show help[22m
+[2m12:12:48[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/ServiceHealthPage.tsx[22m
+[2m12:12:55[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32m✨ new dependencies optimized: [33m@mui/icons-material/AccessTime, @mui/icons-material/Sensors, @mui/icons-material/WarningAmber[32m[39m
+[2m12:12:55[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32m✨ optimized dependencies changed. reloading[39m
+[2m12:12:58[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/ServiceHealthPage.tsx, /src/pages/DashboardPage.tsx[22m
+[2m12:13:24[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/ServiceHealthPage.tsx, /src/pages/DashboardPage.tsx[22m
+[2m12:13:54[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/ServiceHealthPage.tsx[22m
+[2m12:14:04[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/ServiceHealthPage.tsx[22m
+[2m12:14:30[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/SessionEvaluationPage.tsx[22m
+[2m12:15:33[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/ServiceHealthPage.tsx, /src/pages/DashboardPage.tsx[22m
+[2m12:28:44[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2mplaywright-report/index.html[22m
+
+> ui@0.0.0 dev
+> vite --host 127.0.0.1 --port 5173 --strictPort
+
+
+> ui@0.0.0 dev
+> vite --host 127.0.0.1 --port 5173 --strictPort
+
+
+> ui@0.0.0 dev
+> vite --host 127.0.0.1 --port 5173 --strictPort
+
+
+> ui@0.0.0 dev
+> vite --host 127.0.0.1 --port 5173 --strictPort
+
+
+> ui@0.0.0 dev
+> vite --host 127.0.0.1 --port 5173 --strictPort
+
+
+> ui@0.0.0 dev
+> vite --host 127.0.0.1 --port 5173 --strictPort
+

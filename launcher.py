@@ -15,7 +15,11 @@ from pathlib import Path
 from typing import Dict, Optional
 
 import tkinter as tk
-from tkinter import scrolledtext, ttk, messagebox
+from tkinter import filedialog
+from tkinter import font as tkfont
+from tkinter import messagebox
+from tkinter import scrolledtext
+from tkinter import ttk
 
 
 ROOT = Path(__file__).resolve().parent
@@ -30,19 +34,434 @@ UI_URL = "http://127.0.0.1:5173/"
 
 CREATE_NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
 
+BG = "#FFFFFF"
+COLORS = {
+    "pending": "#5A5F63",
+    "active": "#1C1E21",
+    "success": "#7B8388",
+    "error": "#B22222",
+}
+
+STATUS_FONT = ("Segoe UI", 22)
+FOOTER_FONT = ("Segoe UI", 10)
+LOGO_LINE_COLOR = "#C7CED3"
+LOGO_MAIN_COLOR = "#1C1E21"
+LOGO_SUB_COLOR = "#5A5F63"
+
+
+class LauncherApp:
+    def __init__(self) -> None:
+        self.root = tk.Tk()
+        self.root.title("Elmetron Launcher")
+        self.root.geometry("640x400")
+        self.root.resizable(False, False)
+        self.root.configure(bg=BG)
+
+        self._log_buffer: list[str] = []
+        self._processes: dict[str, subprocess.Popen] = {}
+        self._log_files: list = []
+        self._npm_path: Optional[str] = None
+        self._ellipsis_job: Optional[str] = None
+        self._ellipsis_phase = 0
+        self._ellipsis_base = ""
+        self._auto_close_job: Optional[str] = None
+        self._closing = False
+        self._failed = False
+
+        self._build_ui()
+
+        worker = threading.Thread(target=self._launch_sequence, daemon=True)
+        worker.start()
+
+    def _build_ui(self) -> None:
+        container = tk.Frame(self.root, bg=BG)
+        container.pack(fill="both", expand=True, padx=32, pady=24)
+
+        self.logo_canvas = tk.Canvas(container, width=540, height=150, bg=BG, highlightthickness=0)
+        self.logo_canvas.pack(pady=(0, 12))
+        self._draw_logo()
+
+        self.status_var = tk.StringVar(value="Preparing launch…")
+        self.status_label = tk.Label(
+            container,
+            textvariable=self.status_var,
+            font=STATUS_FONT,
+            bg=BG,
+            fg=COLORS["pending"],
+            wraplength=520,
+            justify="center",
+        )
+        self.status_label.pack(pady=(12, 6))
+
+        self.footer_label = tk.Label(
+            container,
+            text="Window will close automatically when services are online.",
+            font=FOOTER_FONT,
+            bg=BG,
+            fg="#8D949A",
+        )
+        self.footer_label.pack(pady=(6, 0))
+
+        self.root.protocol("WM_DELETE_WINDOW", self._on_close)
+
+    def _draw_logo(self) -> None:
+        canvas = self.logo_canvas
+        canvas.delete("all")
+        width = int(canvas["width"])
+
+        main_font = tkfont.Font(family="Copperplate Gothic Bold", size=28)
+        sub_font = tkfont.Font(family="Copperplate Gothic Bold", size=16)
+        tracking_px = max(4, int(main_font.measure("M") * 0.08))  # 8% tracking
+        chars = list("ELMETRON")
+        total_width = sum(main_font.measure(ch) for ch in chars) + tracking_px * (len(chars) - 1)
+        start_x = (width - total_width) / 2
+        top_y = 86
+
+        t_bbox = None
+        for ch in chars:
+            item = canvas.create_text(start_x, top_y, text=ch, font=main_font, fill=LOGO_MAIN_COLOR, anchor="nw")
+            if ch == "T":
+                t_bbox = canvas.bbox(item)
+            start_x += main_font.measure(ch) + tracking_px
+
+        line_y = top_y - 18
+        margin = width * 0.12
+        canvas.create_line(margin, line_y, width - margin, line_y, fill=LOGO_LINE_COLOR, width=2)
+
+        if t_bbox:
+            x1, y1, x2, _ = t_bbox
+            stem_width = max(3, int(main_font.measure("I") * 0.25))
+            cx = (x1 + x2) / 2
+            canvas.create_rectangle(cx - stem_width / 2, line_y, cx + stem_width / 2, y1 + 1, fill=LOGO_MAIN_COLOR, outline="")
+
+        sub_y = top_y + main_font.metrics("linespace") + 12
+        canvas.create_text(width / 2, sub_y, text="Data Capture", font=sub_font, fill=LOGO_SUB_COLOR, anchor="n")
+
+    def log(self, message: str) -> None:
+        timestamp = time.strftime("%H:%M:%S")
+        entry = f"[{timestamp}] {message}"
+        self._log_buffer.append(entry)
+
+    def _set_status(self, text: str, state: str = "pending", animate: bool = False) -> None:
+        color = COLORS.get(state, COLORS["pending"])
+        self._stop_ellipsis()
+        if animate:
+            self._start_ellipsis(text, color)
+        else:
+            self.status_var.set(text)
+            self.status_label.configure(fg=color)
+
+    def _start_ellipsis(self, base_text: str, color: str) -> None:
+        self._ellipsis_base = base_text
+        self.status_label.configure(fg=color)
+        self._ellipsis_phase = 0
+        self._tick_ellipsis()
+
+    def _tick_ellipsis(self) -> None:
+        display = f"{self._ellipsis_base}{'.' * self._ellipsis_phase}"
+        self.status_var.set(display)
+        self._ellipsis_phase = (self._ellipsis_phase + 1) % 4
+        self._ellipsis_job = self.root.after(350, self._tick_ellipsis)
+
+    def _stop_ellipsis(self) -> None:
+        if self._ellipsis_job is not None:
+            self.root.after_cancel(self._ellipsis_job)
+            self._ellipsis_job = None
+
+    def _launch_sequence(self) -> None:
+        try:
+            self._set_status("Checking prerequisites", "active", animate=True)
+            self._prepare_environment()
+
+            self._set_status("Starting capture service", "active", animate=True)
+            self._start_capture_service()
+            if not self._wait_for_url(HEALTH_URL, 40, self._processes.get("capture"), "capture service"):
+                self._fail("Capture service did not respond at /health.")
+                return
+            self.log("Capture service online")
+
+            self._set_status("Starting dashboard server", "active", animate=True)
+            self._start_ui_server()
+            if not self._wait_for_url(UI_URL, 40, self._processes.get("ui"), "UI dev server"):
+                self._fail("UI server did not respond at 127.0.0.1:5173.")
+                return
+            self.log("Service Health UI online")
+
+            self._set_status("Opening dashboard", "active", animate=True)
+            self._open_browser()
+
+            self._stop_ellipsis()
+            self._set_status("All systems online.", "success", animate=False)
+            self.log("All services online")
+            self._schedule_auto_close()
+        except Exception as exc:  # pragma: no cover
+            self._fail(f"Launcher error: {exc}")
+
+    def _prepare_environment(self) -> None:
+        self.log("Checking prerequisites")
+        self._npm_path = shutil.which("npm")
+        if self._npm_path is None:
+            raise RuntimeError("npm is not available on PATH.")
+        self.log(f"npm resolved to {self._npm_path}")
+        CAPTURES_DIR.mkdir(exist_ok=True)
+        self.log("Environment ready")
+
+    def _start_capture_service(self) -> None:
+        self.log("Starting capture service")
+        log = CAPTURE_LOG.open("a", encoding="utf-8")
+        err = CAPTURE_ERR.open("a", encoding="utf-8")
+        self._log_files.extend([log, err])
+
+        cmd = [
+            sys.executable,
+            str(ROOT / "cx505_capture_service.py"),
+            "--config",
+            str(ROOT / "config" / "app.toml"),
+            "--protocols",
+            str(ROOT / "config" / "protocols.toml"),
+            "--health-api-port",
+            "8050",
+            "--watchdog-timeout",
+            "30",
+            "--health-log",
+        ]
+
+        try:
+            process = subprocess.Popen(
+                cmd,
+                stdout=log,
+                stderr=err,
+                cwd=str(ROOT),
+                creationflags=CREATE_NO_WINDOW,
+            )
+        except FileNotFoundError as exc:
+            raise RuntimeError(f"Failed to start capture service ({exc})") from exc
+        self._processes["capture"] = process
+        self.log("Capture service launched, waiting for /health")
+
+    def _start_ui_server(self) -> None:
+        self.log("Preparing UI dashboard")
+        if not self._npm_path:
+            raise RuntimeError("npm path unavailable after prerequisite check.")
+        ui_dir = ROOT / "ui"
+        node_modules = ui_dir / "node_modules"
+        if not node_modules.exists():
+            self.log("Installing UI dependencies (npm install)")
+            result = subprocess.run(
+                [self._npm_path, "install"],
+                cwd=str(ui_dir),
+                creationflags=CREATE_NO_WINDOW,
+            )
+            if result.returncode != 0:
+                raise RuntimeError("npm install failed. See console for details.")
+            self.log("UI dependencies installed")
+
+        log = UI_LOG.open("a", encoding="utf-8")
+        err = UI_ERR.open("a", encoding="utf-8")
+        self._log_files.extend([log, err])
+
+        env = os.environ.copy()
+        env["VITE_API_BASE_URL"] = "http://127.0.0.1:8050"
+        env.setdefault("VITE_HEALTH_BASE_URL", env["VITE_API_BASE_URL"])
+        self.log(f"UI base URL set to {env['VITE_API_BASE_URL']}")
+
+        cmd = [
+            self._npm_path,
+            "run",
+            "dev",
+            "--",
+            "--host",
+            "127.0.0.1",
+            "--port",
+            "5173",
+            "--strictPort",
+        ]
+
+        try:
+            process = subprocess.Popen(
+                cmd,
+                cwd=str(ui_dir),
+                env=env,
+                stdout=log,
+                stderr=err,
+                creationflags=CREATE_NO_WINDOW,
+            )
+        except FileNotFoundError as exc:
+            raise RuntimeError(f"Failed to start UI server ({exc})") from exc
+        self._processes["ui"] = process
+        self.log("UI dev server launching")
+
+    def _open_browser(self) -> None:
+        self.log("Opening dashboard in default browser")
+        webbrowser.open(UI_URL)
+        self.log("Dashboard opened")
+
+    def _wait_for_url(
+        self,
+        url: str,
+        attempts: int,
+        process: Optional[subprocess.Popen],
+        process_name: str,
+    ) -> bool:
+        for _ in range(attempts):
+            try:
+                with urllib.request.urlopen(url, timeout=2) as response:
+                    if 200 <= response.getcode() < 300:
+                        return True
+            except urllib.error.URLError:
+                pass
+            if process is not None and process.poll() is not None:
+                self.log(f"{process_name} exited with code {process.poll()}")
+                return False
+            self.log(f"Waiting for {url}")
+            time.sleep(1)
+        return False
+
+    def _schedule_auto_close(self) -> None:
+        self._auto_close_job = self.root.after(1500, self._close_success)
+
+    def _close_success(self) -> None:
+        if self._closing or self._failed:
+            return
+        self._closing = True
+        self._stop_ellipsis()
+        self.log("Launcher closing after successful start")
+        self._cleanup()
+        self.root.destroy()
+
+    def _fail(self, message: str) -> None:
+        if self._auto_close_job is not None:
+            self.root.after_cancel(self._auto_close_job)
+            self._auto_close_job = None
+        self._failed = True
+        self._stop_ellipsis()
+        self._set_status(message, "error", animate=False)
+        self.log(f"ERROR: {message}")
+        self.root.after(0, lambda: ErrorDialog(self.root, self._log_buffer))
+
+    def _on_close(self) -> None:
+        if self._closing:
+            return
+        self._closing = True
+        if self._auto_close_job is not None:
+            self.root.after_cancel(self._auto_close_job)
+            self._auto_close_job = None
+        self._stop_ellipsis()
+        self.log("Launcher window closed by user")
+        self._cleanup()
+        self.root.destroy()
+
+    def _cleanup(self) -> None:
+        for handle in self._log_files:
+            try:
+                handle.close()
+            except Exception:
+                pass
+        self._log_files.clear()
+
+    def run(self) -> None:
+        self.root.mainloop()
+
+
+class ErrorDialog(tk.Toplevel):
+    def __init__(self, parent: tk.Tk, log_entries: list[str]) -> None:
+        super().__init__(parent)
+        self.title("Launch Error")
+        self.configure(bg=BG)
+        self.geometry("660x380")
+        self.minsize(520, 320)
+        self.transient(parent)
+        self.grab_set()
+
+        heading = tk.Label(
+            self,
+            text="Launch encountered an error",
+            font=("Segoe UI", 16, "bold"),
+            bg=BG,
+            fg=COLORS["error"],
+        )
+        heading.pack(pady=(18, 6))
+
+        sub = tk.Label(
+            self,
+            text="Details are available below. You can copy or save the log for support.",
+            font=("Segoe UI", 10),
+            bg=BG,
+            fg="#5A5F63",
+        )
+        sub.pack(pady=(0, 12))
+
+        text_frame = tk.Frame(self, bg=BG)
+        text_frame.pack(fill="both", expand=True, padx=18)
+
+        text_widget = tk.Text(
+            text_frame,
+            wrap="word",
+            font=("Consolas", 10),
+            bg="#F5F6F7",
+            fg="#1C1E21",
+            relief="flat",
+        )
+        text_widget.pack(fill="both", expand=True)
+
+        log_text = "\n".join(log_entries) if log_entries else "No log output captured."
+        text_widget.insert("1.0", log_text)
+        text_widget.configure(state="disabled")
+
+        button_row = tk.Frame(self, bg=BG)
+        button_row.pack(pady=16)
+
+        copy_btn = tk.Button(button_row, text="Copy Log", command=lambda: self._copy_to_clipboard(log_text))
+        copy_btn.pack(side="left", padx=6)
+
+        save_btn = tk.Button(button_row, text="Save…", command=lambda: self._save_log(log_text))
+        save_btn.pack(side="left", padx=6)
+
+        close_btn = tk.Button(button_row, text="Close", command=self.destroy)
+        close_btn.pack(side="left", padx=6)
+
+    def _copy_to_clipboard(self, text: str) -> None:
+        self.clipboard_clear()
+        self.clipboard_append(text)
+
+    def _save_log(self, text: str) -> None:
+        path = filedialog.asksaveasfilename(
+            parent=self,
+            defaultextension=".log",
+            filetypes=[("Log Files", "*.log"), ("Text Files", "*.txt"), ("All Files", "*.*")],
+        )
+        if not path:
+            return
+        try:
+            with open(path, "w", encoding="utf-8") as handle:
+                handle.write(text)
+        except OSError:
+            pass
+
+
+def main() -> None:
+    app = LauncherApp()
+    app.run()
+
+
+if __name__ == "__main__":
+    main()
+
 
 class StatusLabel:
-    def __init__(self, parent: tk.Widget, title: str, row: int) -> None:
-        ttk.Label(parent, text=title, font=("Segoe UI", 11, "bold"), anchor="w").grid(
-            row=row, column=0, sticky="we", pady=(4, 0), padx=(0, 12)
+    def __init__(self, parent: ttk.Frame, title: str, row: int) -> None:
+        ttk.Label(parent, text=title, font=("Segoe UI", 11, "bold")).grid(
+            row=row,
+            column=0,
+            sticky="w",
+            pady=(0, 2),
         )
-        self._status_var = tk.StringVar(value="Pending")
-        self._label = ttk.Label(parent, textvariable=self._status_var, font=("Segoe UI", 10), anchor="w")
-        self._label.configure(width=34)
-        self._label.grid(row=row, column=1, sticky="we", padx=12)
+        self._value = tk.StringVar(value="Pending…")
+        self._label = ttk.Label(parent, textvariable=self._value)
+        self._label.grid(row=row, column=1, sticky="w")
 
     def set(self, text: str, color: str) -> None:
-        self._status_var.set(text)
+        self._value.set(text)
         self._label.configure(foreground=color)
 
 

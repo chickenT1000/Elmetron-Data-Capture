@@ -68,6 +68,22 @@ export interface ResponseTimeTelemetry {
   samples?: number;
 }
 
+export interface LatestMeasurementSummary {
+  value?: number | null;
+  value_text?: string | null;
+  unit?: string | null;
+  temperature?: number | null;
+  temperature_unit?: string | null;
+  timestamp?: string | null;
+  captured_at?: string | null;
+  sequence?: string | null;
+  mode?: string | null;
+  status?: string | null;
+  range?: string | null;
+  frame_id?: number | null;
+  measurement_id?: number | null;
+}
+
 export interface HealthResponse {
   state: string;
   frames: number;
@@ -81,6 +97,7 @@ export interface HealthResponse {
   command_metrics?: CommandMetrics | null;
   analytics_profile?: AnalyticsProfileSummary | null;
   response_times?: ResponseTimeTelemetry | null;
+  latest_measurement?: LatestMeasurementSummary | null;
 }
 
 export const healthQueryKey = ['health-status'] as const;

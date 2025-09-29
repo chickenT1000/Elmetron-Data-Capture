@@ -11,6 +11,7 @@ actual device config path.
 from __future__ import annotations
 
 import argparse
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -61,6 +62,21 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Suppress console stream from acquisition service",
     )
     parser.add_argument(
+        "--open-retry-attempts",
+        type=int,
+        help="Override FTDI open retry attempts",
+    )
+    parser.add_argument(
+        "--open-retry-backoff",
+        type=float,
+        help="Override FTDI open retry backoff in seconds",
+    )
+    parser.add_argument(
+        "--restart-backoff-max",
+        type=float,
+        help="Maximum reconnect delay after repeated device failures",
+    )
+    parser.add_argument(
         "--simulation",
         action="store_true",
         default=False,
@@ -99,6 +115,12 @@ def build_command(args: argparse.Namespace) -> list[str]:
     ]
     if args.quiet:
         cmd.append("--quiet")
+    if args.open_retry_attempts is not None:
+        cmd.extend(["--open-retry-attempts", str(args.open_retry_attempts)])
+    if args.open_retry_backoff is not None:
+        cmd.extend(["--open-retry-backoff", str(args.open_retry_backoff)])
+    if args.restart_backoff_max is not None:
+        cmd.extend(["--restart-backoff-max", str(args.restart_backoff_max)])
     if args.simulation:
         cmd.extend(["--profile", "cx505_sim"])
     if args.extra_args:
@@ -108,10 +130,35 @@ def build_command(args: argparse.Namespace) -> list[str]:
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
+    if not _check_existing_capture_processes():
+        print("Aborting harness launch; please stop the existing cx505_capture_service instance and retry.")
+        return 1
     command = build_command(args)
     print("Launching bench harness with command:")
     print(" ".join(command))
     return subprocess.call(command)
+
+
+def _check_existing_capture_processes() -> bool:
+    """Return True when no other capture service instance appears to be running."""
+
+    if os.name != "nt":
+        return True
+    try:
+        output = subprocess.check_output(
+            ["tasklist", "/FI", "IMAGENAME eq python.exe", "/V"],
+            text=True,
+            stderr=subprocess.STDOUT,
+        )
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return True
+
+    lowered = output.lower()
+    if "cx505_capture_service.py" not in lowered:
+        return True
+    print("Detected an existing python.exe running cx505_capture_service.py."
+          " Close it before starting the bench harness.")
+    return False
 
 
 if __name__ == "__main__":

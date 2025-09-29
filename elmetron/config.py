@@ -211,6 +211,7 @@ class AcquisitionConfig:
     window_s: float = 10.0
     idle_s: float = 0.0
     restart_delay_s: float = 2.0
+    restart_backoff_max_s: float = 30.0
     status_interval_s: float = 30.0
     max_runtime_s: float = 0.0
     quiet: bool = False
@@ -254,6 +255,16 @@ class AcquisitionConfig:
             threshold = 5
         self.decode_failure_threshold = max(threshold, 1)
         try:
+            max_backoff = float(self.restart_backoff_max_s)
+        except (TypeError, ValueError):
+            max_backoff = 30.0
+        if max_backoff <= 0:
+            max_backoff = 30.0
+        base_delay = max(self.restart_delay_s, 0.0)
+        if max_backoff < base_delay:
+            max_backoff = base_delay
+        self.restart_backoff_max_s = max_backoff
+        try:
             overrides = int(self.lab_retry_max_retries) if self.lab_retry_max_retries is not None else None
         except (TypeError, ValueError):
             overrides = None
@@ -273,6 +284,7 @@ class AcquisitionConfig:
             'window_s': self.window_s,
             'idle_s': self.idle_s,
             'restart_delay_s': self.restart_delay_s,
+            'restart_backoff_max_s': self.restart_backoff_max_s,
             'status_interval_s': self.status_interval_s,
             'max_runtime_s': self.max_runtime_s,
             'quiet': self.quiet,
