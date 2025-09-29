@@ -111,7 +111,10 @@
 | Medium | Add `npm run ui:check` wrapper to build Storybook, run Playwright screenshots, and emit markdown diff reports for CI agents | Completed 2025-09-29: Wrapper orchestrates lint, Vitest, and Playwright with deterministic stories. |
 | Medium | Introduce Playwright/Cypress end-to-end suite covering 5–10 critical flows with trace artifacts | Completes the “Wire E2E only for flows” requirement. |
 | Medium | Harden determinism: Tailwind containment, frozen dates/random seeds, and shared mock data | Completed 2025-09-29: Shared deterministic mocks, Storybook global freeze, Playwright init script, and reduced-motion CSS. |
-| Medium | Add launcher session controller that keeps the window open and terminates capture/UI processes when closed | Prevents orphaned backend processes when operators stop work from the browser. |
+| High | Document launcher start/stop/restart dependency chain (processes, threads, UI callbacks) | Map prerequisites so follow-up tickets can address restart sequencing safely. |
+| High | Refactor launcher restart workflow using documented dependencies | Queue relaunch on the Tk main thread after `_stop_services` completes and gate controls during restart. |
+| Medium | Add launcher session controller that keeps the window open, enforces single-instance execution, and terminates capture/UI processes when closed | Controller must detect existing sessions, show a warning if another instance is active, and handle graceful start/stop/restart of capture + UI services. |
+| Medium | Fix launcher restart workflow to queue relaunch on the Tk main thread after a clean stop | Current restart button can race cleanup/startup; ensure `_stop_services` finishes before scheduling `_on_start`, keep buttons disabled until services relaunch. |
 
 
 
