@@ -59,6 +59,12 @@ python cx505_capture_service.py \
 - CSV behaviour honours the `export.csv_*` options, while PDF/LIMS exports read optional templates (`export.pdf_template`, `export.lims_template`).
 - Hardware runs require the FTDI D2XX runtime; BLE adapters can be enabled through the transport factory once compatible hardware is available.
 
+### Front-end workflow
+- Design tokens live in `ui/tokens.json` and are consumed by the MUI theme, global styles, and component contracts for measurement/dashboard widgets.
+- Start the Storybook component lab with `npm run storybook` (from `ui/`); the baseline stories cover typography plus `MeasurementPanel`, `CommandHistory`, `LogFeed`, and the full dashboard composition.
+- Run `npm run test:ui` to execute Playwright component screenshot tests and ensure visual diffs stay within the checked-in baselines.
+- Publish the current Storybook to Chromatic with `npm run chromatic` (requires `CHROMATIC_PROJECT_TOKEN`), or let the `UI Visual Checks` workflow handle it in CI.
+
 
 
 

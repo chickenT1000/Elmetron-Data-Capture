@@ -1,12 +1,15 @@
-import { Box, Stack, Typography, Divider } from '@mui/material';
-import ShowChartIcon from '@mui/icons-material/ShowChart';
-import StorageIcon from '@mui/icons-material/Storage';
+import { Stack, Typography } from '@mui/material';
 import { useHealthStatus } from '../hooks/useHealthStatus';
-import { useHealthLogEvents } from '../hooks/useHealthLogEvents';
+import { useHealthLogEvents, type HealthLogConnectionState } from '../hooks/useHealthLogEvents';
 import { MeasurementPanel } from '../components/MeasurementPanel';
-import type { MeasurementPanelState, MetricIndicatorState } from '../components/contracts';
 import { CommandHistory } from '../components/CommandHistory';
 import { LogFeed } from '../components/LogFeed';
+import type {
+  CommandHistoryEntryState,
+  DiagnosticLogRowState,
+  MeasurementPanelState,
+  MetricIndicatorState,
+} from '../components/contracts';
 
 const formatNumber = (value?: number | null, digits = 2): string => {
   if (value === undefined || value === null || Number.isNaN(value)) {
@@ -21,6 +24,26 @@ const formatDurationMs = (value?: number | null): string => {
     return `${(value / 1000).toFixed(2)} s`;
   }
   return `${value.toFixed(1)} ms`;
+};
+
+const normaliseLogStream = (state: HealthLogConnectionState): MeasurementPanelState['logStream'] => {
+  if (state === 'streaming' || state === 'polling') {
+    return state;
+  }
+  return 'idle';
+};
+
+const normaliseLogLevel = (level?: string | null): DiagnosticLogRowState['level'] => {
+  switch ((level ?? 'info').toLowerCase()) {
+    case 'success':
+      return 'success';
+    case 'warning':
+      return 'warning';
+    case 'error':
+      return 'error';
+    default:
+      return 'info';
+  }
 };
 
 export default function DashboardPage() {
@@ -42,6 +65,8 @@ export default function DashboardPage() {
     error: logsErrorObj,
   } = useHealthLogEvents({ limit: logLimit, fallbackMs: 5000 });
 
+  const logStream = normaliseLogStream(connectionState);
+
   const metricCards: MetricIndicatorState[] = [
     {
       id: 'frames',
@@ -55,7 +80,7 @@ export default function DashboardPage() {
       label: 'Command queue depth',
       value: formatNumber(health?.command_metrics?.queue_depth, 0),
       helperText: `Inflight ${formatNumber(health?.command_metrics?.inflight, 0)}`,
-      iconToken: 'frames',
+      iconToken: 'queue',
     },
     {
       id: 'processing',
@@ -71,7 +96,9 @@ export default function DashboardPage() {
       id: 'latency',
       label: 'Health response latency',
       value: formatDurationMs(responseTimes?.average_ms),
-      helperText: `Last ${formatDurationMs(responseTimes?.last_ms)} • Max ${formatDurationMs(responseTimes?.max_ms)}`,
+      helperText: `Last ${formatDurationMs(responseTimes?.last_ms)} • Max ${formatDurationMs(
+        responseTimes?.max_ms,
+      )}`,
       iconToken: 'latency',
     },
   ];
@@ -80,11 +107,11 @@ export default function DashboardPage() {
     if (healthLoading) {
       return { status: 'loading' };
     }
-    if (healthError) {
+    if (healthError || !health) {
       return { status: 'error', message: 'Health data unavailable.' };
     }
 
-    const measurement = health?.latest_measurement ?? null;
+    const measurement = health.latest_measurement ?? null;
     if (!measurement) {
       return { status: 'empty', message: 'No measurements recorded yet.' };
     }
@@ -92,11 +119,17 @@ export default function DashboardPage() {
     return {
       status: 'ready',
       autosaveEnabled: true,
-      connection: health?.state === 'running' ? 'connected' : 'offline',
-      logStream: connectionState,
+      connection: health.state === 'running' ? 'connected' : 'offline',
+      logStream,
       measurement: {
         value: typeof measurement.value === 'number' ? measurement.value : undefined,
-        valueText: measurement.value_text ?? measurement.value?.toString() ?? null,
+        valueText:
+          measurement.value_text ??
+          (typeof measurement.value === 'number'
+            ? measurement.value.toString()
+            : measurement.value != null
+            ? String(measurement.value)
+            : null),
         unit: measurement.unit ?? null,
         temperature: {
           value: measurement.temperature ?? null,
@@ -112,33 +145,40 @@ export default function DashboardPage() {
     };
   })();
 
-  const commandHistoryEntries = commandHistory.map((entry) => ({
+  const commandHistoryEntries: CommandHistoryEntryState[] = commandHistory.map((entry) => ({
     timestampIso: entry.timestamp_iso,
-    queueDepth: entry.queue_depth,
-    inflight: entry.inflight,
-    backlog: entry.result_backlog,
+    queueDepth: entry.queue_depth ?? null,
+    inflight: entry.inflight ?? null,
+    backlog: entry.result_backlog ?? null,
   }));
 
-  const logEntries = logEvents.map((event) => ({
-    id: event.id,
-    level: event.level as MetricIndicatorState['tone'],
-    category: event.category,
-    message: event.message,
-    createdAtIso: event.created_at,
+  const logEntries: DiagnosticLogRowState[] = logEvents.map((event) => ({
+    id: String(event.id ?? event.created_at ?? Date.now()),
+    level: normaliseLogLevel(event.level),
+    category: event.category ?? 'log',
+    message: event.message ?? '',
+    createdAtIso: event.created_at ?? new Date().toISOString(),
   }));
-    : 'No recent frames detected from the instrument.';
+
+  const logEmptyMessage = logEntries.length
+    ? undefined
+    : logStream === 'idle'
+    ? 'No recent frames detected from the instrument.'
+    : 'No recent log events.';
 
   return (
+    <Stack spacing={3} sx={{ py: 3 }}>
+      <Typography variant="h4" component="h1" fontWeight={600}>
+        Service Health Dashboard
+      </Typography>
       <MeasurementPanel state={measurementState} metrics={metricCards} />
-      </Card>
       <CommandHistory entries={commandHistoryEntries} loading={healthLoading} />
-      </Card>
       <LogFeed
         entries={logEntries}
         loading={logsLoading}
         errorMessage={logsError ? logsErrorObj?.message ?? 'Failed to load log stream' : null}
+        emptyMessage={logEmptyMessage}
       />
-      </Card>
     </Stack>
   );
 }

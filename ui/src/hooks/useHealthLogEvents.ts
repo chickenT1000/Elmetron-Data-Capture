@@ -232,7 +232,7 @@ export const useHealthLogEvents = (
         try {
           const payload = JSON.parse(event.data) as HealthLogEvent;
           updateEvents([payload]);
-        } catch (_err) {
+        } catch {
           // ignore malformed payloads
         }
       };
@@ -311,7 +311,7 @@ export const useHealthLogEvents = (
                   }
                 }
               }
-            } catch (streamErr) {
+        } catch (streamErr) {
               if (!cancelled) {
                 setError(streamErr instanceof Error ? streamErr : new Error('NDJSON stream error'));
                 setConnectionState('error');
@@ -340,7 +340,6 @@ export const useHealthLogEvents = (
         ndjsonReader = null;
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [limit, updateEvents, category, level]);
 
   const isStreaming = connectionState === 'streaming';

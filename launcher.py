@@ -12,11 +12,14 @@ import urllib.error
 import urllib.request
 import webbrowser
 from pathlib import Path
-from typing import Optional
+from typing import Dict, Optional
 
 import tkinter as tk
 from tkinter import filedialog
 from tkinter import font as tkfont
+from tkinter import messagebox
+from tkinter import scrolledtext
+from tkinter import ttk
 
 
 ROOT = Path(__file__).resolve().parent
@@ -443,6 +446,23 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+
+class StatusLabel:
+    def __init__(self, parent: ttk.Frame, title: str, row: int) -> None:
+        ttk.Label(parent, text=title, font=("Segoe UI", 11, "bold")).grid(
+            row=row,
+            column=0,
+            sticky="w",
+            pady=(0, 2),
+        )
+        self._value = tk.StringVar(value="Pending…")
+        self._label = ttk.Label(parent, textvariable=self._value)
+        self._label.grid(row=row, column=1, sticky="w")
+
+    def set(self, text: str, color: str) -> None:
+        self._value.set(text)
+        self._label.configure(foreground=color)
 
 
 class LauncherApp:

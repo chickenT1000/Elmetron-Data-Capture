@@ -1,0 +1,184 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "npm: dev (ui)",
+      "type": "npm",
+      "script": "dev",
+      "path": "ui",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "isBackground": true,
+      "problemMatcher": [
+        {
+          "owner": "vite",
+          "pattern": [
+            {
+              "regexp": ".",
+              "file": 0,
+              "location": 0,
+              "message": 0
+            }
+          ],
+          "background": {
+            "activeOnStart": true,
+            "beginsPattern": ".*",
+            "endsPattern": "ready in .+ms"
+          }
+        }
+      ],
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      }
+    },
+    {
+      "label": "npm: storybook",
+      "type": "npm",
+      "script": "storybook",
+      "path": "ui",
+      "group": "build",
+      "isBackground": true,
+      "problemMatcher": [
+        {
+          "owner": "storybook",
+          "pattern": [
+            {
+              "regexp": ".",
+              "file": 0,
+              "location": 0,
+              "message": 0
+            }
+          ],
+          "background": {
+            "activeOnStart": true,
+            "beginsPattern": ".*",
+            "endsPattern": "Storybook .* started"
+          }
+        }
+      ]
+    },
+    {
+      "label": "npm: build-storybook",
+      "type": "npm",
+      "script": "build-storybook",
+      "path": "ui",
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "npm: lint",
+      "type": "npm",
+      "script": "lint",
+      "path": "ui",
+      "group": "test",
+      "problemMatcher": "$eslint-stylish"
+    },
+    {
+      "label": "npm: vitest",
+      "type": "npm",
+      "script": "test",
+      "path": "ui",
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "npm: test:ui",
+      "type": "npm",
+      "script": "test:ui",
+      "path": "ui",
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "npm: chromatic",
+      "type": "npm",
+      "script": "chromatic",
+      "path": "ui",
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "python: pytest",
+      "type": "shell",
+      "command": "py",
+      "args": [
+        "-3",
+        "-m",
+        "pytest"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": {
+        "kind": "test",
+        "isDefault": false
+      },
+      "problemMatcher": "$pytest-python"
+    },
+    {
+      "label": "python: acquisition supervisor",
+      "type": "shell",
+      "command": "py",
+      "args": [
+        "-3",
+        "cx505_capture_service.py",
+        "--config",
+        "config/app.toml",
+        "--protocols",
+        "config/protocols.toml",
+        "--watchdog-timeout",
+        "30",
+        "--health-api-port",
+        "8050",
+        "--health-log"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "python: run protocol calibrate_ph7",
+      "type": "shell",
+      "command": "py",
+      "args": [
+        "-3",
+        "run_protocol_command.py",
+        "--config",
+        "config/app.toml",
+        "--protocols",
+        "config/protocols.toml",
+        "calibrate_ph7"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "python: compileall",
+      "type": "shell",
+      "command": "py",
+      "args": [
+        "-3",
+        "-m",
+        "compileall",
+        "elmetron",
+        "cx505_capture_service.py"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": "build",
+      "problemMatcher": []
+    }
+  ]
+}

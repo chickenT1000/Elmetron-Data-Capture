@@ -3,6 +3,7 @@ import { ThemeProvider, CssBaseline, Container } from '@mui/material';
 import theme from '../theme';
 import { LogFeed } from '../components/LogFeed';
 import type { DiagnosticLogRowState } from '../components/contracts';
+import { toDeterministicIso } from './mocks/deterministic';
 
 const meta: Meta<typeof LogFeed> = {
   title: 'Dashboard/LogFeed',
@@ -32,21 +33,21 @@ const logEntries: DiagnosticLogRowState[] = [
     level: 'info',
     category: 'capture',
     message: 'Capture window completed (512 bytes).',
-    createdAtIso: new Date().toISOString(),
+    createdAtIso: toDeterministicIso(),
   },
   {
     id: '2',
     level: 'warning',
     category: 'command',
     message: 'Startup command LATENCY timed out after 3 attempts.',
-    createdAtIso: new Date(Date.now() - 30_000).toISOString(),
+    createdAtIso: toDeterministicIso(-30_000),
   },
   {
     id: '3',
     level: 'error',
     category: 'watchdog',
     message: 'Watchdog detected stalled capture window.',
-    createdAtIso: new Date(Date.now() - 90_000).toISOString(),
+    createdAtIso: toDeterministicIso(-90_000),
   },
 ];
 

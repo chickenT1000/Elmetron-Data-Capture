@@ -31,6 +31,9 @@
 - Created live rehearsal configuration (`config/live_rehearsal.toml`) and bench harness script updates to support CX-505 hardware runs.
 - Executed CX-505 live rehearsal capture, archived health snapshot/database summary artifacts, and validated watchdog/telemetry stability.
 - Authored CX-505 live test checklist documenting setup, acceptance criteria, and post-run archival steps.
+- Introduced a component-driven UI lab with shared design tokens (`ui/tokens.json`), Storybook 9.x, and Chromatic publishing so visual baselines are versioned alongside code.
+- Added Playwright component screenshot harness (`npm run test:ui`) that snapshots typography, measurement panel states, command history, log feed, and full dashboard compositions on every run.
+- Refactored the dashboard to reusable `MeasurementPanel`, `CommandHistory`, and `LogFeed` components, exposing health telemetry, queues, and logs consistently across the UI and stories.
 
 ## Work plan by area
 
@@ -80,7 +83,7 @@
 | --- | --- | --- |
 | High | Connect the dashboard to live endpoints (telemetry, logs, manifest) with full loading/error state management | Completed |
 | High | Implement the Session Evaluation screen with overlay alignment and PNG/JSON export options | Completed |
-| Medium | Add component tests (Vitest + RTL) and configure Playwright smoke tests | Vitest coverage added for API/hooks; Playwright automation pending |
+| Medium | Add component tests (Vitest + RTL) and configure Playwright smoke tests | Completed 2025-09-29: Vitest hover/API suites plus stable Playwright story captures wired into `npm run ui:check`. |
 | Low | Introduce kiosk/Electron packaging and offline operation | Targeted for post-MVP deployments |
 | High | Build Windows launch monitor GUI for non-technical operators | Completed (`launcher.py` with status dashboard) |
 | High | Investigate live Service Health UI connectivity failures (intermittent 404/stale data during harness runs) | Completed (CORS headers + launcher/env fixes 2025-09-27) |
@@ -98,11 +101,16 @@
 | Medium | Annotate mode transitions across the UI | Persist data for all channels and mark intervals where a channel was inactive (e.g., mode switches), both in live view and exports. |
 | High | Add session timeline notes with chart annotations | Allow users to drop timestamped notes (up to 400 chars) that render as numbered pointers beneath the time axis, showing a short label while full text lives in a notes log; notes can be scheduled in the future and are stored with the session. |
 | High | Sync notes into session data at creation/edition time | Every note addition or edit should be written immediately to the session record so exports and downstream tools capture the updated metadata. |
-| High | Freeze the UI contract with shared design tokens (`ui/tokens.json`) and publish component API specs that cover default, loading, empty, and error states | Establishes the source of truth agents will rely on for component generation. |
-| High | Lock the UI stack to shadcn/ui + Radix + Tailwind and remove bespoke styling until post-v2 | Ensures consistent primitives for component lab work and future spec automation. |
-| High | Stand up the component lab (Storybook or Ladle) with Chromatic/Percy diffs, Playwright component screenshots, and a `pnpm ui:check` guard | Blocks merges on visual regressions and gives agents a fast self-test loop. |
 | Medium | Keep a lean Cypress/Playwright E2E suite that exercises 5–10 production flows with trace review | Maintains end-to-end confidence without slowing component iteration. |
 | Medium | Provide a structured UI JSON DSL plus deterministic mocks for agents | Lets automated contributors define components via contract instead of the full app surface. |
+| Medium | Extend dashboard visuals with rolling charts and advanced measurement analytics | Follow-up once core real-time readouts are stabilised. |
+| High | Migrate front-end stack to shadcn/ui + Radix + Tailwind and remove ad-hoc MUI styling | Aligns with the contract-first workflow and enables Tailwind-only determinism during tests. |
+| High | Implement JSON-based UI DSL and runner that mounts stories, captures diffs, and returns pass/fail for agents | Unlocks the self-test loop described in the Factory/Codex workflow. |
+| High | Finalise VS Code IDE workspace (tasks, extensions, launch/debug configs) for repeatable UI workflows | Ensures contributors have a single command centre for Storybook, Playwright, Chromatic, and pytest operations. |
+| High | Restore UI lint/TypeScript baseline after dashboard refactor | Completed 2025-09-29 (`npm run lint` now passes). |
+| Medium | Add `npm run ui:check` wrapper to build Storybook, run Playwright screenshots, and emit markdown diff reports for CI agents | Completed 2025-09-29: Wrapper orchestrates lint, Vitest, and Playwright with deterministic stories. |
+| Medium | Introduce Playwright/Cypress end-to-end suite covering 5–10 critical flows with trace artifacts | Completes the “Wire E2E only for flows” requirement. |
+| Medium | Harden determinism: Tailwind containment, frozen dates/random seeds, and shared mock data | Completed 2025-09-29: Shared deterministic mocks, Storybook global freeze, Playwright init script, and reduced-motion CSS. |
 | Medium | Add launcher session controller that keeps the window open and terminates capture/UI processes when closed | Prevents orphaned backend processes when operators stop work from the browser. |
 
 

@@ -3,6 +3,7 @@ import { ThemeProvider, CssBaseline, Container } from '@mui/material';
 import theme from '../theme';
 import { MeasurementPanel } from '../components/MeasurementPanel';
 import type { MeasurementPanelState, MetricIndicatorState } from '../components/contracts';
+import { toDeterministicIso } from './mocks/deterministic';
 
 const meta: Meta<typeof MeasurementPanel> = {
   title: 'Dashboard/MeasurementPanel',
@@ -65,7 +66,7 @@ const readyState: MeasurementPanelState = {
   measurement: {
     value: 7.13,
     unit: 'pH',
-    timestampIso: new Date().toISOString(),
+    timestampIso: toDeterministicIso(),
     sequence: 1289,
     mode: 'Continuous',
     status: 'Stable',
@@ -95,7 +96,7 @@ export const Offline: Story = {
         value: undefined,
         valueText: '—',
         unit: 'pH',
-        timestampIso: new Date(Date.now() - 5 * 60_000).toISOString(),
+        timestampIso: toDeterministicIso(-5 * 60_000),
         sequence: 0,
         mode: 'Standby',
         status: 'Offline',

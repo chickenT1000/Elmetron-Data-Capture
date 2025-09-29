@@ -10,6 +10,7 @@ import type {
   CommandHistoryEntryState,
   DiagnosticLogRowState,
 } from '../components/contracts';
+import { toDeterministicIso } from './mocks/deterministic';
 
 const meta: Meta = {
   title: 'Dashboard/Overview',
@@ -40,7 +41,7 @@ const measurementState: MeasurementPanelState = {
   measurement: {
     value: 7.08,
     unit: 'pH',
-    timestampIso: new Date().toISOString(),
+    timestampIso: toDeterministicIso(),
     sequence: 1942,
     mode: 'Continuous',
     status: 'Stable',
@@ -84,7 +85,7 @@ const metrics: MetricIndicatorState[] = [
 ];
 
 const commandHistoryEntries: CommandHistoryEntryState[] = Array.from({ length: 6 }).map((_, index) => ({
-  timestampIso: new Date(Date.now() - index * 90_000).toISOString(),
+  timestampIso: toDeterministicIso(-index * 90_000),
   queueDepth: Math.max(0, 2 - index),
   inflight: Math.max(0, 1 - index),
   backlog: index,
@@ -96,21 +97,21 @@ const logEntries: DiagnosticLogRowState[] = [
     level: 'info',
     category: 'capture',
     message: 'Capture window completed (768 bytes).',
-    createdAtIso: new Date().toISOString(),
+    createdAtIso: toDeterministicIso(),
   },
   {
     id: 'log-2',
     level: 'warning',
     category: 'command',
     message: 'Startup command CALIBRATE took longer than expected.',
-    createdAtIso: new Date(Date.now() - 45_000).toISOString(),
+    createdAtIso: toDeterministicIso(-45_000),
   },
   {
     id: 'log-3',
     level: 'error',
     category: 'watchdog',
     message: 'Watchdog issued reconnect attempt (attempt 2).',
-    createdAtIso: new Date(Date.now() - 120_000).toISOString(),
+    createdAtIso: toDeterministicIso(-120_000),
   },
 ];
 
@@ -137,7 +138,7 @@ export const Errors: Story = {
             value: undefined,
             valueText: null,
             unit: 'pH',
-            timestampIso: new Date(Date.now() - 10 * 60_000).toISOString(),
+            timestampIso: toDeterministicIso(-10 * 60_000),
             mode: 'Unknown',
             status: 'Error',
             range: '0–14',
@@ -164,21 +165,21 @@ export const Errors: Story = {
             level: 'error',
             category: 'capture',
             message: 'Capture window failed: FT_STATUS_DEVICE_NOT_FOUND',
-            createdAtIso: new Date().toISOString(),
+            createdAtIso: toDeterministicIso(),
           },
           {
             id: 'warn-1',
             level: 'warning',
             category: 'command',
             message: 'Command queue backlog exceeded expected threshold (8)',
-            createdAtIso: new Date(Date.now() - 30_000).toISOString(),
+            createdAtIso: toDeterministicIso(-30_000),
           },
           {
             id: 'info-1',
             level: 'info',
             category: 'watchdog',
             message: 'Attempting interface reopen (1/5)',
-            createdAtIso: new Date(Date.now() - 60_000).toISOString(),
+            createdAtIso: toDeterministicIso(-60_000),
           },
         ]}
         errorMessage="Health stream degraded"

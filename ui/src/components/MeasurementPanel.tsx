@@ -22,14 +22,6 @@ const formatNumber = (value?: number | null, digits = 2): string => {
   return value.toLocaleString(undefined, { maximumFractionDigits: digits });
 };
 
-const formatDurationMs = (value?: number | null): string => {
-  if (!value && value !== 0) return '—';
-  if (value >= 1000) {
-    return `${(value / 1000).toFixed(2)} s`;
-  }
-  return `${value.toFixed(1)} ms`;
-};
-
 const formatTimestamp = (value?: string | null): string => {
   if (!value) return '—';
   const date = new Date(value);

@@ -38,11 +38,8 @@ const formatDateTime = (value?: string | null): string => {
   if (!value) {
     return 'Never';
   }
-  try {
-    return new Date(value).toLocaleString();
-  } catch (_error) {
-    return value;
-  }
+  const time = new Date(value);
+  return Number.isNaN(time.getTime()) ? value : time.toLocaleString();
 };
 
 const formatAgeMinutes = (value?: number | null): string => {

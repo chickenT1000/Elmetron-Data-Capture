@@ -1,5 +1,49 @@
 import { expect, test } from '@playwright/test';
 
+const deterministicInitScript = `
+  (() => {
+    const FIXED_TIME = Date.parse('2024-08-01T15:00:00Z');
+    const OriginalDate = Date;
+    const FixedDate = class extends OriginalDate {
+      constructor(...args) {
+        if (args.length === 0) {
+          super(FIXED_TIME);
+        } else {
+          super(...args);
+        }
+      }
+      static now() {
+        return FIXED_TIME;
+      }
+    };
+    Object.getOwnPropertyNames(OriginalDate).forEach((prop) => {
+      if (prop in FixedDate) {
+        return;
+      }
+      const descriptor = Object.getOwnPropertyDescriptor(OriginalDate, prop);
+      if (descriptor) {
+        Object.defineProperty(FixedDate, prop, descriptor);
+      }
+    });
+    // eslint-disable-next-line no-global-assign
+    Date = FixedDate;
+
+    let seed = 1337;
+    Math.random = () => {
+      seed = (seed * 1664525 + 1013904223) % 4294967296;
+      return seed / 4294967296;
+    };
+
+    const style = document.createElement('style');
+    style.innerHTML = '*, *::before, *::after { transition: none !important; animation: none !important; }';
+    document.head.appendChild(style);
+  })();
+`;
+
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(deterministicInitScript);
+});
+
 const stories = [
   {
     id: 'foundation-typography--overview',
