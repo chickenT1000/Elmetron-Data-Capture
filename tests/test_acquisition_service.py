@@ -444,6 +444,57 @@ def test_scheduled_command_uses_default_retry_policy() -> None:
     assert success_payload['lab_retry_applied'] is False
 
 
+def test_build_latest_measurement_summary(base_service: AcquisitionService) -> None:
+    record = {
+        'measurement': {
+            'value': 7.12,
+            'value_text': '7.12',
+            'value_unit': 'pH',
+            'temperature': 23.5,
+            'temperature_unit': '°C',
+            'sequence': '0123',
+            'timestamp': '2025-09-27T10:00:00Z',
+        },
+        'header': {
+            'mode': 'pH',
+            'status': 'Stable',
+            'range': '0-14',
+        },
+        'storage': {
+            'frame_id': 42,
+            'measurement_id': 84,
+        },
+        'captured_at': '2025-09-27T10:00:01Z',
+    }
+
+    summary = base_service._build_latest_measurement(record)  # pylint: disable=protected-access
+
+    assert summary['value'] == 7.12
+    assert summary['unit'] == 'pH'
+    assert summary['temperature'] == 23.5
+    assert summary['temperature_unit'] == '°C'
+    assert summary['mode'] == 'pH'
+    assert summary['status'] == 'Stable'
+    assert summary['range'] == '0-14'
+    assert summary['sequence'] == '0123'
+    assert summary['frame_id'] == 42
+    assert summary['measurement_id'] == 84
+    assert summary['timestamp'] == '2025-09-27T10:00:00Z'
+    assert summary['captured_at'] == '2025-09-27T10:00:01Z'
+
+    fallback_record = {
+        'measurement': {
+            'value': 5.43,
+        },
+        'captured_at': '2025-09-27T11:11:11Z',
+        'storage': {},
+    }
+
+    fallback_summary = base_service._build_latest_measurement(fallback_record)  # pylint: disable=protected-access
+    assert fallback_summary['value'] == 5.43
+    assert fallback_summary['timestamp'] == '2025-09-27T11:11:11Z'
+
+
 def test_startup_command_lab_retry_applies() -> None:
     config = AppConfig()
     config.acquisition.startup_commands = ['lab_cal']

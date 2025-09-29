@@ -86,6 +86,24 @@
 | High | Investigate live Service Health UI connectivity failures (intermittent 404/stale data during harness runs) | Completed (CORS headers + launcher/env fixes 2025-09-27) |
 | High | Keep Service Health UI available post-bottleneck fix; run dev server at 127.0.0.1:5173 with `VITE_API_BASE_URL=http://127.0.0.1:8050` | Live check 2025-09-27 confirmed UI load |
 | High | Resume live CX-505 testing after PC reboot (relaunch harness, verify /health, reconnect UI) | Urgent next session startup |
+| High | Surface live CX-505 measurements on the landing view | Replace the current connectivity-first layout with primary readouts for pH/Redox/Conductivity/Solution temperature, updating in real time from the active session. |
+| High | Add 10-minute rolling charts beneath the live readouts | Auto-refresh plots for each measured channel; continue plotting even when a channel has no frames (gap visualization). |
+| High | Auto-start continuous session recording on launch | Ensure measurement logging begins immediately; provide context so users know recording is live without manual action. |
+| High | Enable adjustable chart scales and time axes | Allow users to tune vertical ranges per channel and switch between absolute timestamps and local clock labels. |
+| Medium | Show live connectivity indicator for CX-505 | Present a green icon (with tooltip) when instrument link is healthy, so operators confirm streaming status immediately. |
+| Medium | Display autosave status indicator | Reuse the connectivity-style icon to confirm session logging is active; provide hover text describing autosave behaviour. |
+| Medium | Provide interactive export tooling for sessions | Default to the active session, allow picking historical sessions, and select channel subsets for export (pH, Redox, Conductivity, Temp). |
+| Medium | Add graphical time-range selection to exports | Let users crop the export window via chart brushing plus manual start/end timestamps; reflect selected range in previews. |
+| Medium | Support multiple export formats (CSV, PNG charts, etc.) | Offer CSV for data tables and PNG (possibly PDF/SVG) renders for charts; respect channel choices and time range selections. |
+| Medium | Annotate mode transitions across the UI | Persist data for all channels and mark intervals where a channel was inactive (e.g., mode switches), both in live view and exports. |
+| High | Add session timeline notes with chart annotations | Allow users to drop timestamped notes (up to 400 chars) that render as numbered pointers beneath the time axis, showing a short label while full text lives in a notes log; notes can be scheduled in the future and are stored with the session. |
+| High | Sync notes into session data at creation/edition time | Every note addition or edit should be written immediately to the session record so exports and downstream tools capture the updated metadata. |
+| High | Freeze the UI contract with shared design tokens (`ui/tokens.json`) and publish component API specs that cover default, loading, empty, and error states | Establishes the source of truth agents will rely on for component generation. |
+| High | Lock the UI stack to shadcn/ui + Radix + Tailwind and remove bespoke styling until post-v2 | Ensures consistent primitives for component lab work and future spec automation. |
+| High | Stand up the component lab (Storybook or Ladle) with Chromatic/Percy diffs, Playwright component screenshots, and a `pnpm ui:check` guard | Blocks merges on visual regressions and gives agents a fast self-test loop. |
+| Medium | Keep a lean Cypress/Playwright E2E suite that exercises 5–10 production flows with trace review | Maintains end-to-end confidence without slowing component iteration. |
+| Medium | Provide a structured UI JSON DSL plus deterministic mocks for agents | Lets automated contributors define components via contract instead of the full app surface. |
+| Medium | Add launcher session controller that keeps the window open and terminates capture/UI processes when closed | Prevents orphaned backend processes when operators stop work from the browser. |
 
 
 
