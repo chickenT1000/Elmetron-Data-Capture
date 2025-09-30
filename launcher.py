@@ -62,34 +62,27 @@ def check_hardware_connected() -> HardwareStatus:
     try:
         # Try to load ftd2xx.dll
         ftd2xx = ctypes.WinDLL('ftd2xx.dll')
-        
         # Define function signatures for device enumeration
         _ft_create_list = ftd2xx.FT_CreateDeviceInfoList
         _ft_create_list.argtypes = [ctypes.POINTER(ctypes.c_ulong)]
         _ft_create_list.restype = ctypes.c_ulong
-        
         # Define FT_Open to test if device can be opened
         _ft_open = ftd2xx.FT_Open
         _ft_open.argtypes = [ctypes.c_int, ctypes.POINTER(ctypes.wintypes.HANDLE)]
         _ft_open.restype = ctypes.c_ulong
-        
         # Define FT_Close to close test connection
         _ft_close = ftd2xx.FT_Close
         _ft_close.argtypes = [ctypes.wintypes.HANDLE]
         _ft_close.restype = ctypes.c_ulong
-        
         # Call FT_CreateDeviceInfoList to get device count
         count = ctypes.c_ulong()
         status = _ft_create_list(ctypes.byref(count))
-        
         # Check if enumeration succeeded and devices found
         if status != 0 or count.value == 0:
             return HardwareStatus.NOT_FOUND
-        
         # Device(s) found - try to open first device to check availability
         handle = ctypes.wintypes.HANDLE()
         open_status = _ft_open(0, ctypes.byref(handle))  # Try to open device index 0
-        
         if open_status == 0:
             # Successfully opened - device is available
             # Close immediately so we don't hold it
@@ -101,7 +94,6 @@ def check_hardware_connected() -> HardwareStatus:
         else:
             # Other error
             return HardwareStatus.UNKNOWN
-            
     except (OSError, AttributeError) as e:
         # ftd2xx.dll not found or function failed
         return HardwareStatus.NOT_FOUND
@@ -160,7 +152,6 @@ class LauncherApp:
                 "Please close the existing launcher window before starting a new one."
             )
             sys.exit(1)
-        
         self.root = tk.Tk()
         self.root.title("Elmetron Launch Monitor")
         self.root.geometry("700x480")
@@ -200,7 +191,6 @@ class LauncherApp:
             try:
                 with open(LOCKFILE, "r") as f:
                     old_pid = int(f.read().strip())
-                
                 # Try to check if process is still running on Windows
                 import ctypes.wintypes as wintypes
                 PROCESS_QUERY_INFORMATION = 0x0400
@@ -217,7 +207,6 @@ class LauncherApp:
                     LOCKFILE.unlink()
                 except FileNotFoundError:
                     pass
-        
         # Write current PID to lockfile
         try:
             with open(LOCKFILE, "w") as f:
@@ -225,7 +214,6 @@ class LauncherApp:
             return True
         except OSError:
             return False
-    
     def _release_lock(self) -> None:
         """Release single-instance lock."""
         try:
@@ -272,13 +260,10 @@ class LauncherApp:
 
         self.reset_button = ttk.Button(button_row, text="Reset", command=self.reset)
         self.reset_button.pack(side="left", padx=(0, 8))
-        
         # Separator
         ttk.Separator(button_row, orient="vertical").pack(side="left", fill="y", padx=8)
-        
         self.hw_refresh_button = ttk.Button(button_row, text="Refresh Hardware", command=self._refresh_hardware)
         self.hw_refresh_button.pack(side="left", padx=(0, 8))
-        
         # Reopen Browser button
         self.reopen_browser_button = ttk.Button(button_row, text="Reopen Browser", command=self._reopen_browser)
         self.reopen_browser_button.pack(side="left", padx=(0, 8))
@@ -363,10 +348,8 @@ class LauncherApp:
     def _check_hardware(self) -> HardwareStatus:
         """Check hardware connection status and update UI. Returns the detected status."""
         hw_status = check_hardware_connected()
-        
         if hw_status == HardwareStatus.AVAILABLE:
             self._set_status("hardware", "CX-505 connected and available", "success")
-        
         elif hw_status == HardwareStatus.IN_USE:
             # Check if our capture service is running
             if "capture" in self._processes and self._state == LauncherState.RUNNING:
@@ -376,15 +359,12 @@ class LauncherApp:
                 # Unexpected - something else has it
                 self._set_status("hardware", "CX-505 in use by another process", "error")
                 self._log("WARNING: CX-505 is in use by another process (check Task Manager for python.exe or other Elmetron software)")
-        
         elif hw_status == HardwareStatus.NOT_FOUND:
             self._set_status("hardware", "CX-505 not detected (OK for archived sessions)", "waiting")
             self._log("WARNING: CX-505 device not detected (check USB connection and FTDI drivers)")
-        
         else:  # UNKNOWN
             self._set_status("hardware", "CX-505 status unknown", "waiting")
             self._log("WARNING: CX-505 status could not be determined")
-        
         return hw_status
 
 
@@ -392,7 +372,6 @@ class LauncherApp:
         """Manually refresh hardware status."""
         self._log("Refreshing hardware status...")
         hw_status = self._check_hardware()
-        
         # Log the result
         if hw_status == HardwareStatus.AVAILABLE:
             self._log("Hardware refresh complete: CX-505 is available")
@@ -409,54 +388,7 @@ class LauncherApp:
 
     def _reopen_browser(self) -> None:
         """Reopen the browser tab with the UI dashboard."""
-        if self._state != LauncherState.RUNNING:
-            self._log("[Browser] Cannot reopen browser - service not running")
-            messagebox.showwarning(
-                "Service Not Running",
-                "The capture service must be running to open the dashboard.\n\nPlease click 'Start' first."
-            )
-            return
-        
-        # Check if processes are actually alive
-        capture_alive = "capture" in self._processes and self._processes["capture"].poll() is None
-        ui_alive = "ui" in self._processes and self._processes["ui"].poll() is None
-        
-        if not capture_alive or not ui_alive:
-            self._log("[Browser] Cannot reopen browser - service processes not responding")
-            missing = []
-            if not capture_alive:
-                missing.append("capture service")
-            if not ui_alive:
-                missing.append("UI server")
-            
-            messagebox.showerror(
-                "Service Error",
-                f"The {' and '.join(missing)} stopped unexpectedly.\n\n"
-                "Please click 'Stop' to clean up, then 'Start' to restart services."
-            )
-            return
-        
-        # Check if UI is actually responding
-        try:
-            with urllib.request.urlopen(UI_URL, timeout=2) as response:
-                if not (200 <= response.getcode() < 300):
-                    self._log(f"[Browser] UI server returned status {response.getcode()}")
-                    messagebox.showwarning(
-                        "UI Not Ready",
-                        f"The UI server is not responding properly (HTTP {response.getcode()}).\n\n"
-                        "Please wait a moment or try clicking 'Reset'."
-                    )
-                    return
-        except Exception as e:
-            self._log(f"[Browser] Cannot reach UI server: {e}")
-            messagebox.showerror(
-                "UI Not Accessible",
-                f"The UI server is not accessible at {UI_URL}.\n\n"
-                f"Error: {e}\n\n"
-                "Please click 'Reset' to restart services."
-            )
-            return
-        
+        # Simple: button is only enabled when UI is ready, so just open browser
         self._log("[Browser] Reopening dashboard in browser...")
         try:
             webbrowser.open(UI_URL)
@@ -465,7 +397,38 @@ class LauncherApp:
             self._log("[Browser] Dashboard opened successfully")
         except Exception as e:
             self._log(f"[Browser] Failed to open dashboard: {e}")
-            self.status_rows["browser"].set(f"Failed: {e}", STATUS_PALETTE["error"])
+            messagebox.showerror("Browser Error", f"Failed to open browser:\\n\\n{e}")
+    def _update_button_states(self) -> None:
+        """Update button enabled/disabled state based on service state."""
+        # Check if UI is actually responding
+        ui_ready = False
+        try:
+            if self._state == LauncherState.RUNNING and "ui" in self._processes:
+                ui_process = self._processes["ui"]
+                if ui_process.poll() is None:  # Process still running
+                    # Quick check if UI is responding
+                    with urllib.request.urlopen(UI_URL, timeout=1) as response:
+                        ui_ready = 200 <= response.getcode() < 300
+        except Exception:
+            ui_ready = False
+        # Enable/disable Reopen Browser button
+        try:
+            if ui_ready:
+                self.reopen_browser_button.config(state="normal")
+            else:
+                self.reopen_browser_button.config(state="disabled")
+        except Exception:
+            pass  # Button may not exist yet during init
+
+    def _schedule_button_update(self) -> None:
+        """Schedule periodic button state updates."""
+        try:
+            self._update_button_states()
+        except Exception:
+            pass
+        # Check every 2 seconds
+        self.root.after(2000, self._schedule_button_update)
+
     def _do_start(self) -> None:
         self._transition_to(LauncherState.STARTING)
         self._set_initial_statuses()
@@ -473,7 +436,6 @@ class LauncherApp:
             # Check hardware status (but don't block startup if not found)
             hw_status = self._check_hardware()
             device_available = hw_status in (HardwareStatus.AVAILABLE, HardwareStatus.IN_USE)
-            
             self._set_status("prereq", "Checking prerequisites...", "waiting")
             self._prepare_environment()
             self._set_status("prereq", "Prerequisites ready", "success")
@@ -483,7 +445,6 @@ class LauncherApp:
             self._start_data_api_service()
             if not self._wait_for_url(DATA_API_HEALTH_URL, 40, "data_api"):
                 raise RuntimeError("Data API service did not respond at /health.")
-            
             # Only start Capture Service (port 8051) if device is available
             if device_available:
                 self._set_status("capture", "Starting capture service...", "waiting")
@@ -521,7 +482,6 @@ class LauncherApp:
                 self._set_status("system", "Archive mode ready (no device)", "success")
                 self._log("=== System ready in ARCHIVE MODE ===")
                 self._log("Connect CX-505 device and click 'Reset' to enable live capture")
-            
             self._transition_to(LauncherState.RUNNING)
         except Exception as exc:
             self._log(f"ERROR: {exc}")
@@ -540,21 +500,16 @@ class LauncherApp:
             self._mark_idle_statuses()
             self._transition_to(LauncherState.IDLE)
             return
-        
         # Run termination in background thread to avoid blocking GUI
         def stop_thread():
             try:
                 self._post(lambda: self._transition_to(LauncherState.STOPPING))
                 self._post(lambda: self._set_status("system", "Stopping services...", "waiting"))
-                
                 # Stop data monitoring
                 self._stop_data_monitoring()
-                
                 # Log resource state before cleanup for debugging
                 self._log_resource_state()
-                
                 errors = self._terminate_processes()
-                
                 # Update UI from background thread using _post
                 if errors:
                     for error in errors:
@@ -569,33 +524,27 @@ class LauncherApp:
                 self._log(f"ERROR in stop thread: {e}")
                 self._post(lambda: self._set_status("system", f"Stop failed: {e}", "error"))
                 self._post(lambda: self._transition_to(LauncherState.FAILED))
-        
         threading.Thread(target=stop_thread, daemon=True).start()
 
     def _do_reset(self) -> None:
         """Reset services by stopping and restarting them."""
         self._log("Executing reset: stop then start.")
-        
         # Run reset in background thread to avoid blocking GUI
         def reset_thread():
             try:
                 # Stop phase
                 self._post(lambda: self._transition_to(LauncherState.STOPPING))
                 self._post(lambda: self._set_status("system", "Stopping services...", "waiting"))
-                
                 # Stop data monitoring
                 self._stop_data_monitoring()
                 self._log_resource_state()
-                
                 # Terminate processes gracefully
                 errors = self._terminate_processes()
                 if errors:
                     for error in errors:
                         self._log(f"ERROR during stop: {error}")
-                
                 # Force cleanup if needed
                 self._force_cleanup()
-                
                 # Wait briefly for ports to be freed before restarting
                 self._log("Waiting for service ports to be freed...")
                 # Shorter waits - processes already terminated gracefully
@@ -603,17 +552,14 @@ class LauncherApp:
                 self._wait_for_port_free(8051, max_wait=3)  # Capture Service  
                 self._wait_for_port_free(5173, max_wait=3)  # UI Server
                 self._log("Restarting services...")
-                
                 # Reset to IDLE and restart on GUI thread
                 self._post(lambda: self._transition_to(LauncherState.IDLE))
                 self._post(lambda: self._set_initial_statuses())
                 self._post(lambda: self._do_start())
-                
             except Exception as e:
                 self._log(f"ERROR in reset thread: {e}")
                 self._post(lambda: self._set_status("system", f"Reset failed: {e}", "error"))
                 self._post(lambda: self._transition_to(LauncherState.FAILED))
-        
         threading.Thread(target=reset_thread, daemon=True).start()
 
     def _prepare_environment(self) -> None:
@@ -757,11 +703,9 @@ class LauncherApp:
             except Exception:
                 # If we get an exception, assume port is free
                 return True
-            
             if attempt == 0:
                 self._log(f"Waiting for port {port} to be freed...")
             time.sleep(1)
-        
         self._log(f"WARNING: Port {port} still in use after {max_wait} seconds")
         return False
 
@@ -795,7 +739,6 @@ class LauncherApp:
     def _terminate_processes(self) -> List[str]:
         """Terminate processes gracefully with database safety."""
         errors: List[str] = []
-        
         # Phase 1: Send graceful shutdown signals (SIGTERM)
         self._log("Initiating graceful shutdown...")
         shutdown_pids = {}
@@ -805,25 +748,20 @@ class LauncherApp:
                 if pid is None or process.poll() is not None:
                     self._processes.pop(name, None)
                     continue
-                
                 self._log(f"Requesting graceful shutdown of {name} (pid {pid})...")
                 process.terminate()  # Send SIGTERM for graceful shutdown
                 shutdown_pids[name] = (process, time.time())
-                
             except Exception as exc:
                 self._log(f"Error requesting shutdown of {name}: {exc}")
                 errors.append(f"Failed to request shutdown of {name}: {exc}")
-        
         # Phase 2: Wait for graceful exits (with timeout)
         # Data API and Capture Service have signal handlers to close DB connections
         max_wait = 5.0  # seconds to wait for graceful shutdown
         check_interval = 0.2
         elapsed = 0
-        
         while shutdown_pids and elapsed < max_wait:
             time.sleep(check_interval)
             elapsed += check_interval
-            
             for name in list(shutdown_pids.keys()):
                 process, start_time = shutdown_pids[name]
                 if process.poll() is not None:
@@ -831,7 +769,6 @@ class LauncherApp:
                     self._log(f"{name} exited gracefully (exit code: {process.poll()})")
                     self._processes.pop(name, None)
                     del shutdown_pids[name]
-        
         # Phase 3: Force-kill any remaining processes
         if shutdown_pids:
             self._log(f"Force-killing {len(shutdown_pids)} processes that did not exit gracefully...")
@@ -839,7 +776,6 @@ class LauncherApp:
                 try:
                     pid = process.pid
                     self._log(f"Force-killing {name} (pid {pid})...")
-                    
                     # Use taskkill /F /T for stubborn processes (mainly UI/Node)
                     subprocess.run(
                         ["taskkill", "/F", "/T", "/PID", str(pid)],
@@ -848,18 +784,14 @@ class LauncherApp:
                         creationflags=CREATE_NO_WINDOW
                     )
                     self._log(f"{name} force-killed")
-                    
                 except Exception as e:
                     self._log(f"Error force-killing {name}: {e}")
                     errors.append(f"Failed to force-kill {name}: {e}")
                 finally:
                     self._processes.pop(name, None)
-        
         self._close_logs()
-        
         # Brief pause for OS cleanup
         time.sleep(0.3)
-        
         return errors
 
     def _close_logs(self) -> None:
@@ -873,10 +805,8 @@ class LauncherApp:
     def _force_cleanup(self) -> None:
         """Force cleanup of all resources, even if partially initialized."""
         self._log("Forcing complete resource cleanup.")
-        
         # Close any open log handles
         self._close_logs()
-        
         # Kill any lingering processes
         for name, process in list(self._processes.items()):
             try:
@@ -892,7 +822,6 @@ class LauncherApp:
                 self._log(f"WARNING: Exception during force cleanup of {name}: {exc}")
             finally:
                 self._processes.pop(name, None)
-        
         # Clear process dictionary
         self._processes.clear()
         self._log("Resource cleanup completed.")
@@ -934,6 +863,10 @@ class LauncherApp:
     def _transition_to(self, state: LauncherState) -> None:
         self._state = state
         self._update_controls()
+        # Update button states when state changes
+        self._post(lambda: self._update_button_states())
+        # Update button states when state changes
+        self._post(lambda: self._update_button_states())
 
     def _log(self, message: str) -> None:
         timestamp = time.strftime("%H:%M:%S")
@@ -987,7 +920,6 @@ class LauncherApp:
         # If browser was opened, show confirmation dialog
         if self._browser_opened and self._state == LauncherState.RUNNING:
             session_file = self._get_current_session_file()
-            
             message = (
                 "Closing the launcher will stop all services.\n\n"
                 f"Session data file: {session_file}\n\n"
@@ -995,25 +927,20 @@ class LauncherApp:
                 "The captured measurement data is automatically saved to the database.\n\n"
                 "📌 The browser tab will detect the offline state and close automatically.\n\n""Are you sure you want to close?"
             )
-            
             response = messagebox.askyesno(
                 "Confirm Close",
                 message,
                 icon="warning",
                 default="no"
             )
-            
             if not response:
                 return  # User cancelled
-        
         # If services are running, stop them first and wait for completion
         if self._state == LauncherState.RUNNING:
             self._log("Closing launcher - stopping services...")
-            
             # Directly terminate processes instead of using the queue
             # (queue won't process after we set _closing = True)
             self._terminate_processes()
-            
             # Wait for processes to actually terminate (up to 3 seconds)
             max_wait = 30  # 3 seconds (30 * 0.1)
             for _ in range(max_wait):
@@ -1024,20 +951,16 @@ class LauncherApp:
                 if all_stopped:
                     break
                 time.sleep(0.1)
-            
             # Force kill any remaining
             for name, proc in list(self._processes.items()):
                 if proc.poll() is None:
                     self._log(f"Force killing {name}...")
                     proc.kill()
-            
             self._processes.clear()
             self._log("All services stopped")
-            
             # Remind user to close browser
             if self._browser_opened:
                 self._log("Browser tab will auto-close after detecting offline state")
-        
         self._closing = True
         with self._queue_lock:
             self._queue_active = False
@@ -1047,6 +970,8 @@ class LauncherApp:
 
     def run(self) -> None:
         try:
+            # Start periodic button state updates
+            self._schedule_button_update()
             self.root.mainloop()
         finally:
             self._closing = True
