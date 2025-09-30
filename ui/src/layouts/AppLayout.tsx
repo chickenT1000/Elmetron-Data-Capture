@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   AppBar,
@@ -20,6 +20,7 @@ import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
 import { appRoutes } from '../routes/navigation';
+import { CloseWarningBanner } from '../components/CloseWarningBanner';
 
 const drawerWidth = 240;
 
@@ -164,6 +165,7 @@ export function AppLayout({ onToggleTheme, isDarkMode = false }: AppLayoutProps)
           backgroundColor: 'background.default',
         }}
       >
+        <CloseWarningBanner />
         <Outlet />
       </Box>
     </Box>

@@ -93,3 +93,688 @@ Traceback (most recent call last):
            ^^^^^^^^^^^^^^^^^^^^^^^
 ConnectionAbortedError: [WinError 10053] Nawi¹zane po³¹czenie zosta³o przerwane przez oprogramowanie zainstalowane w komputerze-hoœcie
 ----------------------------------------
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 63247)
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 51196)
+Traceback (most recent call last):
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 691, in process_request_thread
+    self.finish_request(request, client_address)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 361, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 755, in __init__
+    self.handle()
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 438, in handle
+    self.handle_one_request()
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 404, in handle_one_request
+    self.raw_requestline = self.rfile.readline(65537)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socket.py", line 706, in readinto
+    return self._sock.recv_into(b)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+ConnectionAbortedError: [WinError 10053] Nawi¹zane po³¹czenie zosta³o przerwane przez oprogramowanie zainstalowane w komputerze-hoœcie
+----------------------------------------
+Traceback (most recent call last):
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 691, in process_request_thread
+    self.finish_request(request, client_address)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 361, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 755, in __init__
+    self.handle()
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 438, in handle
+    self.handle_one_request()
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 404, in handle_one_request
+    self.raw_requestline = self.rfile.readline(65537)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socket.py", line 706, in readinto
+    return self._sock.recv_into(b)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+ConnectionAbortedError: [WinError 10053] Nawi¹zane po³¹czenie zosta³o przerwane przez oprogramowanie zainstalowane w komputerze-hoœcie
+----------------------------------------
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 59885)
+Traceback (most recent call last):
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 691, in process_request_thread
+    self.finish_request(request, client_address)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 361, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 755, in __init__
+    self.handle()
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 438, in handle
+    self.handle_one_request()
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 404, in handle_one_request
+    self.raw_requestline = self.rfile.readline(65537)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socket.py", line 706, in readinto
+    return self._sock.recv_into(b)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+ConnectionAbortedError: [WinError 10053] Nawi¹zane po³¹czenie zosta³o przerwane przez oprogramowanie zainstalowane w komputerze-hoœcie
+----------------------------------------
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 59000)
+Traceback (most recent call last):
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 691, in process_request_thread
+    self.finish_request(request, client_address)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 361, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 755, in __init__
+    self.handle()
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 438, in handle
+    self.handle_one_request()
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 404, in handle_one_request
+    self.raw_requestline = self.rfile.readline(65537)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socket.py", line 706, in readinto
+    return self._sock.recv_into(b)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+ConnectionAbortedError: [WinError 10053] Nawi¹zane po³¹czenie zosta³o przerwane przez oprogramowanie zainstalowane w komputerze-hoœcie
+----------------------------------------
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 57483)
+Traceback (most recent call last):
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 691, in process_request_thread
+    self.finish_request(request, client_address)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 361, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 755, in __init__
+    self.handle()
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 438, in handle
+    self.handle_one_request()
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 404, in handle_one_request
+    self.raw_requestline = self.rfile.readline(65537)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socket.py", line 706, in readinto
+    return self._sock.recv_into(b)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+ConnectionAbortedError: [WinError 10053] Nawi¹zane po³¹czenie zosta³o przerwane przez oprogramowanie zainstalowane w komputerze-hoœcie
+----------------------------------------
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 53407)
+Traceback (most recent call last):
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 691, in process_request_thread
+    self.finish_request(request, client_address)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 361, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 755, in __init__
+    self.handle()
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 438, in handle
+    self.handle_one_request()
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 404, in handle_one_request
+    self.raw_requestline = self.rfile.readline(65537)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socket.py", line 706, in readinto
+    return self._sock.recv_into(b)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+ConnectionAbortedError: [WinError 10053] Nawi¹zane po³¹czenie zosta³o przerwane przez oprogramowanie zainstalowane w komputerze-hoœcie
+----------------------------------------
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 50197)
+Traceback (most recent call last):
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 691, in process_request_thread
+    self.finish_request(request, client_address)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 361, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 755, in __init__
+    self.handle()
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 438, in handle
+    self.handle_one_request()
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 404, in handle_one_request
+    self.raw_requestline = self.rfile.readline(65537)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socket.py", line 706, in readinto
+    return self._sock.recv_into(b)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+ConnectionAbortedError: [WinError 10053] Nawi¹zane po³¹czenie zosta³o przerwane przez oprogramowanie zainstalowane w komputerze-hoœcie
+----------------------------------------
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 65204)
+Traceback (most recent call last):
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 691, in process_request_thread
+    self.finish_request(request, client_address)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 361, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 755, in __init__
+    self.handle()
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 438, in handle
+    self.handle_one_request()
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 404, in handle_one_request
+    self.raw_requestline = self.rfile.readline(65537)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socket.py", line 706, in readinto
+    return self._sock.recv_into(b)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+ConnectionAbortedError: [WinError 10053] Nawi¹zane po³¹czenie zosta³o przerwane przez oprogramowanie zainstalowane w komputerze-hoœcie
+----------------------------------------
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 55261)
+Traceback (most recent call last):
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 691, in process_request_thread
+    self.finish_request(request, client_address)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 361, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 755, in __init__
+    self.handle()
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 438, in handle
+    self.handle_one_request()
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 404, in handle_one_request
+    self.raw_requestline = self.rfile.readline(65537)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socket.py", line 706, in readinto
+    return self._sock.recv_into(b)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+ConnectionAbortedError: [WinError 10053] Nawi¹zane po³¹czenie zosta³o przerwane przez oprogramowanie zainstalowane w komputerze-hoœcie
+----------------------------------------
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 61831)
+Traceback (most recent call last):
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 691, in process_request_thread
+    self.finish_request(request, client_address)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 361, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 755, in __init__
+    self.handle()
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 438, in handle
+    self.handle_one_request()
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 404, in handle_one_request
+    self.raw_requestline = self.rfile.readline(65537)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socket.py", line 706, in readinto
+    return self._sock.recv_into(b)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+ConnectionAbortedError: [WinError 10053] Nawi¹zane po³¹czenie zosta³o przerwane przez oprogramowanie zainstalowane w komputerze-hoœcie
+----------------------------------------
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 54379)
+Traceback (most recent call last):
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 691, in process_request_thread
+    self.finish_request(request, client_address)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 361, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 755, in __init__
+    self.handle()
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 438, in handle
+    self.handle_one_request()
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 404, in handle_one_request
+    self.raw_requestline = self.rfile.readline(65537)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socket.py", line 706, in readinto
+    return self._sock.recv_into(b)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+ConnectionAbortedError: [WinError 10053] Nawi¹zane po³¹czenie zosta³o przerwane przez oprogramowanie zainstalowane w komputerze-hoœcie
+----------------------------------------
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 58237)
+Traceback (most recent call last):
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 691, in process_request_thread
+    self.finish_request(request, client_address)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 361, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 755, in __init__
+    self.handle()
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 438, in handle
+    self.handle_one_request()
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 404, in handle_one_request
+    self.raw_requestline = self.rfile.readline(65537)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socket.py", line 706, in readinto
+    return self._sock.recv_into(b)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+ConnectionAbortedError: [WinError 10053] Nawi¹zane po³¹czenie zosta³o przerwane przez oprogramowanie zainstalowane w komputerze-hoœcie
+----------------------------------------
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 56933)
+Traceback (most recent call last):
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 691, in process_request_thread
+    self.finish_request(request, client_address)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 361, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 755, in __init__
+    self.handle()
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 438, in handle
+    self.handle_one_request()
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 404, in handle_one_request
+    self.raw_requestline = self.rfile.readline(65537)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socket.py", line 706, in readinto
+    return self._sock.recv_into(b)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+ConnectionAbortedError: [WinError 10053] Nawi¹zane po³¹czenie zosta³o przerwane przez oprogramowanie zainstalowane w komputerze-hoœcie
+----------------------------------------
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 61741)
+Traceback (most recent call last):
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 691, in process_request_thread
+    self.finish_request(request, client_address)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 361, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 755, in __init__
+    self.handle()
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 438, in handle
+    self.handle_one_request()
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 404, in handle_one_request
+    self.raw_requestline = self.rfile.readline(65537)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socket.py", line 706, in readinto
+    return self._sock.recv_into(b)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+ConnectionAbortedError: [WinError 10053] Nawi¹zane po³¹czenie zosta³o przerwane przez oprogramowanie zainstalowane w komputerze-hoœcie
+----------------------------------------
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 51020)
+Traceback (most recent call last):
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 691, in process_request_thread
+    self.finish_request(request, client_address)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 361, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 755, in __init__
+    self.handle()
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 438, in handle
+    self.handle_one_request()
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 404, in handle_one_request
+    self.raw_requestline = self.rfile.readline(65537)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socket.py", line 706, in readinto
+    return self._sock.recv_into(b)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+ConnectionAbortedError: [WinError 10053] Nawi¹zane po³¹czenie zosta³o przerwane przez oprogramowanie zainstalowane w komputerze-hoœcie
+----------------------------------------
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 56516)
+Traceback (most recent call last):
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 691, in process_request_thread
+    self.finish_request(request, client_address)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 361, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 755, in __init__
+    self.handle()
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 438, in handle
+    self.handle_one_request()
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 404, in handle_one_request
+    self.raw_requestline = self.rfile.readline(65537)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socket.py", line 706, in readinto
+    return self._sock.recv_into(b)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+ConnectionAbortedError: [WinError 10053] Nawi¹zane po³¹czenie zosta³o przerwane przez oprogramowanie zainstalowane w komputerze-hoœcie
+----------------------------------------
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 51961)
+Traceback (most recent call last):
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 691, in process_request_thread
+    self.finish_request(request, client_address)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 361, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 755, in __init__
+    self.handle()
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 438, in handle
+    self.handle_one_request()
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 404, in handle_one_request
+    self.raw_requestline = self.rfile.readline(65537)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socket.py", line 706, in readinto
+    return self._sock.recv_into(b)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+ConnectionAbortedError: [WinError 10053] Nawi¹zane po³¹czenie zosta³o przerwane przez oprogramowanie zainstalowane w komputerze-hoœcie
+----------------------------------------
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 59785)
+Traceback (most recent call last):
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 691, in process_request_thread
+    self.finish_request(request, client_address)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 361, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 755, in __init__
+    self.handle()
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 438, in handle
+    self.handle_one_request()
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 404, in handle_one_request
+    self.raw_requestline = self.rfile.readline(65537)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socket.py", line 706, in readinto
+    return self._sock.recv_into(b)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+ConnectionAbortedError: [WinError 10053] Nawi¹zane po³¹czenie zosta³o przerwane przez oprogramowanie zainstalowane w komputerze-hoœcie
+----------------------------------------
+----------------------------------------
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 63120)
+Exception occurred during processing of request from ('127.0.0.1', 50445)
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 54610)
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 62920)
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 61789)
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 59331)
+Traceback (most recent call last):
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 691, in process_request_thread
+    self.finish_request(request, client_address)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 361, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 755, in __init__
+    self.handle()
+Traceback (most recent call last):
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 438, in handle
+    self.handle_one_request()
+Traceback (most recent call last):
+Traceback (most recent call last):
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 404, in handle_one_request
+    self.raw_requestline = self.rfile.readline(65537)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 691, in process_request_thread
+    self.finish_request(request, client_address)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 691, in process_request_thread
+    self.finish_request(request, client_address)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 691, in process_request_thread
+    self.finish_request(request, client_address)
+Traceback (most recent call last):
+Traceback (most recent call last):
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socket.py", line 706, in readinto
+    return self._sock.recv_into(b)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 691, in process_request_thread
+    self.finish_request(request, client_address)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 691, in process_request_thread
+    self.finish_request(request, client_address)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 361, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 361, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 361, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 755, in __init__
+    self.handle()
+ConnectionAbortedError: [WinError 10053] Nawi¹zane po³¹czenie zosta³o przerwane przez oprogramowanie zainstalowane w komputerze-hoœcie
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 361, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 438, in handle
+    self.handle_one_request()
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 755, in __init__
+    self.handle()
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 755, in __init__
+    self.handle()
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 361, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 755, in __init__
+    self.handle()
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 438, in handle
+    self.handle_one_request()
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 438, in handle
+    self.handle_one_request()
+----------------------------------------
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 404, in handle_one_request
+    self.raw_requestline = self.rfile.readline(65537)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socket.py", line 706, in readinto
+    return self._sock.recv_into(b)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 755, in __init__
+    self.handle()
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 404, in handle_one_request
+    self.raw_requestline = self.rfile.readline(65537)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 438, in handle
+    self.handle_one_request()
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socket.py", line 706, in readinto
+    return self._sock.recv_into(b)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+ConnectionAbortedError: [WinError 10053] Nawi¹zane po³¹czenie zosta³o przerwane przez oprogramowanie zainstalowane w komputerze-hoœcie
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 404, in handle_one_request
+    self.raw_requestline = self.rfile.readline(65537)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socket.py", line 706, in readinto
+    return self._sock.recv_into(b)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+ConnectionAbortedError: [WinError 10053] Nawi¹zane po³¹czenie zosta³o przerwane przez oprogramowanie zainstalowane w komputerze-hoœcie
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 404, in handle_one_request
+    self.raw_requestline = self.rfile.readline(65537)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socket.py", line 706, in readinto
+    return self._sock.recv_into(b)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+----------------------------------------
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 438, in handle
+    self.handle_one_request()
+ConnectionAbortedError: [WinError 10053] Nawi¹zane po³¹czenie zosta³o przerwane przez oprogramowanie zainstalowane w komputerze-hoœcie
+----------------------------------------
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 404, in handle_one_request
+    self.raw_requestline = self.rfile.readline(65537)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+ConnectionAbortedError: [WinError 10053] Nawi¹zane po³¹czenie zosta³o przerwane przez oprogramowanie zainstalowane w komputerze-hoœcie
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socket.py", line 706, in readinto
+    return self._sock.recv_into(b)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+----------------------------------------
+ConnectionAbortedError: [WinError 10053] Nawi¹zane po³¹czenie zosta³o przerwane przez oprogramowanie zainstalowane w komputerze-hoœcie
+----------------------------------------
+----------------------------------------
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 57891)
+Traceback (most recent call last):
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 691, in process_request_thread
+    self.finish_request(request, client_address)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 361, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 755, in __init__
+    self.handle()
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 438, in handle
+    self.handle_one_request()
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 404, in handle_one_request
+    self.raw_requestline = self.rfile.readline(65537)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socket.py", line 706, in readinto
+    return self._sock.recv_into(b)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+ConnectionAbortedError: [WinError 10053] Nawi¹zane po³¹czenie zosta³o przerwane przez oprogramowanie zainstalowane w komputerze-hoœcie
+----------------------------------------
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 58272)
+Traceback (most recent call last):
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 691, in process_request_thread
+    self.finish_request(request, client_address)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 361, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 755, in __init__
+    self.handle()
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 438, in handle
+    self.handle_one_request()
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 404, in handle_one_request
+    self.raw_requestline = self.rfile.readline(65537)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socket.py", line 706, in readinto
+    return self._sock.recv_into(b)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+ConnectionResetError: [WinError 10054] Istniej¹ce po³¹czenie zosta³o gwa³townie zamkniête przez zdalnego hosta
+----------------------------------------
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 54915)
+Traceback (most recent call last):
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 691, in process_request_thread
+    self.finish_request(request, client_address)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 361, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 755, in __init__
+    self.handle()
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 438, in handle
+    self.handle_one_request()
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 404, in handle_one_request
+    self.raw_requestline = self.rfile.readline(65537)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socket.py", line 706, in readinto
+    return self._sock.recv_into(b)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+ConnectionAbortedError: [WinError 10053] Nawi¹zane po³¹czenie zosta³o przerwane przez oprogramowanie zainstalowane w komputerze-hoœcie
+----------------------------------------
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 50687)
+Traceback (most recent call last):
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 691, in process_request_thread
+    self.finish_request(request, client_address)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 361, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 755, in __init__
+    self.handle()
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 438, in handle
+    self.handle_one_request()
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 404, in handle_one_request
+    self.raw_requestline = self.rfile.readline(65537)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socket.py", line 706, in readinto
+    return self._sock.recv_into(b)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+ConnectionAbortedError: [WinError 10053] Nawi¹zane po³¹czenie zosta³o przerwane przez oprogramowanie zainstalowane w komputerze-hoœcie
+----------------------------------------
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 50495)
+Traceback (most recent call last):
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 691, in process_request_thread
+    self.finish_request(request, client_address)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 361, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 755, in __init__
+    self.handle()
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 438, in handle
+    self.handle_one_request()
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 404, in handle_one_request
+    self.raw_requestline = self.rfile.readline(65537)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socket.py", line 706, in readinto
+    return self._sock.recv_into(b)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+ConnectionResetError: [WinError 10054] Istniej¹ce po³¹czenie zosta³o gwa³townie zamkniête przez zdalnego hosta
+----------------------------------------
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 61701)
+Traceback (most recent call last):
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 691, in process_request_thread
+    self.finish_request(request, client_address)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 361, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 755, in __init__
+    self.handle()
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 438, in handle
+    self.handle_one_request()
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 404, in handle_one_request
+    self.raw_requestline = self.rfile.readline(65537)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socket.py", line 706, in readinto
+    return self._sock.recv_into(b)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+ConnectionAbortedError: [WinError 10053] Nawi¹zane po³¹czenie zosta³o przerwane przez oprogramowanie zainstalowane w komputerze-hoœcie
+----------------------------------------
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 62328)
+Traceback (most recent call last):
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 691, in process_request_thread
+    self.finish_request(request, client_address)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 361, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 755, in __init__
+    self.handle()
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 438, in handle
+    self.handle_one_request()
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 404, in handle_one_request
+    self.raw_requestline = self.rfile.readline(65537)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socket.py", line 706, in readinto
+    return self._sock.recv_into(b)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+ConnectionAbortedError: [WinError 10053] Nawi¹zane po³¹czenie zosta³o przerwane przez oprogramowanie zainstalowane w komputerze-hoœcie
+----------------------------------------
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 57655)
+Traceback (most recent call last):
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 691, in process_request_thread
+    self.finish_request(request, client_address)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 361, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 755, in __init__
+    self.handle()
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 438, in handle
+    self.handle_one_request()
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 404, in handle_one_request
+    self.raw_requestline = self.rfile.readline(65537)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socket.py", line 706, in readinto
+    return self._sock.recv_into(b)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+ConnectionAbortedError: [WinError 10053] Nawi¹zane po³¹czenie zosta³o przerwane przez oprogramowanie zainstalowane w komputerze-hoœcie
+----------------------------------------
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 57859)
+Traceback (most recent call last):
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 691, in process_request_thread
+    self.finish_request(request, client_address)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 361, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 755, in __init__
+    self.handle()
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 438, in handle
+    self.handle_one_request()
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 424, in handle_one_request
+    method()
+  File "C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\elmetron\api\server.py", line 170, in do_GET
+    self.wfile.write(body)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 834, in write
+    self._sock.sendall(b)
+ConnectionAbortedError: [WinError 10053] Nawi¹zane po³¹czenie zosta³o przerwane przez oprogramowanie zainstalowane w komputerze-hoœcie
+----------------------------------------
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 52927)
+Traceback (most recent call last):
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 691, in process_request_thread
+    self.finish_request(request, client_address)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 361, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 755, in __init__
+    self.handle()
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 438, in handle
+    self.handle_one_request()
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 404, in handle_one_request
+    self.raw_requestline = self.rfile.readline(65537)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socket.py", line 706, in readinto
+    return self._sock.recv_into(b)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+ConnectionAbortedError: [WinError 10053] Nawi¹zane po³¹czenie zosta³o przerwane przez oprogramowanie zainstalowane w komputerze-hoœcie
+----------------------------------------
+Warning: poll write failed: FT_Write failed with FT_STATUS=4
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 51666)
+Traceback (most recent call last):
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 691, in process_request_thread
+    self.finish_request(request, client_address)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 361, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 755, in __init__
+    self.handle()
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 438, in handle
+    self.handle_one_request()
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 404, in handle_one_request
+    self.raw_requestline = self.rfile.readline(65537)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socket.py", line 706, in readinto
+    return self._sock.recv_into(b)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+ConnectionAbortedError: [WinError 10053] Nawi¹zane po³¹czenie zosta³o przerwane przez oprogramowanie zainstalowane w komputerze-hoœcie
+----------------------------------------
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 60903)
+Traceback (most recent call last):
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 691, in process_request_thread
+    self.finish_request(request, client_address)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 361, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 755, in __init__
+    self.handle()
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 438, in handle
+    self.handle_one_request()
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 404, in handle_one_request
+    self.raw_requestline = self.rfile.readline(65537)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socket.py", line 706, in readinto
+    return self._sock.recv_into(b)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+ConnectionAbortedError: [WinError 10053] Nawi¹zane po³¹czenie zosta³o przerwane przez oprogramowanie zainstalowane w komputerze-hoœcie
+----------------------------------------

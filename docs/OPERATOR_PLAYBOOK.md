@@ -9,11 +9,16 @@
 ## Daily Startup Checklist
 1. Connect the CX-505 and verify the display shows the target measurement mode (pH, conductivity, O2, etc.).
 2. Double-click `start.bat` in the project root to open the Elmetron Launch Monitor. It starts the capture service, launches the Service Health UI, and opens the dashboard once both are healthy.
-3. Wait for the monitor to show "All services online", then click **OK** to close it. (If automation fails, fall back to the manual commands listed in Appendix A.)
+3. Wait for the monitor to show "All services online". The control window stays open so you can use **Stop** or **Reset** later; minimize it once services are healthy. (If automation fails, fall back to the manual commands listed in Appendix A.)
 4. Confirm the Service Health > Overview card reports `status=running` and `watchdog=healthy`.
 5. Verify the first session appears in `data/elmetron.sqlite` (table `sessions`) using `sqlite3`, DB Browser, or the dashboard's Recent Sessions list.
 6. Record the session identifier in the lab logbook.
 
+### Launch Monitor Controls
+- **Start** runs prerequisite checks and launches the capture service and UI. The button stays disabled until startup completes.
+- **Stop** shuts down the capture service and UI in sequence and re-enables **Start** once both have exited. Use it before applying config changes or powering down hardware.
+- **Reset** queues a Stop followed by Start, waiting for each service to exit cleanly before relaunching. Controls remain disabled until the restart finishes.
+- Status rows reflect prerequisites, capture, UI, dashboard, and overall health. Review the activity log for timestamps and errors before retrying a command.
 ## Handshake & Poll Reference
 - The CX-505 expects the canonical poll handshake `01 23 30 23 30 23 30 23 03`. The capture service writes it once on connect and then every second.
 - Quick sanity check:

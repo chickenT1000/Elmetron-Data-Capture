@@ -185,7 +185,11 @@ class CX505Interface(DeviceInterface):
                 )
                 cx505_d2xx.apply_control_lines(handle, self._config.dtr, self._config.rts)
                 if self._poll_payload:
+                    print(f"[DEBUG] Sending initial handshake: {self._poll_payload.hex(' ')}")
                     cx505_d2xx.write_payloads(handle, [self._poll_payload])
+                    print(f"[DEBUG] Handshake sent successfully")
+                else:
+                    print("[DEBUG] No poll_payload configured - skipping handshake")
                 self._handle = handle
                 assert target is not None
                 target.transport = "ftdi"

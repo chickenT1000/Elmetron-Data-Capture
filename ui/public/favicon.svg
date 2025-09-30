@@ -1,0 +1,15 @@
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <!-- White circular background -->
+  <circle cx="32" cy="32" r="32" fill="#FFFFFF"/>
+  
+  <!-- Blue "E" in Copperplate Gothic Bold style - vertically centered -->
+  <text 
+    x="32" 
+    y="32" 
+    font-family="'Copperplate Gothic Bold', 'Copperplate', serif" 
+    font-size="44" 
+    font-weight="700"
+    fill="#1976D2" 
+    text-anchor="middle"
+    dominant-baseline="central">E</text>
+</svg>

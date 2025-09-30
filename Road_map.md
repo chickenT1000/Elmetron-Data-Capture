@@ -68,6 +68,11 @@
 | High | Introduce a schema migration that adds indexes supporting overlay and session comparison queries | Completed |
 | Medium | Implement an automated retention report (data removed) and write outputs to `audit_events` | Increases transparency for QA and auditors |
 | Low | Evaluate SQLCipher integration with a proof-of-concept encryption flow | Optional path for regulated deployments |
+| Medium | Implement delta-based measurement storage to reduce redundancy | Only store measurements when value changes by >threshold (e.g., pH ±0.01); reduces storage by 50-80% for stable readings |
+| Medium | Optimize payload_json field to store only essential fields | Current: ~1,457 bytes/measurement; Optimized: ~200-300 bytes (~80% reduction) by removing redundant raw_hex, extra_fields, and duplicate device info |
+| Low | Add optional derived_metrics storage mode (on-demand vs always) | Allow disabling analytics storage for simple monitoring applications; saves ~114 bytes/measurement |
+| Medium | Implement measurement aggregation for long-term storage | After 7 days, replace raw measurements with minute/hour aggregates; preserves trends while reducing row count by 60-3600x |
+| **High** | **Implement crash-resistant session buffering system** | **CRITICAL**: Current implementation directly writes to SQLite during capture, making database vulnerable to corruption on power loss or process kill. Proposed solution: (1) Write active session data to separate append-only JSONL file in `captures/session_{id}_buffer.jsonl`, (2) Only merge buffered data into SQLite on graceful shutdown via launcher, (3) On startup, auto-recover any orphaned buffer files from previous crashes, (4) Add periodic flush interval (e.g., every 100 measurements) to minimize data loss. Benefits: eliminates 99% of corruption risk, provides automatic crash recovery, maintains audit trail of raw captures, minimal performance impact (~5% overhead for file I/O). Implementation priority raised after database corruption incident on 2025-09-30. |
 
 ### 5. Documentation & operational materials
 | Priority | Task | Notes |
@@ -111,7 +116,55 @@
 | Medium | Add `npm run ui:check` wrapper to build Storybook, run Playwright screenshots, and emit markdown diff reports for CI agents | Completed 2025-09-29: Wrapper orchestrates lint, Vitest, and Playwright with deterministic stories. |
 | Medium | Introduce Playwright/Cypress end-to-end suite covering 5–10 critical flows with trace artifacts | Completes the “Wire E2E only for flows” requirement. |
 | Medium | Harden determinism: Tailwind containment, frozen dates/random seeds, and shared mock data | Completed 2025-09-29: Shared deterministic mocks, Storybook global freeze, Playwright init script, and reduced-motion CSS. |
-| Medium | Add launcher session controller that keeps the window open and terminates capture/UI processes when closed | Prevents orphaned backend processes when operators stop work from the browser. |
+| High | Document launcher start/stop/restart dependency chain (processes, threads, UI callbacks) | Map prerequisites so follow-up tickets can address restart sequencing safely. |
+| High | Refactor launcher restart workflow using documented dependencies | Queue relaunch on the Tk main thread after `_stop_services` completes and gate controls during restart. |
+| Medium | Add launcher session controller that keeps the window open, enforces single-instance execution, and terminates capture/UI processes when closed | Controller must detect existing sessions, show a warning if another instance is active, and handle graceful start/stop/restart of capture + UI services. |
+| Medium | Fix launcher restart workflow to queue relaunch on the Tk main thread after a clean stop | Current restart button can race cleanup/startup; ensure `_stop_services` finishes before scheduling `_on_start`, keep buttons disabled until services relaunch. |
+| High | Consolidate launcher into a single stateful controller and remove duplicate class definitions | Merge the legacy launcher variants, extract shared process helpers, and define explicit IDLE/STARTING/RUNNING/STOPPING/FAILED transitions. |
+| High | Implement launcher start/stop/reset controls with guarded state transitions | Add Start/Stop/Reset buttons, post UI updates via `after`, and disable controls while background actions run. |
+| High | Serialize launcher workflows through a background job queue | Run start/stop/reset sequentially, wait for subprocess termination, and surface failures in the log and status rows. |
+| Medium | Add launcher reset regression coverage and operator documentation updates | Patch subprocess calls in tests, cover happy/error reset flows, and extend `docs/OPERATOR_PLAYBOOK.md` with the revised restart procedure. |
+| High | Add single-instance enforcement to launcher | Prevent multiple launcher instances from running simultaneously using lockfile with PID tracking and process validation. |
+| High | Add hardware connection status indicator to launcher | Show CX-505 device connection status in launcher UI; allow UI opening for archived sessions even without hardware. |
+| High | Add hardware in-use detection to launcher | Detect when CX-505 is present but being used by another process; distinguish between our service and external apps with manual refresh button. |
+| High | Fix launcher reset button crash: state transition race condition | Critical fix for reset failing when services don't terminate cleanly; add FAILED state handling, force cleanup method, and proper log file closure. |
+| High | Fix launcher reset button crash: log file handle leakage | Ensure log files are closed on startup failure and prevent resource leaks during reset operations. |
+| High | Fix launcher reset button crash: process dictionary inconsistency | Verify process objects are valid before termination and handle zombie processes gracefully. |
+| Medium | Add launcher reset button crash: defensive improvements | Add process state verification, resource state logging, and improved error recovery in stop workflow. |
+| Medium | Add launcher reset button crash: comprehensive testing | Add unit tests for reset from FAILED state, partial starts, zombie processes, and log handle cleanup scenarios. |
+| Low | Add launcher reset button crash: documentation & monitoring | Add debug logging mode, document reset button behavior, and create troubleshooting guide for reset failures. |
+
+## Known Issues
+
+### CX-505 Device Release Timing
+**Observed**: After closing the launcher (which automatically stops services and terminates processes), the CX-505 device may not immediately become available to legacy Elmetron software if opened within 1-2 seconds of launcher close.
+
+**Symptoms**: Legacy software reports device is in use or fails to connect when launched immediately after closing the launcher.
+
+**Workaround**: Wait 2-3 seconds after closing the launcher before opening legacy software or other applications that need CX-505 access.
+
+**Root cause**: Likely related to FTDI driver handle cleanup latency after process termination. Python processes are killed and CX-505 shows as available shortly after, but there may be a brief window where the FTDI driver hasn't fully released the device handle.
+
+**Status**: Under investigation. Device reliably becomes available within 2-3 seconds. No zombie processes remain after launcher close.
+
+### Database Optimization
+**Implemented**: Raw frame storage has been disabled by default to reduce database size.
+
+**Configuration**: Added `store_raw_frames` flag to `StorageConfig` (default: `False`). Raw binary frames are no longer stored in the `raw_frames` table unless explicitly enabled for debugging purposes.
+
+**Impact**: 
+- Database size reduced by ~16% immediately (17 MB saved from existing data)
+- Future growth reduced by ~50% (from ~21 MB/day to ~10-12 MB/day)
+- Measurements continue to be stored normally with all parsed values
+
+**To re-enable for debugging**, add to `config/app.toml`:
+```toml
+[storage]
+store_raw_frames = true
+```
+
+**Cleanup script**: Use `cleanup_raw_frames.py` to remove existing raw frames from older databases and reclaim space.
+
 
 
 

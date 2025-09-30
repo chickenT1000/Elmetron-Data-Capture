@@ -1,4 +1,4 @@
-﻿
+
 # Elmetron Data Acquisition and Analysis Suite
 
 This project modernises Elmetron CX-505 data capture by replacing the legacy S457s tooling with a modular, scriptable stack that spans transport, decoding, persistence, analytics, and reporting.
@@ -38,6 +38,13 @@ python cx505_capture_service.py \
 - `docs/UI_DESIGN_SYSTEM.md` - technology stack, theming, and component strategy for the operator UI.
 - `docs/RELEASE_AUTOMATION.md` - CI/CD checklist for publishing exporter bundles.
 - The Service Health dashboard exposes `/health/logs/stream` plus a one-click diagnostic bundle download (`/health/bundle`) for support escalations.
+
+### Important Operational Notes
+?? **Always stop services gracefully** - Never use `Stop-Process -Force` on the capture service as it can corrupt the SQLite database. Use the UI Stop button or `Ctrl+C` in terminal.
+
+?? **Before Git operations** - Stop capture service and React dev server before switching branches to avoid file lock conflicts.
+
+?? **Troubleshooting** - See `TROUBLESHOOTING.md` for common issues and solutions, and `FIXES_SUMMARY.md` for historical fixes.
 
 ## Export Toolkit
 - Use `python scripts/build_release_bundle.py --latest 1` to generate release-ready archives (manifest, checksums, and zipped artefacts).

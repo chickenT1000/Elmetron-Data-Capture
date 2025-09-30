@@ -731,6 +731,7 @@ class SessionHandle:
         temperature = measurement.get('temperature')
         temperature_unit = measurement.get('temperature_unit')
         with conn:
+            # Always store raw frame (frame_id is NOT NULL in schema)
             cursor = conn.execute(
                 "INSERT INTO raw_frames (session_id, captured_at, frame_hex, frame_bytes) VALUES (?, ?, ?, ?)",
                 (self.id, captured_at.isoformat(), raw_hex, sqlite3.Binary(raw_frame)),
