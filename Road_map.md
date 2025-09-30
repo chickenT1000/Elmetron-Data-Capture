@@ -68,6 +68,10 @@
 | High | Introduce a schema migration that adds indexes supporting overlay and session comparison queries | Completed |
 | Medium | Implement an automated retention report (data removed) and write outputs to `audit_events` | Increases transparency for QA and auditors |
 | Low | Evaluate SQLCipher integration with a proof-of-concept encryption flow | Optional path for regulated deployments |
+| Medium | Implement delta-based measurement storage to reduce redundancy | Only store measurements when value changes by >threshold (e.g., pH ±0.01); reduces storage by 50-80% for stable readings |
+| Medium | Optimize payload_json field to store only essential fields | Current: ~1,457 bytes/measurement; Optimized: ~200-300 bytes (~80% reduction) by removing redundant raw_hex, extra_fields, and duplicate device info |
+| Low | Add optional derived_metrics storage mode (on-demand vs always) | Allow disabling analytics storage for simple monitoring applications; saves ~114 bytes/measurement |
+| Medium | Implement measurement aggregation for long-term storage | After 7 days, replace raw measurements with minute/hour aggregates; preserves trends while reducing row count by 60-3600x |
 
 ### 5. Documentation & operational materials
 | Priority | Task | Notes |
