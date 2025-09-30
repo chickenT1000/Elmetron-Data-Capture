@@ -115,6 +115,17 @@
 | High | Refactor launcher restart workflow using documented dependencies | Queue relaunch on the Tk main thread after `_stop_services` completes and gate controls during restart. |
 | Medium | Add launcher session controller that keeps the window open, enforces single-instance execution, and terminates capture/UI processes when closed | Controller must detect existing sessions, show a warning if another instance is active, and handle graceful start/stop/restart of capture + UI services. |
 | Medium | Fix launcher restart workflow to queue relaunch on the Tk main thread after a clean stop | Current restart button can race cleanup/startup; ensure `_stop_services` finishes before scheduling `_on_start`, keep buttons disabled until services relaunch. |
+| High | Consolidate launcher into a single stateful controller and remove duplicate class definitions | Merge the legacy launcher variants, extract shared process helpers, and define explicit IDLE/STARTING/RUNNING/STOPPING/FAILED transitions. |
+| High | Implement launcher start/stop/reset controls with guarded state transitions | Add Start/Stop/Reset buttons, post UI updates via `after`, and disable controls while background actions run. |
+| High | Serialize launcher workflows through a background job queue | Run start/stop/reset sequentially, wait for subprocess termination, and surface failures in the log and status rows. |
+| Medium | Add launcher reset regression coverage and operator documentation updates | Patch subprocess calls in tests, cover happy/error reset flows, and extend `docs/OPERATOR_PLAYBOOK.md` with the revised restart procedure. |
+| High | Fix launcher reset button crash: state transition race condition | Critical fix for reset failing when services don't terminate cleanly; add FAILED state handling, force cleanup method, and proper log file closure. |
+| High | Fix launcher reset button crash: log file handle leakage | Ensure log files are closed on startup failure and prevent resource leaks during reset operations. |
+| High | Fix launcher reset button crash: process dictionary inconsistency | Verify process objects are valid before termination and handle zombie processes gracefully. |
+| Medium | Add launcher reset button crash: defensive improvements | Add process state verification, resource state logging, and improved error recovery in stop workflow. |
+| Medium | Add launcher reset button crash: comprehensive testing | Add unit tests for reset from FAILED state, partial starts, zombie processes, and log handle cleanup scenarios. |
+| Low | Add launcher reset button crash: documentation & monitoring | Add debug logging mode, document reset button behavior, and create troubleshooting guide for reset failures. |
+
 
 
 
