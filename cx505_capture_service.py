@@ -1,7 +1,8 @@
-﻿"""CLI entry point for the Elmetron CX-505 acquisition service."""
+"""CLI entry point for the Elmetron CX-505 acquisition service."""
 from __future__ import annotations
 
 import argparse
+import signal
 import sys
 from pathlib import Path
 
@@ -20,124 +21,97 @@ def _apply_overrides(config: AppConfig, args: argparse.Namespace) -> AppConfig:
     storage = config.storage
 
     if args.device_index is not None:
-        device.index = args.device_index
+        device = device.with_overrides(index=args.device_index)
     if args.device_serial:
-        device.serial = args.device_serial
-    if args.profile:
-        device.profile = args.profile
-    if args.no_profile_defaults:
-        device.use_profile_defaults = False
-    if args.baud is not None:
-        device.baud = args.baud
-    if args.data_bits is not None:
-        device.data_bits = args.data_bits
-    if args.stop_bits is not None:
-        device.stop_bits = args.stop_bits
-    if args.parity:
-        device.parity = args.parity
-    if args.poll_hex:
-        device.poll_hex = args.poll_hex
-    if args.poll_interval is not None:
-        device.poll_interval_s = args.poll_interval
-    if args.latency is not None:
-        device.latency_timer_ms = args.latency
-    if args.timeouts:
-        device.read_timeout_ms, device.write_timeout_ms = args.timeouts
-    if args.chunk_size is not None:
-        device.chunk_size = args.chunk_size
-    if args.open_retry_attempts is not None:
-        device.open_retry_attempts = args.open_retry_attempts
-    if args.open_retry_backoff is not None:
-        device.open_retry_backoff_s = args.open_retry_backoff
-
-    if args.window is not None:
-        acquisition.window_s = args.window
-    if args.idle is not None:
-        acquisition.idle_s = args.idle
-    if args.restart_delay is not None:
-        acquisition.restart_delay_s = args.restart_delay
-    if args.restart_backoff_max is not None:
-        acquisition.restart_backoff_max_s = args.restart_backoff_max
-    if args.status_every is not None:
-        acquisition.status_interval_s = args.status_every
-    if args.max_runtime is not None:
-        acquisition.max_runtime_s = args.max_runtime
-    if args.quiet:
-        acquisition.quiet = True
-
+        device = device.with_overrides(serial=args.device_serial)
+    if args.baud is not None and args.baud > 0:
+        device = device.with_overrides(baud=args.baud)
+    if args.window_s is not None and args.window_s > 0:
+        acquisition = acquisition.with_overrides(window_s=args.window_s)
+    if args.idle_s is not None and args.idle_s >= 0:
+        acquisition = acquisition.with_overrides(idle_s=args.idle_s)
+    if args.max_runtime_s is not None and args.max_runtime_s >= 0:
+        acquisition = acquisition.with_overrides(max_runtime_s=args.max_runtime_s)
     if args.database:
-        storage.database_path = args.database
+        storage = storage.with_overrides(database_path=args.database)
+
+    if device is not config.device or acquisition is not config.acquisition or storage is not config.storage:
+        config = config.with_overrides(device=device, acquisition=acquisition, storage=storage)
 
     return config
 
 
-def parse_args(argv: list[str]) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Run the Elmetron CX-505 acquisition service")
-    parser.add_argument('--config', type=Path, help='Configuration file (json/toml/yaml)')
-    parser.add_argument('--protocols', type=Path, help='Protocol registry file (toml/json/yaml)')
-    parser.add_argument('--list-devices', action='store_true', help='List available FTDI devices and exit')
-    parser.add_argument('--device-index', type=int, help='Override device index from config')
-    parser.add_argument('--device-serial', type=str, help='Override target device serial number')
-    parser.add_argument('--profile', type=str, help='Select protocol profile (default: cx505)')
-    parser.add_argument('--no-profile-defaults', action='store_true', help='Do not let profiles override serial parameters')
-    parser.add_argument('--baud', type=int, help='Override baud rate')
-    parser.add_argument('--data-bits', dest='data_bits', type=int, choices=[7, 8], help='Override data bits')
-    parser.add_argument('--stop-bits', dest='stop_bits', type=float, choices=[1.0, 1.5, 2.0], help='Override stop bits')
-    parser.add_argument('--parity', type=str, choices=list('NOEMS'), help='Override parity setting')
-    parser.add_argument('--poll-hex', type=str, help='Hex payload to use for poll frames')
-    parser.add_argument('--poll-interval', type=float, help='Seconds between poll transmissions')
-    parser.add_argument('--latency', type=int, help='FTDI latency timer in milliseconds (1-255)')
-    parser.add_argument('--timeouts', type=int, nargs=2, metavar=('READ_MS', 'WRITE_MS'), help='Read/write timeouts in milliseconds')
-    parser.add_argument('--chunk-size', dest='chunk_size', type=int, help='Read chunk size in bytes')
-    parser.add_argument('--open-retry-attempts', type=int, help='Number of retries when opening the FTDI device')
-    parser.add_argument('--open-retry-backoff', type=float, help='Base backoff in seconds between FTDI open attempts')
-    parser.add_argument('--window', type=float, help='Seconds per capture window')
-    parser.add_argument('--idle', type=float, help='Seconds to sleep between windows')
-    parser.add_argument('--restart-delay', type=float, help='Seconds to wait before reconnecting after failure')
-    parser.add_argument('--restart-backoff-max', type=float, help='Maximum delay applied after repeated reconnect failures')
-    parser.add_argument('--status-every', type=float, help='Status print interval in seconds (0 disables)')
-    parser.add_argument('--max-runtime', type=float, help='Stop after N seconds (0 keeps running)')
-    parser.add_argument('--database', type=Path, help='SQLite database path override')
-    parser.add_argument('--quiet', action='store_true', help='Suppress console status output')
-    parser.add_argument('--watchdog-timeout', type=float, default=0.0, help='Enable watchdog with timeout in seconds (0 disables)')
-    parser.add_argument('--watchdog-poll', type=float, default=2.0, help='Watchdog poll interval in seconds (default: 2.0)')
-    parser.add_argument('--health-log', action='store_true', help='Print watchdog health events to stdout')
-    parser.add_argument('--health-api-host', type=str, default='127.0.0.1', help='Bind address for the local health API (default: 127.0.0.1)')
-    parser.add_argument('--health-api-port', type=int, default=0, help='Port for the local health API (0 disables)')
-    return parser.parse_args(argv)
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(
+        description='Run the Elmetron CX-505 data acquisition service.',
+        epilog='The service continuously captures measurements and stores them in a local SQLite database.',
+    )
+    parser.add_argument('--config', type=str, required=True, help='Path to the application config TOML file.')
+    parser.add_argument(
+        '--protocols', type=str, required=True, help='Path to the protocols config TOML file.'
+    )
+    parser.add_argument('--device-index', type=int, help='Override device index (default: 0).')
+    parser.add_argument('--device-serial', type=str, help='Override device by serial number.')
+    parser.add_argument('--baud', type=int, help='Override baud rate.')
+    parser.add_argument('--window-s', type=float, help='Override capture window duration (seconds).')
+    parser.add_argument('--idle-s', type=float, help='Override idle time between windows (seconds).')
+    parser.add_argument(
+        '--max-runtime-s', type=float, help='Override maximum runtime (seconds, 0 = unlimited).'
+    )
+    parser.add_argument('--database', type=str, help='Override SQLite database file path.')
+    parser.add_argument(
+        '--watchdog-timeout',
+        type=float,
+        default=0,
+        help='Enable process watchdog with specified timeout (seconds, 0 to disable).',
+    )
+    parser.add_argument(
+        '--watchdog-poll', type=float, default=2.0, help='Watchdog poll interval (seconds).'
+    )
+    parser.add_argument(
+        '--health-api-port', type=int, default=0, help='Enable HTTP health API on specified port (0 to disable).'
+    )
+    parser.add_argument(
+        '--health-api-host', type=str, default='127.0.0.1', help='Health API host (default: 127.0.0.1).'
+    )
+    parser.add_argument(
+        '--health-log', action='store_true', help='Enable detailed health logging to console.'
+    )
 
+    args = parser.parse_args(argv)
 
-def main(argv: list[str]) -> int:
-    args = parse_args(argv)
+    config_path = Path(args.config)
+    if not config_path.exists():
+        print(f'Config file not found: {config_path}', file=sys.stderr)
+        return 1
 
-    if args.list_devices:
-        devices = list_devices()
-        if not devices:
-            print('No FTDI devices visible')
-        else:
-            for device in devices:
-                label = device.description or '<no description>'
-                serial = device.serial or '<no serial>'
-                print(f"[{device.index}] {label} (S/N {serial}) Type={device.type} LocId=0x{device.loc_id:08X} ID=0x{device.id:08X}")
-        return 0
+    protocols_path = Path(args.protocols)
+    if not protocols_path.exists():
+        print(f'Protocols file not found: {protocols_path}', file=sys.stderr)
+        return 1
 
-    config = load_config(args.config)
+    config = load_config(config_path)
     config = _apply_overrides(config, args)
 
-    registry = load_registry(args.protocols)
-    try:
-        profile = registry.apply_to_device(config.device)
-    except KeyError as exc:
-        print(str(exc), file=sys.stderr)
-        return 2
-
-    command_definitions = profile.commands if profile else {}
+    registry = load_registry(protocols_path)
 
     database = Database(config.storage)
+    database.connect()
+
+    print('Connected hardware:')
+    devices = list_devices()
+    if devices:
+        for device in devices:
+            print(f'  [{device.index}] {device.description or "(no description)"} (S/N {device.serial or "unknown"})')
+    else:
+        print('  (none)')
+        print('  >> Please connect a compatible Elmetron CX-505 device and retry.')
+        database.close()
+        return 1
+
     service = AcquisitionService(
         config,
         database,
-        command_definitions=command_definitions,
         protocol_registry=registry,
     )
 
@@ -165,6 +139,24 @@ def main(argv: list[str]) -> int:
         host, port = runner.health_api_address
         print(f'Health API listening on http://{host}:{port}/health')
 
+    # Setup signal handlers for graceful shutdown
+    shutdown_requested = False
+    
+    def signal_handler(signum, frame):
+        nonlocal shutdown_requested
+        if not shutdown_requested:
+            shutdown_requested = True
+            print(f'Received shutdown signal {signum}, stopping capture...')
+            runner.service.request_stop()
+    
+    # Register signal handlers
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
+    
+    # Windows doesn't have SIGHUP, but register if available
+    if hasattr(signal, 'SIGHUP'):
+        signal.signal(signal.SIGHUP, signal_handler)
+
     try:
         runner.run()
     except KeyboardInterrupt:
@@ -183,16 +175,3 @@ def main(argv: list[str]) -> int:
 
 if __name__ == '__main__':
     raise SystemExit(main(sys.argv[1:]))
-
-
-
-
-
-
-
-
-
-
-
-
-

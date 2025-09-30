@@ -168,6 +168,8 @@ class LauncherApp:
         self._queue_active = True
         self._processes: Dict[str, subprocess.Popen] = {}
         self._logs: Dict[str, tuple[IO[str], IO[str]]] = {}
+        self._data_monitor_active = False
+        self._data_monitor_thread: Optional[threading.Thread] = None
         self._log_history: List[str] = []
         self._npm_path: Optional[str] = None
         self._closing = False
@@ -440,6 +442,9 @@ class LauncherApp:
             return
         self._transition_to(LauncherState.STOPPING)
         self._set_status("system", "Stopping services...", "waiting")
+        
+        # Stop data monitoring
+        self._stop_data_monitoring()
         
         # Log resource state before cleanup for debugging
         self._log_resource_state()
