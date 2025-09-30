@@ -72,6 +72,7 @@
 | Medium | Optimize payload_json field to store only essential fields | Current: ~1,457 bytes/measurement; Optimized: ~200-300 bytes (~80% reduction) by removing redundant raw_hex, extra_fields, and duplicate device info |
 | Low | Add optional derived_metrics storage mode (on-demand vs always) | Allow disabling analytics storage for simple monitoring applications; saves ~114 bytes/measurement |
 | Medium | Implement measurement aggregation for long-term storage | After 7 days, replace raw measurements with minute/hour aggregates; preserves trends while reducing row count by 60-3600x |
+| **High** | **Implement crash-resistant session buffering system** | **CRITICAL**: Current implementation directly writes to SQLite during capture, making database vulnerable to corruption on power loss or process kill. Proposed solution: (1) Write active session data to separate append-only JSONL file in `captures/session_{id}_buffer.jsonl`, (2) Only merge buffered data into SQLite on graceful shutdown via launcher, (3) On startup, auto-recover any orphaned buffer files from previous crashes, (4) Add periodic flush interval (e.g., every 100 measurements) to minimize data loss. Benefits: eliminates 99% of corruption risk, provides automatic crash recovery, maintains audit trail of raw captures, minimal performance impact (~5% overhead for file I/O). Implementation priority raised after database corruption incident on 2025-09-30. |
 
 ### 5. Documentation & operational materials
 | Priority | Task | Notes |

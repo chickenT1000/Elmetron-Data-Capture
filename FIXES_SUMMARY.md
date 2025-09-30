@@ -54,3 +54,76 @@ parity = "E"
 
 ## Status
 ✅ **RESOLVED** - CX505 is now receiving and recording measurements successfully.
+
+---
+
+## Database Corruption Issue (2025-09-30)
+
+### Problem
+After forcefully stopping Python processes during testing, the SQLite database became corrupted:
+```
+sqlite3.DatabaseError: database disk image is malformed
+```
+
+### Root Cause
+SQLite databases use Write-Ahead Logging (WAL) and when processes are killed with `-Force`, they can't properly close the database connection, leading to corruption.
+
+### Recovery Steps Taken
+1. **Backed up corrupted database**: `data/elmetron.sqlite.corrupted.20250930_143523`
+2. **Removed corrupted files**: Deleted `.sqlite`, `.sqlite-wal`, `.sqlite-shm` files
+3. **Created fresh database**: Used `Database.connect()` and `Database.initialise()`
+4. **Verified integrity**: Confirmed all tables created and integrity check passed
+
+### Prevention - Best Practices
+
+#### ✅ CORRECT Way to Stop Services:
+1. **Via UI**: Click the "Stop" button and wait for confirmation
+2. **Via Terminal**: Press `Ctrl+C` and wait for "capture stopped" message
+3. **Via Script**: Send SIGTERM (not SIGKILL) to allow graceful shutdown
+
+#### ❌ WRONG - Never Do This:
+```powershell
+# This can corrupt the database!
+Get-Process python | Stop-Process -Force
+```
+
+#### ✅ CORRECT - Safe Shutdown:
+```powershell
+# Stop via UI first, or:
+# Send Ctrl+C, then wait for process to exit naturally
+```
+
+### Database File Management
+
+#### Files to Include in .gitignore:
+```gitignore
+*.sqlite           # Main database file
+*.sqlite-journal   # Rollback journal
+*.sqlite-wal       # Write-Ahead Log
+*.sqlite-shm       # Shared memory file
+```
+
+#### Backup Strategy:
+- Corrupted databases are automatically backed up with timestamp
+- Manual backups can be created before risky operations:
+  ```powershell
+  Copy-Item data/elmetron.sqlite "data/elmetron.sqlite.backup.$(Get-Date -Format 'yyyyMMdd_HHmmss')"
+  ```
+
+#### Recovery Process:
+If database becomes corrupted:
+```powershell
+# 1. Backup corrupted database
+Copy-Item data/elmetron.sqlite data/elmetron.sqlite.corrupted
+
+# 2. Remove corrupted files
+Remove-Item data/elmetron.sqlite* -Force
+
+# 3. Recreate database
+py -c "from pathlib import Path; from elmetron import load_config; from elmetron.storage import Database; config = load_config(Path('config/app.toml')); db = Database(config.storage); db.connect(); db.initialise(); db.close()"
+```
+
+### Additional Notes
+- Old measurement data from corrupted database is preserved in backup files
+- A fresh database starts with Session ID 1
+- The service will automatically create required tables on first run if they don't exist
