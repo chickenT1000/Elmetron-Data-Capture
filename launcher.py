@@ -20,10 +20,13 @@ import tkinter as tk
 from tkinter import messagebox
 from tkinter import scrolledtext
 from tkinter import ttk
+import ctypes
+import ctypes.wintypes as wintypes
 
 
 ROOT = Path(__file__).resolve().parent
 CAPTURES_DIR = ROOT / "captures"
+LOCKFILE = CAPTURES_DIR / ".launcher.lock"
 CAPTURE_LOG = CAPTURES_DIR / "live_ui_dev.log"
 CAPTURE_ERR = CAPTURES_DIR / "live_ui_dev.err.log"
 UI_LOG = CAPTURES_DIR / "live_ui_dev_ui.log"
@@ -44,12 +47,75 @@ STATUS_PALETTE = {
 __all__ = ["LauncherApp", "LauncherState"]
 
 
+
+
+def check_hardware_connected() -> HardwareStatus:
+    """Check if Elmetron CX-505 hardware is connected via FTDI and if it's available."""
+    try:
+        # Try to load ftd2xx.dll
+        ftd2xx = ctypes.WinDLL('ftd2xx.dll')
+        
+        # Define function signatures for device enumeration
+        _ft_create_list = ftd2xx.FT_CreateDeviceInfoList
+        _ft_create_list.argtypes = [ctypes.POINTER(ctypes.c_ulong)]
+        _ft_create_list.restype = ctypes.c_ulong
+        
+        # Define FT_Open to test if device can be opened
+        _ft_open = ftd2xx.FT_Open
+        _ft_open.argtypes = [ctypes.c_int, ctypes.POINTER(ctypes.wintypes.HANDLE)]
+        _ft_open.restype = ctypes.c_ulong
+        
+        # Define FT_Close to close test connection
+        _ft_close = ftd2xx.FT_Close
+        _ft_close.argtypes = [ctypes.wintypes.HANDLE]
+        _ft_close.restype = ctypes.c_ulong
+        
+        # Call FT_CreateDeviceInfoList to get device count
+        count = ctypes.c_ulong()
+        status = _ft_create_list(ctypes.byref(count))
+        
+        # Check if enumeration succeeded and devices found
+        if status != 0 or count.value == 0:
+            return HardwareStatus.NOT_FOUND
+        
+        # Device(s) found - try to open first device to check availability
+        handle = ctypes.wintypes.HANDLE()
+        open_status = _ft_open(0, ctypes.byref(handle))  # Try to open device index 0
+        
+        if open_status == 0:
+            # Successfully opened - device is available
+            # Close immediately so we don't hold it
+            _ft_close(handle)
+            return HardwareStatus.AVAILABLE
+        elif open_status in (3, 4):
+            # FT_DEVICE_NOT_OPENED (3) or FT_IO_ERROR (4) = device busy/in use
+            return HardwareStatus.IN_USE
+        else:
+            # Other error
+            return HardwareStatus.UNKNOWN
+            
+    except (OSError, AttributeError) as e:
+        # ftd2xx.dll not found or function failed
+        return HardwareStatus.NOT_FOUND
+    except Exception as e:
+        # Unexpected error
+        return HardwareStatus.UNKNOWN
+
 class LauncherState(enum.Enum):
     IDLE = "idle"
     STARTING = "starting"
     RUNNING = "running"
     STOPPING = "stopping"
     FAILED = "failed"
+
+class HardwareStatus(enum.Enum):
+    """Hardware connection status."""
+    NOT_FOUND = "not_found"
+    AVAILABLE = "available"
+    IN_USE = "in_use"
+    UNKNOWN = "unknown"
+
+
 
 
 class LauncherCommand(enum.Enum):
@@ -78,6 +144,15 @@ class StatusLabel:
 
 class LauncherApp:
     def __init__(self, auto_start: bool = True) -> None:
+        # Check for existing instance
+        if not self._acquire_lock():
+            messagebox.showerror(
+                "Elmetron Launch Monitor",
+                "Another instance of the launcher is already running.\n\n"
+                "Please close the existing launcher window before starting a new one."
+            )
+            sys.exit(1)
+        
         self.root = tk.Tk()
         self.root.title("Elmetron Launch Monitor")
         self.root.geometry("700x480")
@@ -106,6 +181,49 @@ class LauncherApp:
         if auto_start:
             self.start()
 
+
+    def _acquire_lock(self) -> bool:
+        """Try to acquire single-instance lock."""
+        CAPTURES_DIR.mkdir(exist_ok=True)
+        if LOCKFILE.exists():
+            # Check if the PID in lockfile is still running
+            try:
+                with open(LOCKFILE, "r") as f:
+                    old_pid = int(f.read().strip())
+                
+                # Try to check if process is still running on Windows
+                import ctypes.wintypes as wintypes
+                PROCESS_QUERY_INFORMATION = 0x0400
+                kernel32 = ctypes.windll.kernel32
+                handle = kernel32.OpenProcess(PROCESS_QUERY_INFORMATION, False, old_pid)
+                if handle:
+                    kernel32.CloseHandle(handle)
+                    return False  # Process still running
+                # Process not running, remove stale lock
+                LOCKFILE.unlink()
+            except (ValueError, FileNotFoundError, OSError):
+                # Stale or invalid lockfile, remove it
+                try:
+                    LOCKFILE.unlink()
+                except FileNotFoundError:
+                    pass
+        
+        # Write current PID to lockfile
+        try:
+            with open(LOCKFILE, "w") as f:
+                f.write(str(os.getpid()))
+            return True
+        except OSError:
+            return False
+    
+    def _release_lock(self) -> None:
+        """Release single-instance lock."""
+        try:
+            if LOCKFILE.exists():
+                LOCKFILE.unlink()
+        except OSError:
+            pass
+
     def _build_ui(self) -> None:
         main = ttk.Frame(self.root, padding=20)
         main.pack(fill="both", expand=True)
@@ -125,15 +243,16 @@ class LauncherApp:
         ).grid(row=1, column=0, columnspan=2, sticky="w", pady=(0, 10))
 
         self.status_rows: Dict[str, StatusLabel] = {
-            "prereq": StatusLabel(main, "Prerequisites", 2),
-            "capture": StatusLabel(main, "Capture Service", 3),
-            "ui": StatusLabel(main, "Service Health UI", 4),
-            "browser": StatusLabel(main, "Dashboard", 5),
-            "system": StatusLabel(main, "Overall Status", 6),
+            "hardware": StatusLabel(main, "CX-505 Hardware", 2),
+            "prereq": StatusLabel(main, "Prerequisites", 3),
+            "capture": StatusLabel(main, "Capture Service", 4),
+            "ui": StatusLabel(main, "Service Health UI", 5),
+            "browser": StatusLabel(main, "Dashboard", 6),
+            "system": StatusLabel(main, "Overall Status", 7),
         }
 
         button_row = ttk.Frame(main)
-        button_row.grid(row=7, column=0, columnspan=2, sticky="w", pady=(12, 6))
+        button_row.grid(row=8, column=0, columnspan=2, sticky="w", pady=(12, 6))
 
         self.start_button = ttk.Button(button_row, text="Start", command=self.start)
         self.start_button.pack(side="left", padx=(0, 8))
@@ -143,9 +262,15 @@ class LauncherApp:
 
         self.reset_button = ttk.Button(button_row, text="Reset", command=self.reset)
         self.reset_button.pack(side="left", padx=(0, 8))
+        
+        # Separator
+        ttk.Separator(button_row, orient="vertical").pack(side="left", fill="y", padx=8)
+        
+        self.hw_refresh_button = ttk.Button(button_row, text="Refresh Hardware", command=self._refresh_hardware)
+        self.hw_refresh_button.pack(side="left", padx=(0, 8))
 
         ttk.Label(main, text="Activity log", font=("Segoe UI", 11, "bold")).grid(
-            row=8,
+            row=9,
             column=0,
             columnspan=2,
             sticky="w",
@@ -161,7 +286,7 @@ class LauncherApp:
             state="normal",
             takefocus=True,
         )
-        self.log_box.grid(row=9, column=0, columnspan=2, sticky="nsew")
+        self.log_box.grid(row=10, column=0, columnspan=2, sticky="nsew")
         self.log_box.bind("<Key>", self._on_log_key)
         self.log_box.bind("<Control-a>", self._select_all)
         self.log_box.bind("<Button-3>", self._show_context_menu)
@@ -172,9 +297,9 @@ class LauncherApp:
 
         ttk.Label(
             main,
-            text="Closing this window keeps services running. Use Stop to end capture before exiting.",
+            text="Closing this window will automatically stop all running services and release the CX-505 device.",
             font=("Segoe UI", 9),
-        ).grid(row=10, column=0, columnspan=2, sticky="w", pady=(12, 0))
+        ).grid(row=11, column=0, columnspan=2, sticky="w", pady=(12, 10))
 
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
 
@@ -220,10 +345,60 @@ class LauncherApp:
             finally:
                 self._queue.task_done()
 
+
+    def _check_hardware(self) -> HardwareStatus:
+        """Check hardware connection status and update UI. Returns the detected status."""
+        hw_status = check_hardware_connected()
+        
+        if hw_status == HardwareStatus.AVAILABLE:
+            self._set_status("hardware", "CX-505 connected and available", "success")
+        
+        elif hw_status == HardwareStatus.IN_USE:
+            # Check if our capture service is running
+            if "capture" in self._processes and self._state == LauncherState.RUNNING:
+                # Expected - our service has it
+                self._set_status("hardware", "CX-505 in use by capture service", "success")
+            else:
+                # Unexpected - something else has it
+                self._set_status("hardware", "CX-505 in use by another process", "error")
+                self._log("WARNING: CX-505 is in use by another process (check Task Manager for python.exe or other Elmetron software)")
+        
+        elif hw_status == HardwareStatus.NOT_FOUND:
+            self._set_status("hardware", "CX-505 not detected (OK for archived sessions)", "waiting")
+            self._log("WARNING: CX-505 device not detected (check USB connection and FTDI drivers)")
+        
+        else:  # UNKNOWN
+            self._set_status("hardware", "CX-505 status unknown", "waiting")
+            self._log("WARNING: CX-505 status could not be determined")
+        
+        return hw_status
+
+
+    def _refresh_hardware(self) -> None:
+        """Manually refresh hardware status."""
+        self._log("Refreshing hardware status...")
+        hw_status = self._check_hardware()
+        
+        # Log the result
+        if hw_status == HardwareStatus.AVAILABLE:
+            self._log("Hardware refresh complete: CX-505 is available")
+        elif hw_status == HardwareStatus.IN_USE:
+            if "capture" in self._processes and self._state == LauncherState.RUNNING:
+                self._log("Hardware refresh complete: CX-505 in use by our service")
+            else:
+                self._log("Hardware refresh complete: CX-505 in use by another process")
+        elif hw_status == HardwareStatus.NOT_FOUND:
+            self._log("Hardware refresh complete: CX-505 not detected")
+        else:  # UNKNOWN
+            self._log("Hardware refresh complete: CX-505 status unknown")
+
     def _do_start(self) -> None:
         self._transition_to(LauncherState.STARTING)
         self._set_initial_statuses()
         try:
+            # Check hardware first
+            self._check_hardware()
+            
             self._set_status("prereq", "Checking prerequisites...", "waiting")
             self._prepare_environment()
             self._set_status("prereq", "Prerequisites ready", "success")
@@ -402,6 +577,9 @@ class LauncherApp:
         self._log("UI dependencies installed.")
 
     def _open_browser(self) -> None:
+        self._set_status("browser", "Opening UI in web browser...", "waiting")
+        self._log("Opening UI in web browser in 3 seconds...")
+        time.sleep(3)
         self._log("Opening dashboard in default browser.")
         webbrowser.open(UI_URL, new=0, autoraise=True)
 
@@ -497,6 +675,7 @@ class LauncherApp:
             self._log(f"  Process '{name}' (pid {pid}): {status}")
 
     def _set_initial_statuses(self) -> None:
+        self._set_status("hardware", "Hardware status unknown", "pending")
         self._set_status("prereq", "Awaiting prerequisite check", "pending")
         self._set_status("capture", "Capture service offline", "pending")
         self._set_status("ui", "Service Health UI offline", "pending")
@@ -561,10 +740,40 @@ class LauncherApp:
             pass
 
     def _on_close(self) -> None:
+        """Handle window close - stop services if running, then exit."""
+        # If services are running, stop them first and wait for completion
+        if self._state == LauncherState.RUNNING:
+            self._log("Closing launcher - stopping services...")
+            
+            # Directly terminate processes instead of using the queue
+            # (queue won't process after we set _closing = True)
+            self._terminate_processes()
+            
+            # Wait for processes to actually terminate (up to 3 seconds)
+            max_wait = 30  # 3 seconds (30 * 0.1)
+            for _ in range(max_wait):
+                all_stopped = all(
+                    p.poll() is not None 
+                    for p in self._processes.values()
+                )
+                if all_stopped:
+                    break
+                time.sleep(0.1)
+            
+            # Force kill any remaining
+            for name, proc in list(self._processes.items()):
+                if proc.poll() is None:
+                    self._log(f"Force killing {name}...")
+                    proc.kill()
+            
+            self._processes.clear()
+            self._log("All services stopped")
+        
         self._closing = True
         with self._queue_lock:
             self._queue_active = False
         self._queue.put(LauncherCommand.SHUTDOWN)
+        self._release_lock()
         self.root.destroy()
 
     def run(self) -> None:
@@ -575,6 +784,7 @@ class LauncherApp:
             with self._queue_lock:
                 self._queue_active = False
             self._queue.put(LauncherCommand.SHUTDOWN)
+            self._release_lock()
 
     def join(self) -> None:
        self._queue.join()

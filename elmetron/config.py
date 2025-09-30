@@ -309,6 +309,8 @@ class StorageConfig:
     ensure_directories: bool = True
     vacuum_on_start: bool = False
     retention_days: Optional[int] = 90
+    store_raw_frames: bool = False  # Disable to save space (only for debugging)
+    store_raw_frames: bool = False  # Disable to save space (only for debugging)
 
     def __post_init__(self) -> None:
         if isinstance(self.database_path, str):

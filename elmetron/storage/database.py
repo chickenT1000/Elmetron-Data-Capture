@@ -731,11 +731,15 @@ class SessionHandle:
         temperature = measurement.get('temperature')
         temperature_unit = measurement.get('temperature_unit')
         with conn:
-            cursor = conn.execute(
-                "INSERT INTO raw_frames (session_id, captured_at, frame_hex, frame_bytes) VALUES (?, ?, ?, ?)",
-                (self.id, captured_at.isoformat(), raw_hex, sqlite3.Binary(raw_frame)),
-            )
-            frame_id = cursor.lastrowid
+            # Only store raw frames if configured (disabled by default to save space)
+            if self._database._config.storage.store_raw_frames:
+                cursor = conn.execute(
+                    "INSERT INTO raw_frames (session_id, captured_at, frame_hex, frame_bytes) VALUES (?, ?, ?, ?)",
+                    (self.id, captured_at.isoformat(), raw_hex, sqlite3.Binary(raw_frame)),
+                )
+                frame_id = cursor.lastrowid
+            else:
+                frame_id = None  # No raw frame stored
             measurement_cursor = conn.execute(
                 """
                 INSERT INTO measurements (
