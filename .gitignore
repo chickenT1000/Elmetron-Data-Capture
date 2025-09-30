@@ -1,3 +1,71 @@
+# Python
 __pycache__/
 *.pyc
-scripts/__pycache__/
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Node.js / UI
+node_modules/
+ui/node_modules/
+ui/dist/
+ui/.vite/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Database files (exclude production data)
+*.sqlite
+*.sqlite-journal
+*.db
+
+# Logs
+*.log
+*.err.log
+*.out.log
+captures/*.log
+captures/*.err.log
+captures/*.out.log
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Virtual environments
+venv/
+env/
+.venv/
+ENV/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+ui/playwright-report/
+ui/test-results/
+ui/playwright/.cache/
+
+# Exports and temporary files
+exports/*.csv
+exports/*.json
+exports/*.xml
+exports/*.pdf
+exports/*.zip
+temp/
+tmp/
+
+# OS files
+Thumbs.db
+.DS_Store
