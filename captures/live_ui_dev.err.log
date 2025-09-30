@@ -778,3 +778,88 @@ Traceback (most recent call last):
            ^^^^^^^^^^^^^^^^^^^^^^^
 ConnectionAbortedError: [WinError 10053] Nawi¹zane po³¹czenie zosta³o przerwane przez oprogramowanie zainstalowane w komputerze-hoœcie
 ----------------------------------------
+  File "C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\cx505_capture_service.py", line 183
+    th API listening on http://{host}:{port}/health')
+                                                   ^
+SyntaxError: unterminated string literal (detected at line 183)
+  File "C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\cx505_capture_service.py", line 183
+    th API listening on http://{host}:{port}/health')
+                                                   ^
+SyntaxError: unterminated string literal (detected at line 183)
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 56177)
+Traceback (most recent call last):
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 691, in process_request_thread
+    self.finish_request(request, client_address)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 361, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 755, in __init__
+    self.handle()
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 438, in handle
+    self.handle_one_request()
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 404, in handle_one_request
+    self.raw_requestline = self.rfile.readline(65537)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socket.py", line 706, in readinto
+    return self._sock.recv_into(b)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+ConnectionResetError: [WinError 10054] Istniej¹ce po³¹czenie zosta³o gwa³townie zamkniête przez zdalnego hosta
+----------------------------------------
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 64188)
+Traceback (most recent call last):
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 691, in process_request_thread
+    self.finish_request(request, client_address)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 361, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 755, in __init__
+    self.handle()
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 438, in handle
+    self.handle_one_request()
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 404, in handle_one_request
+    self.raw_requestline = self.rfile.readline(65537)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socket.py", line 706, in readinto
+    return self._sock.recv_into(b)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+ConnectionResetError: [WinError 10054] Istniej¹ce po³¹czenie zosta³o gwa³townie zamkniête przez zdalnego hosta
+----------------------------------------
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 62943)
+Traceback (most recent call last):
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 691, in process_request_thread
+    self.finish_request(request, client_address)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 361, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 755, in __init__
+    self.handle()
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 438, in handle
+    self.handle_one_request()
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 404, in handle_one_request
+    self.raw_requestline = self.rfile.readline(65537)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socket.py", line 706, in readinto
+    return self._sock.recv_into(b)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+ConnectionResetError: [WinError 10054] Istniej¹ce po³¹czenie zosta³o gwa³townie zamkniête przez zdalnego hosta
+----------------------------------------
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 62017)
+Traceback (most recent call last):
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 691, in process_request_thread
+    self.finish_request(request, client_address)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 361, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 755, in __init__
+    self.handle()
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 438, in handle
+    self.handle_one_request()
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 404, in handle_one_request
+    self.raw_requestline = self.rfile.readline(65537)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socket.py", line 706, in readinto
+    return self._sock.recv_into(b)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+ConnectionResetError: [WinError 10054] Istniej¹ce po³¹czenie zosta³o gwa³townie zamkniête przez zdalnego hosta
+----------------------------------------
+Warning: poll write failed: FT_Write failed with FT_STATUS=4

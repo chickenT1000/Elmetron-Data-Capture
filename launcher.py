@@ -1,4 +1,4 @@
-﻿"""Graphical launcher for CX-505 capture service and UI dashboard."""
+"""Graphical launcher for CX-505 capture service and UI dashboard."""
 
 from __future__ import annotations
 
@@ -27,12 +27,20 @@ import ctypes.wintypes as wintypes
 ROOT = Path(__file__).resolve().parent
 CAPTURES_DIR = ROOT / "captures"
 LOCKFILE = CAPTURES_DIR / ".launcher.lock"
+DATA_API_LOG = CAPTURES_DIR / "data_api_service.log"
+DATA_API_ERR = CAPTURES_DIR / "data_api_service.err.log"
 CAPTURE_LOG = CAPTURES_DIR / "live_ui_dev.log"
 CAPTURE_ERR = CAPTURES_DIR / "live_ui_dev.err.log"
 UI_LOG = CAPTURES_DIR / "live_ui_dev_ui.log"
 UI_ERR = CAPTURES_DIR / "live_ui_dev_ui.err.log"
 
-HEALTH_URL = "http://127.0.0.1:8050/health"
+DATA_API_HEALTH_URL = "http://127.0.0.1:8050/health"
+CAPTURE_HEALTH_URL = "http://127.0.0.1:8051/health"
+LIVE_STATUS_URL = "http://127.0.0.1:8050/api/live/status"
+UI_URL = "http://127.0.0.1:5173/"
+
+# Backwards compatibility
+HEALTH_URL = DATA_API_HEALTH_URL
 UI_URL = "http://127.0.0.1:5173/"
 
 CREATE_NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
@@ -462,18 +470,38 @@ class LauncherApp:
         self._transition_to(LauncherState.STARTING)
         self._set_initial_statuses()
         try:
-            # Check hardware first
-            self._check_hardware()
+            # Check hardware status (but don't block startup if not found)
+            hw_status = self._check_hardware()
+            device_available = hw_status in (HardwareStatus.AVAILABLE, HardwareStatus.IN_USE)
             
             self._set_status("prereq", "Checking prerequisites...", "waiting")
             self._prepare_environment()
             self._set_status("prereq", "Prerequisites ready", "success")
 
-            self._set_status("capture", "Starting capture service...", "waiting")
-            self._start_capture_service()
-            if not self._wait_for_url(HEALTH_URL, 40, "capture"):
-                raise RuntimeError("Capture service did not respond at /health.")
-            self._set_status("capture", "Capture service online", "success")
+            # Start Data API Service first (port 8050)
+            self._set_status("capture", "Starting Data API service...", "waiting")
+            self._start_data_api_service()
+            if not self._wait_for_url(DATA_API_HEALTH_URL, 40, "data_api"):
+                raise RuntimeError("Data API service did not respond at /health.")
+            
+            # Only start Capture Service (port 8051) if device is available
+            if device_available:
+                self._set_status("capture", "Starting capture service...", "waiting")
+                try:
+                    self._start_capture_service()
+                    if self._wait_for_url(CAPTURE_HEALTH_URL, 40, "capture"):
+                        self._set_status("capture", "Live capture service online", "success")
+                        self._log("Capture service started successfully (live mode available)")
+                    else:
+                        self._log("WARNING: Capture service did not respond, continuing in archive-only mode")
+                        self._set_status("capture", "Archive mode only (capture service failed)", "waiting")
+                except Exception as capture_error:
+                    self._log(f"WARNING: Failed to start capture service: {capture_error}")
+                    self._log("Continuing in archive-only mode")
+                    self._set_status("capture", "Archive mode only (no device)", "waiting")
+            else:
+                self._log("CX-505 device not detected, starting in archive-only mode")
+                self._set_status("capture", "Archive mode only (no device)", "waiting")
 
             self._set_status("ui", "Starting Service Health UI...", "waiting")
             self._start_ui_server()
@@ -485,7 +513,15 @@ class LauncherApp:
             self._open_browser()
             self._set_status("browser", "Dashboard opened", "success")
 
-            self._set_status("system", "All services online", "success")
+            # Set final system status based on what's running
+            if device_available:
+                self._set_status("system", "All services online (Live Mode)", "success")
+                self._log("=== System ready in LIVE MODE ===")
+            else:
+                self._set_status("system", "Archive mode ready (no device)", "success")
+                self._log("=== System ready in ARCHIVE MODE ===")
+                self._log("Connect CX-505 device and click 'Reset' to enable live capture")
+            
             self._transition_to(LauncherState.RUNNING)
         except Exception as exc:
             self._log(f"ERROR: {exc}")
@@ -504,50 +540,81 @@ class LauncherApp:
             self._mark_idle_statuses()
             self._transition_to(LauncherState.IDLE)
             return
-        self._transition_to(LauncherState.STOPPING)
-        self._set_status("system", "Stopping services...", "waiting")
         
-        # Stop data monitoring
-        self._stop_data_monitoring()
+        # Run termination in background thread to avoid blocking GUI
+        def stop_thread():
+            try:
+                self._post(lambda: self._transition_to(LauncherState.STOPPING))
+                self._post(lambda: self._set_status("system", "Stopping services...", "waiting"))
+                
+                # Stop data monitoring
+                self._stop_data_monitoring()
+                
+                # Log resource state before cleanup for debugging
+                self._log_resource_state()
+                
+                errors = self._terminate_processes()
+                
+                # Update UI from background thread using _post
+                if errors:
+                    for error in errors:
+                        self._log(f"ERROR: {error}")
+                    self._post(lambda: self._set_status("system", "Stop completed with errors", "error"))
+                    self._post(lambda: self._transition_to(LauncherState.FAILED))
+                else:
+                    self._post(lambda: self._mark_idle_statuses())
+                    self._post(lambda: self._set_status("system", "Services stopped", "pending"))
+                    self._post(lambda: self._transition_to(LauncherState.IDLE))
+            except Exception as e:
+                self._log(f"ERROR in stop thread: {e}")
+                self._post(lambda: self._set_status("system", f"Stop failed: {e}", "error"))
+                self._post(lambda: self._transition_to(LauncherState.FAILED))
         
-        # Log resource state before cleanup for debugging
-        self._log_resource_state()
-        
-        errors = self._terminate_processes()
-        if errors:
-            for error in errors:
-                self._log(f"ERROR: {error}")
-            self._set_status("system", "Stop completed with errors", "error")
-            self._transition_to(LauncherState.FAILED)
-        else:
-            self._mark_idle_statuses()
-            self._set_status("system", "Services stopped", "pending")
-            self._transition_to(LauncherState.IDLE)
+        threading.Thread(target=stop_thread, daemon=True).start()
 
     def _do_reset(self) -> None:
+        """Reset services by stopping and restarting them."""
         self._log("Executing reset: stop then start.")
-        was_running = self._state == LauncherState.RUNNING
         
-        # Force cleanup regardless of current state
-        self._do_stop()
+        # Run reset in background thread to avoid blocking GUI
+        def reset_thread():
+            try:
+                # Stop phase
+                self._post(lambda: self._transition_to(LauncherState.STOPPING))
+                self._post(lambda: self._set_status("system", "Stopping services...", "waiting"))
+                
+                # Stop data monitoring
+                self._stop_data_monitoring()
+                self._log_resource_state()
+                
+                # Terminate processes gracefully
+                errors = self._terminate_processes()
+                if errors:
+                    for error in errors:
+                        self._log(f"ERROR during stop: {error}")
+                
+                # Force cleanup if needed
+                self._force_cleanup()
+                
+                # Wait briefly for ports to be freed before restarting
+                self._log("Waiting for service ports to be freed...")
+                # Shorter waits - processes already terminated gracefully
+                self._wait_for_port_free(8050, max_wait=3)  # Data API
+                self._wait_for_port_free(8051, max_wait=3)  # Capture Service  
+                self._wait_for_port_free(5173, max_wait=3)  # UI Server
+                self._log("Restarting services...")
+                
+                # Reset to IDLE and restart on GUI thread
+                self._post(lambda: self._transition_to(LauncherState.IDLE))
+                self._post(lambda: self._set_initial_statuses())
+                self._post(lambda: self._do_start())
+                
+            except Exception as e:
+                self._log(f"ERROR in reset thread: {e}")
+                self._post(lambda: self._set_status("system", f"Reset failed: {e}", "error"))
+                self._post(lambda: self._transition_to(LauncherState.FAILED))
         
-        # Check if stop succeeded
-        if self._state not in {LauncherState.IDLE, LauncherState.FAILED}:
-            self._log("Reset aborted; stop did not complete cleanly.")
-            return
-        
-        # Force cleanup of any lingering resources if in failed state
-        if self._state == LauncherState.FAILED:
-            self._log("Forcing resource cleanup after failed state.")
-            self._force_cleanup()
-        
-        # Reset to IDLE before starting
-        self._transition_to(LauncherState.IDLE)
-        self._set_initial_statuses()
-        
-        if not was_running:
-            self._log("Reset requested while idle; starting services.")
-        self._do_start()
+        threading.Thread(target=reset_thread, daemon=True).start()
 
     def _prepare_environment(self) -> None:
         npm_path = shutil.which("npm")
@@ -555,6 +622,30 @@ class LauncherApp:
             raise RuntimeError("npm is not available on PATH.")
         self._npm_path = npm_path
         CAPTURES_DIR.mkdir(exist_ok=True)
+
+    def _start_data_api_service(self) -> None:
+        """Start the Data API service (always required)."""
+        log = DATA_API_LOG.open("a", encoding="utf-8")
+        err = DATA_API_ERR.open("a", encoding="utf-8")
+        self._logs["data_api"] = (log, err)
+
+        cmd = [
+            sys.executable,
+            str(ROOT / "data_api_service.py"),
+        ]
+
+        try:
+            process = subprocess.Popen(
+                cmd,
+                stdout=log,
+                stderr=err,
+                cwd=str(ROOT),
+                creationflags=CREATE_NO_WINDOW,
+            )
+        except FileNotFoundError as exc:
+            raise RuntimeError(f"Failed to start Data API service ({exc})") from exc
+        self._processes["data_api"] = process
+        self._log("Data API service launched; waiting for /health.")
 
     def _start_capture_service(self) -> None:
         log = CAPTURE_LOG.open("a", encoding="utf-8")
@@ -569,7 +660,7 @@ class LauncherApp:
             "--protocols",
             str(ROOT / "config" / "protocols.toml"),
             "--health-api-port",
-            "8050",
+            "8051",
             "--watchdog-timeout",
             "30",
             "--health-log",
@@ -653,6 +744,27 @@ class LauncherApp:
         webbrowser.open(UI_URL, new=0, autoraise=True)
         self._browser_opened = True  # Mark that we opened the browser
 
+    def _wait_for_port_free(self, port: int, max_wait: int = 30) -> bool:
+        """Wait for a port to be freed. Returns True if port is free, False if timeout."""
+        import socket
+        for attempt in range(max_wait):
+            try:
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+                    result = sock.connect_ex(("127.0.0.1", port))
+                    if result != 0:
+                        # Port is free (connection failed)
+                        return True
+            except Exception:
+                # If we get an exception, assume port is free
+                return True
+            
+            if attempt == 0:
+                self._log(f"Waiting for port {port} to be freed...")
+            time.sleep(1)
+        
+        self._log(f"WARNING: Port {port} still in use after {max_wait} seconds")
+        return False
+
     def _wait_for_url(self, url: str, attempts: int, process_key: str) -> bool:
         for _ in range(attempts):
             try:
@@ -669,36 +781,85 @@ class LauncherApp:
             time.sleep(1)
         return False
 
+    def _stop_data_monitoring(self) -> None:
+        """Stop data monitoring thread if active."""
+        if hasattr(self, '_data_monitor_active'):
+            self._data_monitor_active = False
+        if hasattr(self, '_data_monitor_thread') and self._data_monitor_thread:
+            # Thread will exit when it sees _data_monitor_active = False
+            try:
+                self._data_monitor_thread.join(timeout=2)
+            except Exception:
+                pass
+
     def _terminate_processes(self) -> List[str]:
+        """Terminate processes gracefully with database safety."""
         errors: List[str] = []
+        
+        # Phase 1: Send graceful shutdown signals (SIGTERM)
+        self._log("Initiating graceful shutdown...")
+        shutdown_pids = {}
         for name, process in list(self._processes.items()):
             try:
-                # Verify process object is valid
                 pid = getattr(process, 'pid', None)
-                if pid is None:
-                    self._log(f"Skipping {name}: invalid process object.")
+                if pid is None or process.poll() is not None:
                     self._processes.pop(name, None)
                     continue
                 
-                self._log(f"Stopping {name} (pid {pid}).")
-                if process.poll() is None:
-                    process.terminate()
-                    try:
-                        process.wait(timeout=10)
-                    except subprocess.TimeoutExpired:
-                        self._log(f"{name} did not exit in time; forcing termination.")
-                        process.kill()
-                        try:
-                            process.wait(timeout=5)
-                        except subprocess.TimeoutExpired:
-                            errors.append(f"{name} process did not exit after kill().")
-                exit_code = process.poll()
-                self._log(f"{name} stopped with code {exit_code}.")
-            except OSError as exc:
-                errors.append(f"Failed to terminate {name}: {exc}")
-            finally:
-                self._processes.pop(name, None)
+                self._log(f"Requesting graceful shutdown of {name} (pid {pid})...")
+                process.terminate()  # Send SIGTERM for graceful shutdown
+                shutdown_pids[name] = (process, time.time())
+                
+            except Exception as exc:
+                self._log(f"Error requesting shutdown of {name}: {exc}")
+                errors.append(f"Failed to request shutdown of {name}: {exc}")
+        
+        # Phase 2: Wait for graceful exits (with timeout)
+        # Data API and Capture Service have signal handlers to close DB connections
+        max_wait = 5.0  # seconds to wait for graceful shutdown
+        check_interval = 0.2
+        elapsed = 0
+        
+        while shutdown_pids and elapsed < max_wait:
+            time.sleep(check_interval)
+            elapsed += check_interval
+            
+            for name in list(shutdown_pids.keys()):
+                process, start_time = shutdown_pids[name]
+                if process.poll() is not None:
+                    # Process exited cleanly
+                    self._log(f"{name} exited gracefully (exit code: {process.poll()})")
+                    self._processes.pop(name, None)
+                    del shutdown_pids[name]
+        
+        # Phase 3: Force-kill any remaining processes
+        if shutdown_pids:
+            self._log(f"Force-killing {len(shutdown_pids)} processes that did not exit gracefully...")
+            for name, (process, _) in shutdown_pids.items():
+                try:
+                    pid = process.pid
+                    self._log(f"Force-killing {name} (pid {pid})...")
+                    
+                    # Use taskkill /F /T for stubborn processes (mainly UI/Node)
+                    subprocess.run(
+                        ["taskkill", "/F", "/T", "/PID", str(pid)],
+                        capture_output=True,
+                        timeout=2,
+                        creationflags=CREATE_NO_WINDOW
+                    )
+                    self._log(f"{name} force-killed")
+                    
+                except Exception as e:
+                    self._log(f"Error force-killing {name}: {e}")
+                    errors.append(f"Failed to force-kill {name}: {e}")
+                finally:
+                    self._processes.pop(name, None)
+        
         self._close_logs()
+        
+        # Brief pause for OS cleanup
+        time.sleep(0.3)
+        
         return errors
 
     def _close_logs(self) -> None:
@@ -830,9 +991,9 @@ class LauncherApp:
             message = (
                 "Closing the launcher will stop all services.\n\n"
                 f"Session data file: {session_file}\n\n"
-                "âš ď¸Ź Any unsaved work in the browser (exports, charts, etc.) will be lost.\n\n"
+                "⚠️ Any unsaved work in the browser (exports, charts, etc.) will be lost.\n\n"
                 "The captured measurement data is automatically saved to the database.\n\n"
-                "đź“Ś The browser tab will detect the offline state and close automatically.\n\n""Are you sure you want to close?"
+                "📌 The browser tab will detect the offline state and close automatically.\n\n""Are you sure you want to close?"
             )
             
             response = messagebox.askyesno(

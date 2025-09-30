@@ -475,3 +475,121 @@ Connected hardware:
 Connected hardware:
   (none)
   >> Please connect a compatible Elmetron CX-505 device and retry.
+Connected hardware:
+  [0] CX505 (S/N EL680921)
+Health API listening on http://127.0.0.1:8051/health
+[DEBUG] Sending initial handshake: 01 23 30 23 30 23 30 23 03
+[DEBUG] Handshake sent successfully
+Session 10 started for device CX505
+Frames: 27, Bytes: 2738, Session: 10
+Frames: 54, Bytes: 5438, Session: 10
+Frames: 81, Bytes: 8138, Session: 10
+Frames: 108, Bytes: 10838, Session: 10
+Frames: 135, Bytes: 13538, Session: 10
+Frames: 162, Bytes: 16238, Session: 10
+Connected hardware:
+  [0] CX505 (S/N EL680921)
+Health API listening on http://127.0.0.1:8051/health
+[DEBUG] Sending initial handshake: 01 23 30 23 30 23 30 23 03
+[DEBUG] Handshake sent successfully
+Session 13 started for device CX505
+Frames: 27, Bytes: 2738, Session: 13
+Frames: 54, Bytes: 5438, Session: 13
+Frames: 81, Bytes: 8138, Session: 13
+Frames: 108, Bytes: 10838, Session: 13
+Frames: 135, Bytes: 13538, Session: 13
+Frames: 162, Bytes: 16238, Session: 13
+Frames: 189, Bytes: 18938, Session: 13
+Frames: 216, Bytes: 21638, Session: 13
+Frames: 243, Bytes: 24338, Session: 13
+Frames: 270, Bytes: 27038, Session: 13
+Frames: 297, Bytes: 29738, Session: 13
+Frames: 324, Bytes: 32438, Session: 13
+Frames: 351, Bytes: 35138, Session: 13
+Frames: 378, Bytes: 37838, Session: 13
+Frames: 405, Bytes: 40538, Session: 13
+Frames: 432, Bytes: 43238, Session: 13
+Frames: 459, Bytes: 45938, Session: 13
+Frames: 486, Bytes: 48638, Session: 13
+Frames: 513, Bytes: 51338, Session: 13
+Frames: 540, Bytes: 54038, Session: 13
+Frames: 567, Bytes: 56738, Session: 13
+Frames: 594, Bytes: 59438, Session: 13
+Frames: 621, Bytes: 62138, Session: 13
+Frames: 648, Bytes: 64838, Session: 13
+Frames: 675, Bytes: 67538, Session: 13
+Frames: 702, Bytes: 70238, Session: 13
+Frames: 729, Bytes: 72938, Session: 13
+Frames: 756, Bytes: 75638, Session: 13
+Frames: 783, Bytes: 78338, Session: 13
+Frames: 810, Bytes: 81038, Session: 13
+Frames: 837, Bytes: 83738, Session: 13
+Frames: 864, Bytes: 86438, Session: 13
+Frames: 891, Bytes: 89138, Session: 13
+Frames: 918, Bytes: 91838, Session: 13
+Frames: 945, Bytes: 94538, Session: 13
+Frames: 972, Bytes: 97238, Session: 13
+Frames: 999, Bytes: 99938, Session: 13
+Frames: 1026, Bytes: 102638, Session: 13
+Frames: 1053, Bytes: 105338, Session: 13
+Frames: 1080, Bytes: 108038, Session: 13
+Frames: 1107, Bytes: 110738, Session: 13
+Frames: 1134, Bytes: 113438, Session: 13
+Frames: 1161, Bytes: 116138, Session: 13
+Frames: 1188, Bytes: 118838, Session: 13
+Frames: 1215, Bytes: 121538, Session: 13
+Frames: 1242, Bytes: 124238, Session: 13
+Frames: 1269, Bytes: 126938, Session: 13
+Frames: 1296, Bytes: 129638, Session: 13
+Frames: 1323, Bytes: 132338, Session: 13
+Frames: 1350, Bytes: 135038, Session: 13
+Frames: 1377, Bytes: 137738, Session: 13
+Frames: 1404, Bytes: 140438, Session: 13
+Connected hardware:
+  [0] CX505 (S/N EL680921)
+Health API listening on http://127.0.0.1:8051/health
+[DEBUG] Sending initial handshake: 01 23 30 23 30 23 30 23 03
+[DEBUG] Handshake sent successfully
+Session 14 started for device CX505
+Frames: 28, Bytes: 2800, Session: 14
+Frames: 55, Bytes: 5500, Session: 14
+Frames: 82, Bytes: 8200, Session: 14
+Frames: 109, Bytes: 10900, Session: 14
+Frames: 136, Bytes: 13600, Session: 14
+Frames: 163, Bytes: 16300, Session: 14
+Frames: 190, Bytes: 19000, Session: 14
+Frames: 217, Bytes: 21700, Session: 14
+Frames: 244, Bytes: 24400, Session: 14
+Frames: 271, Bytes: 27100, Session: 14
+Frames: 298, Bytes: 29800, Session: 14
+Frames: 325, Bytes: 32500, Session: 14
+Frames: 352, Bytes: 35200, Session: 14
+Frames: 379, Bytes: 37900, Session: 14
+Frames: 406, Bytes: 40600, Session: 14
+Frames: 433, Bytes: 43300, Session: 14
+Frames: 460, Bytes: 46000, Session: 14
+Frames: 487, Bytes: 48700, Session: 14
+Frames: 514, Bytes: 51400, Session: 14
+Frames: 541, Bytes: 54100, Session: 14
+Frames: 568, Bytes: 56800, Session: 14
+Connected hardware:
+  [0] CX505 (S/N EL680921)
+Health API listening on http://127.0.0.1:8051/health
+[DEBUG] Sending initial handshake: 01 23 30 23 30 23 30 23 03
+[DEBUG] Handshake sent successfully
+Session 15 started for device CX505
+Frames: 27, Bytes: 2738, Session: 15
+Frames: 54, Bytes: 5438, Session: 15
+Frames: 81, Bytes: 8138, Session: 15
+Frames: 108, Bytes: 10838, Session: 15
+Frames: 135, Bytes: 13538, Session: 15
+Frames: 162, Bytes: 16238, Session: 15
+Frames: 189, Bytes: 18938, Session: 15
+Warning: capture window failed: FT_Read failed with FT_STATUS=4. Retrying after 2.0s
+Warning: device open failed: Failed to open FTDI device after 5 attempts: No FTDI D2XX devices detected. Retrying in 2.0s (attempt 1)
+Connected hardware:
+  (none)
+  >> Please connect a compatible Elmetron CX-505 device and retry.
+Connected hardware:
+  (none)
+  >> Please connect a compatible Elmetron CX-505 device and retry.
