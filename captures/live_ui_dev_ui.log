@@ -125,12 +125,11 @@
   [32m[1mVITE[22m v7.1.7[39m  [2mready in [0m[1m692[22m[2m[0m ms[22m
 
   [32m➜[39m  [1mLocal[22m:   [36mhttp://127.0.0.1:[1m5173[22m/[39m
-
-> ui@0.0.0 dev
-> vite --host 127.0.0.1 --port 5173 --strictPort
-
-
-> ui@0.0.0 dev
+[2m12:32:05[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/App.tsx[22m
+[2m12:32:11[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32m✨ new dependencies optimized: [33m@mui/icons-material/Close[32m[39m
+[2m12:32:11[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32m✨ optimized dependencies changed. reloading[39m
+[2m12:54:02[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/OfflineWarning.tsx[22m
+ ui@0.0.0 dev
 > vite --host 127.0.0.1 --port 5173 --strictPort
 
 

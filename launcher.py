@@ -582,6 +582,7 @@ class LauncherApp:
         time.sleep(3)
         self._log("Opening dashboard in default browser.")
         webbrowser.open(UI_URL, new=0, autoraise=True)
+        self._browser_opened = True  # Mark that we opened the browser
 
     def _wait_for_url(self, url: str, attempts: int, process_key: str) -> bool:
         for _ in range(attempts):
@@ -739,8 +740,42 @@ class LauncherApp:
         except tk.TclError:
             pass
 
+
+
+    def _get_current_session_file(self) -> str:
+        """Get current session database file name."""
+        try:
+            db_path = ROOT / "data" / "elmetron.sqlite"
+            if db_path.exists():
+                return f"data/elmetron.sqlite ({db_path.stat().st_size / 1024 / 1024:.1f} MB)"
+            return "data/elmetron.sqlite (new session)"
+        except Exception:
+            return "data/elmetron.sqlite"
+
     def _on_close(self) -> None:
         """Handle window close - stop services if running, then exit."""
+        # If browser was opened, show confirmation dialog
+        if self._browser_opened and self._state == LauncherState.RUNNING:
+            session_file = self._get_current_session_file()
+            
+            message = (
+                "Closing the launcher will stop all services.\n\n"
+                f"Session data file: {session_file}\n\n"
+                "⚠️ Any unsaved work in the browser (exports, charts, etc.) will be lost.\n\n"
+                "The captured measurement data is automatically saved to the database.\n\n"
+                "📌 The browser tab will detect the offline state and close automatically.\n\n""Are you sure you want to close?"
+            )
+            
+            response = messagebox.askyesno(
+                "Confirm Close",
+                message,
+                icon="warning",
+                default="no"
+            )
+            
+            if not response:
+                return  # User cancelled
+        
         # If services are running, stop them first and wait for completion
         if self._state == LauncherState.RUNNING:
             self._log("Closing launcher - stopping services...")
@@ -768,6 +803,10 @@ class LauncherApp:
             
             self._processes.clear()
             self._log("All services stopped")
+            
+            # Remind user to close browser
+            if self._browser_opened:
+                self._log("Browser tab will auto-close after detecting offline state")
         
         self._closing = True
         with self._queue_lock:
