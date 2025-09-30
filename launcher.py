@@ -270,6 +270,10 @@ class LauncherApp:
         
         self.hw_refresh_button = ttk.Button(button_row, text="Refresh Hardware", command=self._refresh_hardware)
         self.hw_refresh_button.pack(side="left", padx=(0, 8))
+        
+        # Reopen Browser button
+        self.reopen_browser_button = ttk.Button(button_row, text="Reopen Browser", command=self._reopen_browser)
+        self.reopen_browser_button.pack(side="left", padx=(0, 8))
 
         ttk.Label(main, text="Activity log", font=("Segoe UI", 11, "bold")).grid(
             row=9,
@@ -394,6 +398,26 @@ class LauncherApp:
         else:  # UNKNOWN
             self._log("Hardware refresh complete: CX-505 status unknown")
 
+
+    def _reopen_browser(self) -> None:
+        """Reopen the browser tab with the UI dashboard."""
+        if self._state != LauncherState.RUNNING:
+            self._log("[Browser] Cannot reopen browser - service not started")
+            messagebox.showwarning(
+                "Service Not Running",
+                "The capture service must be running to open the dashboard.\n\nPlease click 'Start' first."
+            )
+            return
+        
+        self._log("[Browser] Reopening dashboard in browser...")
+        try:
+            webbrowser.open(UI_URL)
+            self.status_rows["browser"].set("Dashboard opened", STATUS_PALETTE["success"])
+            self._browser_opened = True
+            self._log("[Browser] Dashboard opened successfully")
+        except Exception as e:
+            self._log(f"[Browser] Failed to open dashboard: {e}")
+            self.status_rows["browser"].set(f"Failed: {e}", STATUS_PALETTE["error"])
     def _do_start(self) -> None:
         self._transition_to(LauncherState.STARTING)
         self._set_initial_statuses()
