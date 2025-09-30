@@ -1,4 +1,4 @@
-﻿"""Graphical launcher for CX-505 capture service and UI dashboard."""
+"""Graphical launcher for CX-505 capture service and UI dashboard."""
 
 from __future__ import annotations
 
@@ -402,50 +402,10 @@ class LauncherApp:
     def _reopen_browser(self) -> None:
         """Reopen the browser tab with the UI dashboard."""
         if self._state != LauncherState.RUNNING:
-            self._log("[Browser] Cannot reopen browser - service not running")
+            self._log("[Browser] Cannot reopen browser - service not started")
             messagebox.showwarning(
                 "Service Not Running",
                 "The capture service must be running to open the dashboard.\n\nPlease click 'Start' first."
-            )
-            return
-        
-        # Check if processes are actually alive
-        capture_alive = "capture" in self._processes and self._processes["capture"].poll() is None
-        ui_alive = "ui" in self._processes and self._processes["ui"].poll() is None
-        
-        if not capture_alive or not ui_alive:
-            self._log("[Browser] Cannot reopen browser - service processes not responding")
-            missing = []
-            if not capture_alive:
-                missing.append("capture service")
-            if not ui_alive:
-                missing.append("UI server")
-            
-            messagebox.showerror(
-                "Service Error",
-                f"The {' and '.join(missing)} stopped unexpectedly.\n\n"
-                "Please click 'Stop' to clean up, then 'Start' to restart services."
-            )
-            return
-        
-        # Check if UI is actually responding
-        try:
-            with urllib.request.urlopen(UI_URL, timeout=2) as response:
-                if not (200 <= response.getcode() < 300):
-                    self._log(f"[Browser] UI server returned status {response.getcode()}")
-                    messagebox.showwarning(
-                        "UI Not Ready",
-                        f"The UI server is not responding properly (HTTP {response.getcode()}).\n\n"
-                        "Please wait a moment or try clicking 'Reset'."
-                    )
-                    return
-        except Exception as e:
-            self._log(f"[Browser] Cannot reach UI server: {e}")
-            messagebox.showerror(
-                "UI Not Accessible",
-                f"The UI server is not accessible at {UI_URL}.\n\n"
-                f"Error: {e}\n\n"
-                "Please click 'Reset' to restart services."
             )
             return
         
@@ -830,9 +790,9 @@ class LauncherApp:
             message = (
                 "Closing the launcher will stop all services.\n\n"
                 f"Session data file: {session_file}\n\n"
-                "âš ď¸Ź Any unsaved work in the browser (exports, charts, etc.) will be lost.\n\n"
+                "⚠️ Any unsaved work in the browser (exports, charts, etc.) will be lost.\n\n"
                 "The captured measurement data is automatically saved to the database.\n\n"
-                "đź“Ś The browser tab will detect the offline state and close automatically.\n\n""Are you sure you want to close?"
+                "📌 The browser tab will detect the offline state and close automatically.\n\n""Are you sure you want to close?"
             )
             
             response = messagebox.askyesno(

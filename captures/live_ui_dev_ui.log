@@ -245,11 +245,7 @@
 [2m15:41:22[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32m✨ new dependencies optimized: [33m@mui/icons-material/Info[32m[39m
 [2m15:41:22[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32m✨ optimized dependencies changed. reloading[39m
 [2m16:00:24[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2mindex.html[22m
-
-> ui@0.0.0 dev
-> vite --host 127.0.0.1 --port 5173 --strictPort
-
-
-> ui@0.0.0 dev
-> vite --host 127.0.0.1 --port 5173 --strictPort
-
+[2m16:18:44[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2msrc/main.tsx[22m
+[2m16:19:37[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/CloseWarningBanner.tsx[22m
+[2m16:19:46[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32m✨ new dependencies optimized: [33mlucide-react, class-variance-authority, clsx, tailwind-merge[32m[39m
+[2m16:19:46[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32m✨ optimized dependencies changed. reloading[39m

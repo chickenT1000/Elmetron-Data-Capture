@@ -1,24 +1,16 @@
-import { Alert, AlertTitle } from '@mui/material';
-import InfoIcon from '@mui/icons-material/Info';
+import { Alert, AlertTitle, AlertDescription } from './ui/alert';
+import { Info } from 'lucide-react';
 
 export function CloseWarningBanner() {
   return (
-    <Alert 
-      severity="info" 
-      icon={<InfoIcon />}
-      sx={{
-        borderRadius: 0,
-        borderBottom: '1px solid',
-        borderColor: 'info.main',
-        '& .MuiAlert-message': {
-          width: '100%'
-        }
-      }}
-    >
-      <AlertTitle sx={{ fontWeight: 600, mb: 0.5 }}>
+    <Alert variant="info" className="rounded-none border-b">
+      <Info className="h-4 w-4" />
+      <AlertTitle>
         ⚠️ Keep This Tab Open
       </AlertTitle>
-      Do not close this browser tab while capturing data. If closed accidentally, use the <strong>"Reopen Browser"</strong> button in the launcher.
+      <AlertDescription>
+        Do not close this browser tab while capturing data. If closed accidentally, use the <strong>"Reopen Browser"</strong> button in the launcher.
+      </AlertDescription>
     </Alert>
   );
 }

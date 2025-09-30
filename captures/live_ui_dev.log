@@ -466,3 +466,12 @@ Warning: device open failed: Failed to open FTDI device after 5 attempts: FT_Ope
 Warning: device open failed: Failed to open FTDI device after 5 attempts: FT_Open failed with FT_STATUS=3. Retrying in 30.0s (attempt 274)
 Warning: device open failed: Failed to open FTDI device after 5 attempts: FT_Open failed with FT_STATUS=3. Retrying in 30.0s (attempt 275)
 Warning: device open failed: Failed to open FTDI device after 5 attempts: FT_Open failed with FT_STATUS=3. Retrying in 30.0s (attempt 276)
+Connected hardware:
+  (none)
+  >> Please connect a compatible Elmetron CX-505 device and retry.
+Connected hardware:
+  (none)
+  >> Please connect a compatible Elmetron CX-505 device and retry.
+Connected hardware:
+  (none)
+  >> Please connect a compatible Elmetron CX-505 device and retry.
