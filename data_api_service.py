@@ -387,6 +387,177 @@ def get_session_measurements(session_id: int):
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/sessions/<int:session_id>/evaluation', methods=['GET'])
+def get_session_evaluation(session_id: int):
+    """
+    Get session evaluation with measurements formatted for charting.
+    This is a compatibility endpoint for the UI.
+    
+    Query params:
+        anchor: Time anchor point ('start', 'calibration', etc.) - currently ignored
+        limit: Max measurements to return (default: 10000)
+    
+    Returns evaluation format expected by UI.
+    """
+    try:
+        anchor = request.args.get('anchor', 'start', type=str)
+        limit = request.args.get('limit', 10000, type=int)
+        limit = max(1, min(limit, 10000))
+        
+        conn = sqlite3.connect(str(db.path))
+        conn.row_factory = sqlite3.Row
+        
+        # Get session details
+        session_row = conn.execute("""
+            SELECT 
+                s.id,
+                s.started_at,
+                s.ended_at,
+                s.note,
+                i.serial as instrument_serial,
+                i.description as instrument_description,
+                i.model as instrument_model
+            FROM sessions s
+            LEFT JOIN instruments i ON s.instrument_id = i.id
+            WHERE s.id = ?
+        """, (session_id,)).fetchone()
+        
+        if not session_row:
+            conn.close()
+            return jsonify({'error': 'Session not found'}), 404
+        
+        # Get counts
+        counts = conn.execute("""
+            SELECT 
+                (SELECT COUNT(*) FROM measurements WHERE session_id = ?) as measurements,
+                (SELECT COUNT(*) FROM raw_frames WHERE session_id = ?) as frames,
+                (SELECT COUNT(*) FROM audit_events WHERE session_id = ?) as audit_events
+        """, (session_id, session_id, session_id)).fetchone()
+        
+        # Get measurements
+        measurement_rows = conn.execute("""
+            SELECT 
+                m.id as measurement_id,
+                m.frame_id,
+                m.measurement_timestamp as timestamp,
+                m.created_at,
+                m.value,
+                m.unit,
+                m.temperature,
+                m.temperature_unit,
+                m.payload_json
+            FROM measurements m
+            WHERE m.session_id = ?
+            ORDER BY m.id ASC
+            LIMIT ?
+        """, (session_id, limit)).fetchall()
+        
+        conn.close()
+        
+        # Build evaluation response
+        session = {
+            'id': session_row['id'],
+            'started_at': session_row['started_at'],
+            'ended_at': session_row['ended_at'],
+            'note': session_row['note'],
+            'instrument': {
+                'serial': session_row['instrument_serial'],
+                'description': session_row['instrument_description'],
+                'model': session_row['instrument_model']
+            } if session_row['instrument_serial'] else None,
+            'counts': {
+                'measurements': counts['measurements'],
+                'frames': counts['frames'],
+                'audit_events': counts['audit_events']
+            }
+        }
+        
+        # Convert measurements to series format
+        series = []
+        values = []
+        temps = []
+        anchor_time = session_row['started_at']  # Use start as anchor
+        
+        for row in measurement_rows:
+            payload = json.loads(row['payload_json']) if row['payload_json'] else {}
+            
+            # Calculate offset from anchor (simplified - assumes ISO timestamp)
+            offset_seconds = None
+            if row['timestamp'] and anchor_time:
+                try:
+                    from datetime import datetime
+                    ts = datetime.fromisoformat(row['timestamp'].replace('Z', '+00:00'))
+                    anchor_ts = datetime.fromisoformat(anchor_time.replace('Z', '+00:00'))
+                    offset_seconds = (ts - anchor_ts).total_seconds()
+                except:
+                    pass
+            
+            point = {
+                'measurement_id': row['measurement_id'],
+                'frame_id': row['frame_id'],
+                'timestamp': row['timestamp'],
+                'captured_at': row['created_at'],
+                'offset_seconds': offset_seconds,
+                'value': row['value'],
+                'unit': row['unit'],
+                'temperature': row['temperature'],
+                'temperature_unit': row['temperature_unit'],
+                'payload': payload
+            }
+            series.append(point)
+            
+            if row['value'] is not None:
+                values.append(row['value'])
+            if row['temperature'] is not None:
+                temps.append(row['temperature'])
+        
+        # Calculate statistics
+        value_stats = {
+            'min': min(values) if values else None,
+            'max': max(values) if values else None,
+            'average': sum(values) / len(values) if values else None,
+            'samples': len(values),
+            'unit': series[0]['unit'] if series else None
+        }
+        
+        temp_stats = {
+            'min': min(temps) if temps else None,
+            'max': max(temps) if temps else None,
+            'average': sum(temps) / len(temps) if temps else None,
+            'samples': len(temps),
+            'unit': series[0]['temperature_unit'] if series else None
+        }
+        
+        # Calculate duration
+        duration_seconds = None
+        if session_row['ended_at'] and session_row['started_at']:
+            try:
+                from datetime import datetime
+                end_ts = datetime.fromisoformat(session_row['ended_at'].replace('Z', '+00:00'))
+                start_ts = datetime.fromisoformat(session_row['started_at'].replace('Z', '+00:00'))
+                duration_seconds = (end_ts - start_ts).total_seconds()
+            except:
+                pass
+        
+        return jsonify({
+            'session': session,
+            'anchor': anchor,
+            'anchor_timestamp': anchor_time,
+            'series': series,
+            'markers': [],  # TODO: Extract from audit events
+            'statistics': {
+                'value': value_stats,
+                'temperature': temp_stats
+            },
+            'duration_seconds': duration_seconds,
+            'samples': len(series)
+        })
+    
+    except Exception as e:
+        logger.error(f"Error generating evaluation for session {session_id}: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/sessions/<int:session_id>/export', methods=['GET'])
 def export_session(session_id: int):
     """

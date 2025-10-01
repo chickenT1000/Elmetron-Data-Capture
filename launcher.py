@@ -637,8 +637,10 @@ class LauncherApp:
 
         env = os.environ.copy()
         env["VITE_API_BASE_URL"] = "http://127.0.0.1:8050"
-        env.setdefault("VITE_HEALTH_BASE_URL", env["VITE_API_BASE_URL"])
-        self._log(f"UI base URL set to {env['VITE_API_BASE_URL']}")
+        env["VITE_HEALTH_BASE_URL"] = "http://127.0.0.1:8051"
+        self._log(
+            f"UI base URLs set to API={env['VITE_API_BASE_URL']} health={env['VITE_HEALTH_BASE_URL']}"
+        )
 
         cmd = [
             self._npm_path,

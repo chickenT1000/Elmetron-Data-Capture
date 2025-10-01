@@ -1,6 +1,7 @@
-import { Stack, Typography } from '@mui/material';
+﻿import { Stack, Typography } from '@mui/material';
 import { useHealthStatus } from '../hooks/useHealthStatus';
 import { useHealthLogEvents, type HealthLogConnectionState } from '../hooks/useHealthLogEvents';
+import { useLiveStatus } from '../hooks/useLiveStatus';
 import { MeasurementPanel } from '../components/MeasurementPanel';
 import { CommandHistory } from '../components/CommandHistory';
 import { LogFeed } from '../components/LogFeed';
@@ -13,13 +14,13 @@ import type {
 
 const formatNumber = (value?: number | null, digits = 2): string => {
   if (value === undefined || value === null || Number.isNaN(value)) {
-    return '—';
+    return 'â€”';
   }
   return value.toLocaleString(undefined, { maximumFractionDigits: digits });
 };
 
 const formatDurationMs = (value?: number | null): string => {
-  if (!value && value !== 0) return '—';
+  if (!value && value !== 0) return 'â€”';
   if (value >= 1000) {
     return `${(value / 1000).toFixed(2)} s`;
   }
@@ -47,6 +48,9 @@ const normaliseLogLevel = (level?: string | null): DiagnosticLogRowState['level'
 };
 
 export default function DashboardPage() {
+  const { data: liveStatus } = useLiveStatus();
+  const isArchiveMode = liveStatus?.mode === 'archive';
+
   const {
     data: health,
     isLoading: healthLoading,
@@ -86,7 +90,7 @@ export default function DashboardPage() {
       id: 'processing',
       label: 'Avg processing time',
       value: formatDurationMs(analyticsProfile?.average_processing_time_ms),
-      helperText: `Max ${formatDurationMs(analyticsProfile?.max_processing_time_ms)} • throttled ${formatNumber(
+      helperText: `Max ${formatDurationMs(analyticsProfile?.max_processing_time_ms)} â€˘ throttled ${formatNumber(
         analyticsProfile?.throttled_frames,
         0,
       )}`,
@@ -96,7 +100,7 @@ export default function DashboardPage() {
       id: 'latency',
       label: 'Health response latency',
       value: formatDurationMs(responseTimes?.average_ms),
-      helperText: `Last ${formatDurationMs(responseTimes?.last_ms)} • Max ${formatDurationMs(
+      helperText: `Last ${formatDurationMs(responseTimes?.last_ms)} â€˘ Max ${formatDurationMs(
         responseTimes?.max_ms,
       )}`,
       iconToken: 'latency',
@@ -104,6 +108,11 @@ export default function DashboardPage() {
   ];
 
   const measurementState: MeasurementPanelState = (() => {
+    // In archive mode, skip loading states and show static message
+    if (isArchiveMode) {
+      return { status: 'empty', message: 'CX-505 not connected. Browse historical sessions in the Sessions tab.' };
+    }
+
     if (healthLoading) {
       return { status: 'loading' };
     }
@@ -172,13 +181,17 @@ export default function DashboardPage() {
         Service Health Dashboard
       </Typography>
       <MeasurementPanel state={measurementState} metrics={metricCards} />
-      <CommandHistory entries={commandHistoryEntries} loading={healthLoading} />
-      <LogFeed
-        entries={logEntries}
-        loading={logsLoading}
-        errorMessage={logsError ? logsErrorObj?.message ?? 'Failed to load log stream' : null}
-        emptyMessage={logEmptyMessage}
-      />
+      {!isArchiveMode && (
+        <>
+          <CommandHistory entries={commandHistoryEntries} loading={healthLoading} />
+          <LogFeed
+            entries={logEntries}
+            loading={logsLoading}
+            errorMessage={logsError ? logsErrorObj?.message ?? 'Failed to load log stream' : null}
+            emptyMessage={logEmptyMessage}
+          />
+        </>
+      )}
     </Stack>
   );
 }

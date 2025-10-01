@@ -66,7 +66,7 @@ export async function fetchRecentSessions({
   limit = 10,
 }: { limit?: number } = {}): Promise<SessionSummary[]> {
   const params = new URLSearchParams({ limit: String(limit) });
-  const response = await fetch(buildApiUrl(`/sessions/recent?${params.toString()}`), {
+  const response = await fetch(buildApiUrl(`/api/sessions?${params.toString()}`), {
     method: 'GET',
     headers: {
       Accept: 'application/json',
@@ -92,7 +92,7 @@ export async function fetchSessionEvaluation(
     params.set('anchor', anchor);
   }
   const query = params.toString();
-  const url = buildApiUrl(`/sessions/${sessionId}/evaluation${query ? `?${query}` : ''}`);
+  const url = buildApiUrl(`/api/sessions/${sessionId}/evaluation${query ? `?${query}` : ''}`);
   const response = await fetch(url, {
     method: 'GET',
     headers: {
@@ -121,7 +121,7 @@ export async function downloadSessionEvaluationJson(
     params.set('filename', filename);
   }
   const response = await fetch(
-    buildApiUrl(`/sessions/${sessionId}/evaluation/export?${params.toString()}`),
+    buildApiUrl(`/api/sessions/${sessionId}/export?${params.toString()}`),
     {
       method: 'GET',
       headers: {

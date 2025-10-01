@@ -21,6 +21,7 @@ import BugReportIcon from '@mui/icons-material/BugReport';
 import { useHealthStatus } from '../hooks/useHealthStatus';
 import { useHealthLogEvents } from '../hooks/useHealthLogEvents';
 import type { HealthLogConnectionState } from '../hooks/useHealthLogEvents';
+import { useLiveStatus } from '../hooks/useLiveStatus';
 import { fetchDiagnosticBundle } from '../api/health';
 import type {
   CommandMetrics,
@@ -158,6 +159,9 @@ const formatCountLabel = (
 const formatMaybeDate = (value?: string | null): string => (value ? formatDateTime(value) : 'Not scheduled');
 
 export default function ServiceHealthPage() {
+  const { data: liveStatus } = useLiveStatus();
+  const isArchiveMode = liveStatus?.mode === 'archive';
+
   const {
     data,
     isLoading,
@@ -257,6 +261,30 @@ export default function ServiceHealthPage() {
     void refetchLogs();
   };
 
+  // In archive mode, don't show health monitoring at all
+  if (isArchiveMode) {
+    return (
+      <Stack spacing={3}>
+        <Card>
+          <CardContent>
+            <Typography variant="h5" fontWeight={600} gutterBottom>
+              Service Health & Diagnostics
+            </Typography>
+            <Alert severity="info" sx={{ mt: 2 }}>
+              <Typography variant="body1" gutterBottom>
+                <strong>Archive Mode</strong> - Live capture service not available
+              </Typography>
+              <Typography variant="body2">
+                The CX-505 device is not connected. Health monitoring requires an active capture service.
+                You can browse historical measurement sessions in the <strong>Sessions</strong> tab.
+              </Typography>
+            </Alert>
+          </CardContent>
+        </Card>
+      </Stack>
+    );
+  }
+
   return (
     <Stack spacing={3}>
       <Card>
@@ -268,7 +296,11 @@ export default function ServiceHealthPage() {
             <Typography variant="body2" color="text.secondary" gutterBottom>
               Monitor watchdog heartbeat, command queues, and scheduled maintenance tasks for the CX-505 capture service.
             </Typography>
-            {isError ? (
+            {isArchiveMode && isError ? (
+              <Alert severity="info" sx={{ mt: 2 }}>
+                <strong>Archive Mode</strong> - The CX-505 device is not connected. Live health monitoring is unavailable, but you can browse historical sessions in the Sessions tab.
+              </Alert>
+            ) : isError ? (
               <Alert severity="error" sx={{ mt: 2 }}>
                 {(error as Error).message || 'Unable to load health snapshot'}
               </Alert>
@@ -288,7 +320,7 @@ export default function ServiceHealthPage() {
             >
               Refresh
             </Button>
-            {data ? (
+        {data && !isArchiveMode ? (
               <Chip label={`Service: ${data.state}`} color={statusColor(data.state)} size="small" sx={{ mt: 1 }} />
             ) : null}
           </Stack>

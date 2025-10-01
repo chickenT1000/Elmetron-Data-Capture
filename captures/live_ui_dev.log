@@ -593,3 +593,969 @@ Connected hardware:
 Connected hardware:
   (none)
   >> Please connect a compatible Elmetron CX-505 device and retry.
+Connected hardware:
+  [0] CX505 (S/N EL680921)
+Health API listening on http://127.0.0.1:8051/health
+[DEBUG] Sending initial handshake: 01 23 30 23 30 23 30 23 03
+[DEBUG] Handshake sent successfully
+Session 18 started for device CX505
+Frames: 27, Bytes: 2738, Session: 18
+Frames: 54, Bytes: 5438, Session: 18
+Frames: 81, Bytes: 8138, Session: 18
+Frames: 108, Bytes: 10838, Session: 18
+Frames: 135, Bytes: 13538, Session: 18
+Frames: 162, Bytes: 16238, Session: 18
+Frames: 189, Bytes: 18938, Session: 18
+Frames: 216, Bytes: 21638, Session: 18
+Frames: 243, Bytes: 24338, Session: 18
+Frames: 270, Bytes: 27038, Session: 18
+Frames: 297, Bytes: 29738, Session: 18
+Frames: 324, Bytes: 32438, Session: 18
+Frames: 351, Bytes: 35138, Session: 18
+Frames: 378, Bytes: 37838, Session: 18
+Frames: 405, Bytes: 40538, Session: 18
+Frames: 432, Bytes: 43238, Session: 18
+Frames: 459, Bytes: 45938, Session: 18
+Frames: 486, Bytes: 48638, Session: 18
+Frames: 513, Bytes: 51338, Session: 18
+Frames: 540, Bytes: 54038, Session: 18
+Frames: 567, Bytes: 56738, Session: 18
+Frames: 594, Bytes: 59438, Session: 18
+Frames: 621, Bytes: 62138, Session: 18
+Frames: 648, Bytes: 64838, Session: 18
+Frames: 675, Bytes: 67538, Session: 18
+Frames: 702, Bytes: 70238, Session: 18
+Frames: 729, Bytes: 72938, Session: 18
+Frames: 756, Bytes: 75638, Session: 18
+Frames: 783, Bytes: 78338, Session: 18
+Frames: 810, Bytes: 81038, Session: 18
+Frames: 837, Bytes: 83738, Session: 18
+Frames: 864, Bytes: 86438, Session: 18
+Frames: 891, Bytes: 89138, Session: 18
+Frames: 918, Bytes: 91838, Session: 18
+Frames: 945, Bytes: 94538, Session: 18
+Frames: 972, Bytes: 97238, Session: 18
+Frames: 999, Bytes: 99938, Session: 18
+Frames: 1026, Bytes: 102638, Session: 18
+Frames: 1053, Bytes: 105338, Session: 18
+Frames: 1080, Bytes: 108038, Session: 18
+Frames: 1107, Bytes: 110738, Session: 18
+Frames: 1134, Bytes: 113438, Session: 18
+Frames: 1161, Bytes: 116138, Session: 18
+Frames: 1188, Bytes: 118838, Session: 18
+Frames: 1215, Bytes: 121538, Session: 18
+Frames: 1242, Bytes: 124238, Session: 18
+Frames: 1269, Bytes: 126938, Session: 18
+Frames: 1296, Bytes: 129638, Session: 18
+Frames: 1323, Bytes: 132338, Session: 18
+Frames: 1350, Bytes: 135038, Session: 18
+Frames: 1377, Bytes: 137738, Session: 18
+Frames: 1404, Bytes: 140438, Session: 18
+Frames: 1431, Bytes: 143138, Session: 18
+Frames: 1458, Bytes: 145838, Session: 18
+Frames: 1485, Bytes: 148538, Session: 18
+Frames: 1512, Bytes: 151238, Session: 18
+Frames: 1539, Bytes: 153938, Session: 18
+Frames: 1566, Bytes: 156638, Session: 18
+Frames: 1593, Bytes: 159338, Session: 18
+Frames: 1620, Bytes: 162038, Session: 18
+Frames: 1647, Bytes: 164738, Session: 18
+Frames: 1674, Bytes: 167438, Session: 18
+Frames: 1701, Bytes: 170138, Session: 18
+Frames: 1728, Bytes: 172838, Session: 18
+Frames: 1755, Bytes: 175538, Session: 18
+Frames: 1782, Bytes: 178238, Session: 18
+Frames: 1809, Bytes: 180938, Session: 18
+Frames: 1836, Bytes: 183638, Session: 18
+Frames: 1863, Bytes: 186338, Session: 18
+Frames: 1890, Bytes: 189038, Session: 18
+Frames: 1917, Bytes: 191738, Session: 18
+Frames: 1944, Bytes: 194438, Session: 18
+Frames: 1971, Bytes: 197138, Session: 18
+Frames: 1998, Bytes: 199838, Session: 18
+Frames: 2025, Bytes: 202538, Session: 18
+Frames: 2052, Bytes: 205238, Session: 18
+Frames: 2079, Bytes: 207938, Session: 18
+Frames: 2106, Bytes: 210638, Session: 18
+Frames: 2133, Bytes: 213338, Session: 18
+Frames: 2160, Bytes: 216038, Session: 18
+Frames: 2187, Bytes: 218738, Session: 18
+Frames: 2214, Bytes: 221438, Session: 18
+Frames: 2241, Bytes: 224138, Session: 18
+Frames: 2268, Bytes: 226838, Session: 18
+Frames: 2295, Bytes: 229538, Session: 18
+Frames: 2322, Bytes: 232238, Session: 18
+Frames: 2349, Bytes: 234938, Session: 18
+Frames: 2376, Bytes: 237638, Session: 18
+Frames: 2403, Bytes: 240338, Session: 18
+Frames: 2430, Bytes: 243038, Session: 18
+Frames: 2457, Bytes: 245738, Session: 18
+Frames: 2484, Bytes: 248438, Session: 18
+Frames: 2511, Bytes: 251138, Session: 18
+Frames: 2538, Bytes: 253838, Session: 18
+Frames: 2565, Bytes: 256538, Session: 18
+Frames: 2592, Bytes: 259238, Session: 18
+Frames: 2619, Bytes: 261938, Session: 18
+Frames: 2646, Bytes: 264638, Session: 18
+Frames: 2673, Bytes: 267338, Session: 18
+Frames: 2700, Bytes: 270038, Session: 18
+Frames: 2727, Bytes: 272738, Session: 18
+Frames: 2754, Bytes: 275438, Session: 18
+Frames: 2781, Bytes: 278138, Session: 18
+Frames: 2808, Bytes: 280838, Session: 18
+Frames: 2835, Bytes: 283538, Session: 18
+Frames: 2862, Bytes: 286238, Session: 18
+Frames: 2889, Bytes: 288938, Session: 18
+Frames: 2916, Bytes: 291638, Session: 18
+Frames: 2943, Bytes: 294338, Session: 18
+Frames: 2970, Bytes: 297038, Session: 18
+Frames: 2997, Bytes: 299738, Session: 18
+Frames: 3024, Bytes: 302438, Session: 18
+Frames: 3051, Bytes: 305138, Session: 18
+Frames: 3078, Bytes: 307838, Session: 18
+Frames: 3105, Bytes: 310538, Session: 18
+Frames: 3132, Bytes: 313238, Session: 18
+Frames: 3159, Bytes: 315938, Session: 18
+Frames: 3186, Bytes: 318638, Session: 18
+Frames: 3213, Bytes: 321338, Session: 18
+Frames: 3240, Bytes: 324038, Session: 18
+Frames: 3267, Bytes: 326738, Session: 18
+Frames: 3294, Bytes: 329438, Session: 18
+Frames: 3321, Bytes: 332138, Session: 18
+Frames: 3348, Bytes: 334838, Session: 18
+Frames: 3375, Bytes: 337538, Session: 18
+Frames: 3402, Bytes: 340238, Session: 18
+Frames: 3429, Bytes: 342938, Session: 18
+Frames: 3456, Bytes: 345638, Session: 18
+Frames: 3483, Bytes: 348338, Session: 18
+Frames: 3510, Bytes: 351038, Session: 18
+Frames: 3537, Bytes: 353738, Session: 18
+Frames: 3564, Bytes: 356438, Session: 18
+Frames: 3591, Bytes: 359138, Session: 18
+Frames: 3618, Bytes: 361838, Session: 18
+Frames: 3645, Bytes: 364538, Session: 18
+Frames: 3672, Bytes: 367238, Session: 18
+Frames: 3699, Bytes: 369938, Session: 18
+Frames: 3726, Bytes: 372638, Session: 18
+Frames: 3753, Bytes: 375338, Session: 18
+Frames: 3780, Bytes: 378038, Session: 18
+Frames: 3807, Bytes: 380738, Session: 18
+Frames: 3834, Bytes: 383438, Session: 18
+Frames: 3861, Bytes: 386138, Session: 18
+Frames: 3888, Bytes: 388838, Session: 18
+Frames: 3915, Bytes: 391538, Session: 18
+Frames: 3942, Bytes: 394238, Session: 18
+Frames: 3969, Bytes: 396938, Session: 18
+Frames: 3996, Bytes: 399638, Session: 18
+Frames: 4023, Bytes: 402338, Session: 18
+Frames: 4050, Bytes: 405038, Session: 18
+Frames: 4077, Bytes: 407738, Session: 18
+Frames: 4104, Bytes: 410438, Session: 18
+Frames: 4131, Bytes: 413138, Session: 18
+Frames: 4158, Bytes: 415838, Session: 18
+Frames: 4185, Bytes: 418538, Session: 18
+Frames: 4212, Bytes: 421238, Session: 18
+Frames: 4239, Bytes: 423938, Session: 18
+Frames: 4266, Bytes: 426638, Session: 18
+Frames: 4293, Bytes: 429338, Session: 18
+Frames: 4320, Bytes: 432038, Session: 18
+Frames: 4347, Bytes: 434738, Session: 18
+Frames: 4374, Bytes: 437438, Session: 18
+Frames: 4401, Bytes: 440138, Session: 18
+Frames: 4428, Bytes: 442838, Session: 18
+Frames: 4455, Bytes: 445538, Session: 18
+Frames: 4482, Bytes: 448238, Session: 18
+Frames: 4509, Bytes: 450938, Session: 18
+Frames: 4536, Bytes: 453638, Session: 18
+Frames: 4563, Bytes: 456338, Session: 18
+Frames: 4590, Bytes: 459038, Session: 18
+Frames: 4617, Bytes: 461738, Session: 18
+Frames: 4644, Bytes: 464438, Session: 18
+Frames: 4671, Bytes: 467138, Session: 18
+Frames: 4698, Bytes: 469838, Session: 18
+Frames: 4725, Bytes: 472538, Session: 18
+Frames: 4752, Bytes: 475238, Session: 18
+Frames: 4779, Bytes: 477938, Session: 18
+Frames: 4806, Bytes: 480638, Session: 18
+Frames: 4833, Bytes: 483338, Session: 18
+Frames: 4860, Bytes: 486038, Session: 18
+Frames: 4887, Bytes: 488738, Session: 18
+Frames: 4914, Bytes: 491438, Session: 18
+Frames: 4941, Bytes: 494138, Session: 18
+Frames: 4968, Bytes: 496838, Session: 18
+Frames: 4995, Bytes: 499538, Session: 18
+Frames: 5022, Bytes: 502238, Session: 18
+Frames: 5049, Bytes: 504938, Session: 18
+Frames: 5076, Bytes: 507638, Session: 18
+Frames: 5103, Bytes: 510338, Session: 18
+Frames: 5130, Bytes: 513038, Session: 18
+Frames: 5157, Bytes: 515738, Session: 18
+Frames: 5184, Bytes: 518438, Session: 18
+Frames: 5211, Bytes: 521138, Session: 18
+Frames: 5238, Bytes: 523838, Session: 18
+Frames: 5265, Bytes: 526538, Session: 18
+Frames: 5292, Bytes: 529238, Session: 18
+Frames: 5319, Bytes: 531938, Session: 18
+Frames: 5346, Bytes: 534638, Session: 18
+Frames: 5373, Bytes: 537338, Session: 18
+Frames: 5400, Bytes: 540038, Session: 18
+Frames: 5427, Bytes: 542738, Session: 18
+Frames: 5454, Bytes: 545438, Session: 18
+Frames: 5481, Bytes: 548138, Session: 18
+Frames: 5508, Bytes: 550838, Session: 18
+Frames: 5535, Bytes: 553538, Session: 18
+Frames: 5562, Bytes: 556238, Session: 18
+Frames: 5589, Bytes: 558938, Session: 18
+Frames: 5616, Bytes: 561638, Session: 18
+Frames: 5643, Bytes: 564338, Session: 18
+Frames: 5670, Bytes: 567038, Session: 18
+Frames: 5697, Bytes: 569738, Session: 18
+Frames: 5724, Bytes: 572438, Session: 18
+Frames: 5751, Bytes: 575138, Session: 18
+Frames: 5778, Bytes: 577838, Session: 18
+Frames: 5805, Bytes: 580538, Session: 18
+Frames: 5832, Bytes: 583238, Session: 18
+Frames: 5859, Bytes: 585938, Session: 18
+Frames: 5886, Bytes: 588638, Session: 18
+Frames: 5913, Bytes: 591338, Session: 18
+Frames: 5940, Bytes: 594038, Session: 18
+Frames: 5967, Bytes: 596738, Session: 18
+Frames: 5994, Bytes: 599438, Session: 18
+Frames: 6021, Bytes: 602138, Session: 18
+Frames: 6048, Bytes: 604838, Session: 18
+Frames: 6075, Bytes: 607538, Session: 18
+Frames: 6102, Bytes: 610238, Session: 18
+Frames: 6129, Bytes: 612938, Session: 18
+Frames: 6156, Bytes: 615638, Session: 18
+Frames: 6183, Bytes: 618338, Session: 18
+Frames: 6210, Bytes: 621038, Session: 18
+Frames: 6237, Bytes: 623738, Session: 18
+Frames: 6264, Bytes: 626438, Session: 18
+Frames: 6291, Bytes: 629138, Session: 18
+Frames: 6318, Bytes: 631838, Session: 18
+Frames: 6345, Bytes: 634538, Session: 18
+Frames: 6372, Bytes: 637238, Session: 18
+Frames: 6399, Bytes: 639938, Session: 18
+Frames: 6426, Bytes: 642638, Session: 18
+Frames: 6453, Bytes: 645338, Session: 18
+Frames: 6480, Bytes: 648038, Session: 18
+Frames: 6507, Bytes: 650738, Session: 18
+Frames: 6534, Bytes: 653438, Session: 18
+Frames: 6561, Bytes: 656138, Session: 18
+Frames: 6588, Bytes: 658838, Session: 18
+Frames: 6615, Bytes: 661538, Session: 18
+Frames: 6642, Bytes: 664238, Session: 18
+Frames: 6669, Bytes: 666938, Session: 18
+Frames: 6696, Bytes: 669638, Session: 18
+Frames: 6723, Bytes: 672338, Session: 18
+Frames: 6750, Bytes: 675038, Session: 18
+Frames: 6777, Bytes: 677738, Session: 18
+Frames: 6804, Bytes: 680438, Session: 18
+Frames: 6831, Bytes: 683138, Session: 18
+Frames: 6858, Bytes: 685838, Session: 18
+Frames: 6885, Bytes: 688538, Session: 18
+Frames: 6912, Bytes: 691238, Session: 18
+Frames: 6939, Bytes: 693938, Session: 18
+Frames: 6966, Bytes: 696638, Session: 18
+Frames: 6993, Bytes: 699338, Session: 18
+Frames: 7020, Bytes: 702038, Session: 18
+Frames: 7047, Bytes: 704738, Session: 18
+Frames: 7074, Bytes: 707438, Session: 18
+Frames: 7101, Bytes: 710138, Session: 18
+Frames: 7128, Bytes: 712838, Session: 18
+Frames: 7155, Bytes: 715538, Session: 18
+Frames: 7182, Bytes: 718238, Session: 18
+Frames: 7209, Bytes: 720938, Session: 18
+Frames: 7236, Bytes: 723638, Session: 18
+Frames: 7263, Bytes: 726338, Session: 18
+Frames: 7290, Bytes: 729038, Session: 18
+Frames: 7317, Bytes: 731738, Session: 18
+Frames: 7344, Bytes: 734438, Session: 18
+Frames: 7371, Bytes: 737138, Session: 18
+Frames: 7398, Bytes: 739838, Session: 18
+Frames: 7425, Bytes: 742538, Session: 18
+Frames: 7452, Bytes: 745238, Session: 18
+Frames: 7479, Bytes: 747938, Session: 18
+Frames: 7506, Bytes: 750638, Session: 18
+Frames: 7533, Bytes: 753338, Session: 18
+Frames: 7560, Bytes: 756038, Session: 18
+Frames: 7587, Bytes: 758738, Session: 18
+Frames: 7614, Bytes: 761438, Session: 18
+Frames: 7641, Bytes: 764138, Session: 18
+Frames: 7668, Bytes: 766838, Session: 18
+Frames: 7695, Bytes: 769538, Session: 18
+Frames: 7722, Bytes: 772238, Session: 18
+Frames: 7749, Bytes: 774938, Session: 18
+Frames: 7776, Bytes: 777638, Session: 18
+Frames: 7803, Bytes: 780338, Session: 18
+Frames: 7830, Bytes: 783038, Session: 18
+Frames: 7857, Bytes: 785738, Session: 18
+Frames: 7884, Bytes: 788438, Session: 18
+Frames: 7911, Bytes: 791138, Session: 18
+Frames: 7938, Bytes: 793838, Session: 18
+Frames: 7965, Bytes: 796538, Session: 18
+Frames: 7992, Bytes: 799238, Session: 18
+Frames: 8019, Bytes: 801938, Session: 18
+Frames: 8046, Bytes: 804638, Session: 18
+Frames: 8073, Bytes: 807338, Session: 18
+Frames: 8100, Bytes: 810038, Session: 18
+Frames: 8127, Bytes: 812738, Session: 18
+Frames: 8154, Bytes: 815438, Session: 18
+Frames: 8181, Bytes: 818138, Session: 18
+Frames: 8208, Bytes: 820838, Session: 18
+Frames: 8235, Bytes: 823538, Session: 18
+Frames: 8262, Bytes: 826238, Session: 18
+Frames: 8289, Bytes: 828938, Session: 18
+Frames: 8316, Bytes: 831638, Session: 18
+Frames: 8343, Bytes: 834338, Session: 18
+Frames: 8370, Bytes: 837038, Session: 18
+Frames: 8397, Bytes: 839738, Session: 18
+Frames: 8424, Bytes: 842438, Session: 18
+Frames: 8451, Bytes: 845138, Session: 18
+Frames: 8478, Bytes: 847838, Session: 18
+Frames: 8505, Bytes: 850538, Session: 18
+Frames: 8532, Bytes: 853238, Session: 18
+Frames: 8559, Bytes: 855938, Session: 18
+Frames: 8586, Bytes: 858638, Session: 18
+Frames: 8613, Bytes: 861338, Session: 18
+Frames: 8640, Bytes: 864038, Session: 18
+Frames: 8667, Bytes: 866738, Session: 18
+Frames: 8694, Bytes: 869438, Session: 18
+Frames: 8721, Bytes: 872138, Session: 18
+Frames: 8748, Bytes: 874838, Session: 18
+Frames: 8775, Bytes: 877538, Session: 18
+Frames: 8802, Bytes: 880238, Session: 18
+Frames: 8829, Bytes: 882938, Session: 18
+Frames: 8856, Bytes: 885638, Session: 18
+Frames: 8883, Bytes: 888338, Session: 18
+Frames: 8910, Bytes: 891038, Session: 18
+Frames: 8937, Bytes: 893738, Session: 18
+Frames: 8964, Bytes: 896438, Session: 18
+Frames: 8991, Bytes: 899138, Session: 18
+Frames: 9018, Bytes: 901838, Session: 18
+Frames: 9045, Bytes: 904538, Session: 18
+Frames: 9072, Bytes: 907238, Session: 18
+Frames: 9099, Bytes: 909938, Session: 18
+Frames: 9126, Bytes: 912638, Session: 18
+Frames: 9153, Bytes: 915338, Session: 18
+Frames: 9180, Bytes: 918038, Session: 18
+Frames: 9207, Bytes: 920738, Session: 18
+Frames: 9234, Bytes: 923438, Session: 18
+Frames: 9261, Bytes: 926138, Session: 18
+Frames: 9288, Bytes: 928838, Session: 18
+Frames: 9315, Bytes: 931538, Session: 18
+Frames: 9342, Bytes: 934238, Session: 18
+Frames: 9369, Bytes: 936938, Session: 18
+Frames: 9396, Bytes: 939638, Session: 18
+Frames: 9423, Bytes: 942338, Session: 18
+Frames: 9450, Bytes: 945038, Session: 18
+Frames: 9477, Bytes: 947738, Session: 18
+Frames: 9504, Bytes: 950438, Session: 18
+Frames: 9531, Bytes: 953138, Session: 18
+Frames: 9558, Bytes: 955838, Session: 18
+Frames: 9585, Bytes: 958538, Session: 18
+Frames: 9612, Bytes: 961238, Session: 18
+Frames: 9639, Bytes: 963938, Session: 18
+Frames: 9666, Bytes: 966638, Session: 18
+Frames: 9693, Bytes: 969338, Session: 18
+Frames: 9720, Bytes: 972038, Session: 18
+Frames: 9747, Bytes: 974738, Session: 18
+Frames: 9774, Bytes: 977438, Session: 18
+Frames: 9801, Bytes: 980138, Session: 18
+Frames: 9828, Bytes: 982838, Session: 18
+Frames: 9855, Bytes: 985538, Session: 18
+Frames: 9882, Bytes: 988238, Session: 18
+Frames: 9909, Bytes: 990938, Session: 18
+Frames: 9936, Bytes: 993638, Session: 18
+Frames: 9963, Bytes: 996338, Session: 18
+Frames: 9990, Bytes: 999038, Session: 18
+Frames: 10017, Bytes: 1001738, Session: 18
+Frames: 10044, Bytes: 1004438, Session: 18
+Frames: 10071, Bytes: 1007138, Session: 18
+Frames: 10098, Bytes: 1009838, Session: 18
+Frames: 10125, Bytes: 1012538, Session: 18
+Frames: 10152, Bytes: 1015238, Session: 18
+Frames: 10179, Bytes: 1017938, Session: 18
+Frames: 10206, Bytes: 1020638, Session: 18
+Frames: 10233, Bytes: 1023338, Session: 18
+Frames: 10260, Bytes: 1026038, Session: 18
+Frames: 10287, Bytes: 1028738, Session: 18
+Frames: 10314, Bytes: 1031438, Session: 18
+Frames: 10341, Bytes: 1034138, Session: 18
+Frames: 10368, Bytes: 1036838, Session: 18
+Frames: 10395, Bytes: 1039538, Session: 18
+Frames: 10422, Bytes: 1042238, Session: 18
+Frames: 10449, Bytes: 1044938, Session: 18
+Frames: 10476, Bytes: 1047638, Session: 18
+Frames: 10503, Bytes: 1050338, Session: 18
+Frames: 10530, Bytes: 1053038, Session: 18
+Frames: 10557, Bytes: 1055738, Session: 18
+Frames: 10584, Bytes: 1058438, Session: 18
+Frames: 10611, Bytes: 1061138, Session: 18
+Frames: 10638, Bytes: 1063838, Session: 18
+Frames: 10665, Bytes: 1066538, Session: 18
+Frames: 10692, Bytes: 1069238, Session: 18
+Frames: 10719, Bytes: 1071938, Session: 18
+Frames: 10746, Bytes: 1074638, Session: 18
+Frames: 10773, Bytes: 1077338, Session: 18
+Frames: 10800, Bytes: 1080038, Session: 18
+Frames: 10827, Bytes: 1082738, Session: 18
+Frames: 10854, Bytes: 1085438, Session: 18
+Frames: 10881, Bytes: 1088138, Session: 18
+Frames: 10908, Bytes: 1090838, Session: 18
+Frames: 10935, Bytes: 1093538, Session: 18
+Frames: 10962, Bytes: 1096238, Session: 18
+Frames: 10989, Bytes: 1098938, Session: 18
+Frames: 11016, Bytes: 1101638, Session: 18
+Frames: 11043, Bytes: 1104338, Session: 18
+Frames: 11070, Bytes: 1107038, Session: 18
+Frames: 11097, Bytes: 1109738, Session: 18
+Frames: 11124, Bytes: 1112438, Session: 18
+Frames: 11151, Bytes: 1115138, Session: 18
+Frames: 11178, Bytes: 1117838, Session: 18
+Frames: 11205, Bytes: 1120538, Session: 18
+Frames: 11232, Bytes: 1123238, Session: 18
+Frames: 11259, Bytes: 1125938, Session: 18
+Frames: 11286, Bytes: 1128638, Session: 18
+Frames: 11313, Bytes: 1131338, Session: 18
+Frames: 11340, Bytes: 1134038, Session: 18
+Frames: 11367, Bytes: 1136738, Session: 18
+Frames: 11394, Bytes: 1139438, Session: 18
+Frames: 11421, Bytes: 1142138, Session: 18
+Frames: 11448, Bytes: 1144838, Session: 18
+Frames: 11475, Bytes: 1147538, Session: 18
+Frames: 11502, Bytes: 1150238, Session: 18
+Frames: 11529, Bytes: 1152938, Session: 18
+Frames: 11556, Bytes: 1155638, Session: 18
+Frames: 11583, Bytes: 1158338, Session: 18
+Frames: 11610, Bytes: 1161038, Session: 18
+Frames: 11637, Bytes: 1163738, Session: 18
+Frames: 11664, Bytes: 1166438, Session: 18
+Frames: 11691, Bytes: 1169138, Session: 18
+Frames: 11718, Bytes: 1171838, Session: 18
+Frames: 11745, Bytes: 1174538, Session: 18
+Frames: 11772, Bytes: 1177238, Session: 18
+Frames: 11799, Bytes: 1179938, Session: 18
+Frames: 11826, Bytes: 1182638, Session: 18
+Frames: 11853, Bytes: 1185338, Session: 18
+Frames: 11880, Bytes: 1188038, Session: 18
+Frames: 11907, Bytes: 1190738, Session: 18
+Frames: 11934, Bytes: 1193438, Session: 18
+Frames: 11961, Bytes: 1196138, Session: 18
+Frames: 11988, Bytes: 1198838, Session: 18
+Frames: 12015, Bytes: 1201538, Session: 18
+Frames: 12042, Bytes: 1204238, Session: 18
+Frames: 12069, Bytes: 1206938, Session: 18
+Frames: 12096, Bytes: 1209638, Session: 18
+Frames: 12123, Bytes: 1212338, Session: 18
+Frames: 12150, Bytes: 1215038, Session: 18
+Frames: 12177, Bytes: 1217738, Session: 18
+Frames: 12204, Bytes: 1220438, Session: 18
+Frames: 12231, Bytes: 1223138, Session: 18
+Frames: 12258, Bytes: 1225838, Session: 18
+Frames: 12285, Bytes: 1228538, Session: 18
+Frames: 12312, Bytes: 1231238, Session: 18
+Frames: 12339, Bytes: 1233938, Session: 18
+Frames: 12366, Bytes: 1236638, Session: 18
+Frames: 12393, Bytes: 1239338, Session: 18
+Frames: 12420, Bytes: 1242038, Session: 18
+Frames: 12447, Bytes: 1244738, Session: 18
+Frames: 12474, Bytes: 1247438, Session: 18
+Frames: 12501, Bytes: 1250138, Session: 18
+Frames: 12528, Bytes: 1252838, Session: 18
+Frames: 12555, Bytes: 1255538, Session: 18
+Frames: 12582, Bytes: 1258238, Session: 18
+Frames: 12609, Bytes: 1260938, Session: 18
+Frames: 12636, Bytes: 1263638, Session: 18
+Frames: 12663, Bytes: 1266338, Session: 18
+Frames: 12690, Bytes: 1269038, Session: 18
+Frames: 12717, Bytes: 1271738, Session: 18
+Frames: 12744, Bytes: 1274438, Session: 18
+Frames: 12771, Bytes: 1277138, Session: 18
+Frames: 12798, Bytes: 1279838, Session: 18
+Frames: 12825, Bytes: 1282538, Session: 18
+Frames: 12852, Bytes: 1285238, Session: 18
+Frames: 12879, Bytes: 1287938, Session: 18
+Frames: 12906, Bytes: 1290638, Session: 18
+Frames: 12933, Bytes: 1293338, Session: 18
+Frames: 12960, Bytes: 1296038, Session: 18
+Frames: 12987, Bytes: 1298738, Session: 18
+Frames: 13014, Bytes: 1301438, Session: 18
+Frames: 13041, Bytes: 1304138, Session: 18
+Frames: 13068, Bytes: 1306838, Session: 18
+Frames: 13095, Bytes: 1309538, Session: 18
+Frames: 13122, Bytes: 1312238, Session: 18
+Frames: 13149, Bytes: 1314938, Session: 18
+Frames: 13176, Bytes: 1317638, Session: 18
+Frames: 13203, Bytes: 1320338, Session: 18
+Frames: 13230, Bytes: 1323038, Session: 18
+Frames: 13257, Bytes: 1325738, Session: 18
+Frames: 13284, Bytes: 1328438, Session: 18
+Frames: 13311, Bytes: 1331138, Session: 18
+Frames: 13338, Bytes: 1333838, Session: 18
+Frames: 13365, Bytes: 1336538, Session: 18
+Frames: 13392, Bytes: 1339238, Session: 18
+Frames: 13419, Bytes: 1341938, Session: 18
+Frames: 13446, Bytes: 1344638, Session: 18
+Frames: 13473, Bytes: 1347338, Session: 18
+Frames: 13500, Bytes: 1350038, Session: 18
+Frames: 13527, Bytes: 1352738, Session: 18
+Frames: 13554, Bytes: 1355438, Session: 18
+Frames: 13581, Bytes: 1358138, Session: 18
+Frames: 13608, Bytes: 1360838, Session: 18
+Frames: 13635, Bytes: 1363538, Session: 18
+Frames: 13662, Bytes: 1366238, Session: 18
+Frames: 13689, Bytes: 1368938, Session: 18
+Frames: 13716, Bytes: 1371638, Session: 18
+Frames: 13743, Bytes: 1374338, Session: 18
+Frames: 13770, Bytes: 1377038, Session: 18
+Frames: 13797, Bytes: 1379738, Session: 18
+Frames: 13824, Bytes: 1382438, Session: 18
+Frames: 13851, Bytes: 1385138, Session: 18
+Frames: 13878, Bytes: 1387838, Session: 18
+Frames: 13905, Bytes: 1390538, Session: 18
+Frames: 13932, Bytes: 1393238, Session: 18
+Frames: 13959, Bytes: 1395938, Session: 18
+Frames: 13986, Bytes: 1398638, Session: 18
+Frames: 14013, Bytes: 1401338, Session: 18
+Frames: 14040, Bytes: 1404038, Session: 18
+Frames: 14067, Bytes: 1406738, Session: 18
+Frames: 14094, Bytes: 1409438, Session: 18
+Frames: 14121, Bytes: 1412138, Session: 18
+Frames: 14148, Bytes: 1414838, Session: 18
+Frames: 14175, Bytes: 1417538, Session: 18
+Frames: 14202, Bytes: 1420238, Session: 18
+Frames: 14229, Bytes: 1422938, Session: 18
+Frames: 14256, Bytes: 1425638, Session: 18
+Frames: 14283, Bytes: 1428338, Session: 18
+Frames: 14310, Bytes: 1431038, Session: 18
+Frames: 14337, Bytes: 1433738, Session: 18
+Frames: 14364, Bytes: 1436438, Session: 18
+Frames: 14391, Bytes: 1439138, Session: 18
+Frames: 14418, Bytes: 1441838, Session: 18
+Frames: 14445, Bytes: 1444538, Session: 18
+Frames: 14472, Bytes: 1447238, Session: 18
+Frames: 14499, Bytes: 1449938, Session: 18
+Frames: 14526, Bytes: 1452638, Session: 18
+Frames: 14553, Bytes: 1455338, Session: 18
+Frames: 14580, Bytes: 1458038, Session: 18
+Frames: 14607, Bytes: 1460738, Session: 18
+Frames: 14634, Bytes: 1463438, Session: 18
+Frames: 14661, Bytes: 1466138, Session: 18
+Frames: 14688, Bytes: 1468838, Session: 18
+Frames: 14715, Bytes: 1471538, Session: 18
+Frames: 14742, Bytes: 1474238, Session: 18
+Frames: 14769, Bytes: 1476938, Session: 18
+Frames: 14796, Bytes: 1479638, Session: 18
+Frames: 14823, Bytes: 1482338, Session: 18
+Frames: 14850, Bytes: 1485038, Session: 18
+Frames: 14877, Bytes: 1487738, Session: 18
+Frames: 14904, Bytes: 1490438, Session: 18
+Frames: 14931, Bytes: 1493138, Session: 18
+Frames: 14958, Bytes: 1495838, Session: 18
+Frames: 14985, Bytes: 1498538, Session: 18
+Frames: 15012, Bytes: 1501238, Session: 18
+Frames: 15039, Bytes: 1503938, Session: 18
+Frames: 15066, Bytes: 1506638, Session: 18
+Frames: 15093, Bytes: 1509338, Session: 18
+Frames: 15120, Bytes: 1512038, Session: 18
+Frames: 15147, Bytes: 1514738, Session: 18
+Frames: 15174, Bytes: 1517438, Session: 18
+Frames: 15201, Bytes: 1520138, Session: 18
+Frames: 15228, Bytes: 1522838, Session: 18
+Frames: 15255, Bytes: 1525538, Session: 18
+Frames: 15282, Bytes: 1528238, Session: 18
+Frames: 15309, Bytes: 1530938, Session: 18
+Frames: 15336, Bytes: 1533638, Session: 18
+Frames: 15363, Bytes: 1536338, Session: 18
+Frames: 15390, Bytes: 1539038, Session: 18
+Frames: 15417, Bytes: 1541738, Session: 18
+Frames: 15444, Bytes: 1544438, Session: 18
+Frames: 15471, Bytes: 1547138, Session: 18
+Frames: 15498, Bytes: 1549838, Session: 18
+Frames: 15525, Bytes: 1552538, Session: 18
+Frames: 15552, Bytes: 1555238, Session: 18
+Frames: 15579, Bytes: 1557938, Session: 18
+Frames: 15606, Bytes: 1560638, Session: 18
+Frames: 15633, Bytes: 1563338, Session: 18
+Frames: 15660, Bytes: 1566038, Session: 18
+Frames: 15687, Bytes: 1568738, Session: 18
+Frames: 15714, Bytes: 1571438, Session: 18
+Frames: 15741, Bytes: 1574138, Session: 18
+Frames: 15768, Bytes: 1576838, Session: 18
+Frames: 15795, Bytes: 1579538, Session: 18
+Frames: 15822, Bytes: 1582238, Session: 18
+Frames: 15849, Bytes: 1584938, Session: 18
+Frames: 15876, Bytes: 1587638, Session: 18
+Frames: 15903, Bytes: 1590338, Session: 18
+Frames: 15930, Bytes: 1593038, Session: 18
+Frames: 15957, Bytes: 1595738, Session: 18
+Frames: 15984, Bytes: 1598438, Session: 18
+Frames: 16011, Bytes: 1601138, Session: 18
+Frames: 16038, Bytes: 1603838, Session: 18
+Frames: 16065, Bytes: 1606538, Session: 18
+Frames: 16092, Bytes: 1609238, Session: 18
+Frames: 16119, Bytes: 1611938, Session: 18
+Frames: 16146, Bytes: 1614638, Session: 18
+Frames: 16173, Bytes: 1617338, Session: 18
+Frames: 16200, Bytes: 1620038, Session: 18
+Frames: 16227, Bytes: 1622738, Session: 18
+Frames: 16254, Bytes: 1625438, Session: 18
+Frames: 16281, Bytes: 1628138, Session: 18
+Frames: 16308, Bytes: 1630838, Session: 18
+Frames: 16335, Bytes: 1633538, Session: 18
+Frames: 16362, Bytes: 1636238, Session: 18
+Frames: 16389, Bytes: 1638938, Session: 18
+Frames: 16416, Bytes: 1641638, Session: 18
+Frames: 16443, Bytes: 1644338, Session: 18
+Frames: 16470, Bytes: 1647038, Session: 18
+Frames: 16497, Bytes: 1649738, Session: 18
+Frames: 16524, Bytes: 1652438, Session: 18
+Frames: 16551, Bytes: 1655138, Session: 18
+Frames: 16578, Bytes: 1657838, Session: 18
+Frames: 16605, Bytes: 1660538, Session: 18
+Frames: 16632, Bytes: 1663238, Session: 18
+Frames: 16659, Bytes: 1665938, Session: 18
+Frames: 16686, Bytes: 1668638, Session: 18
+Frames: 16713, Bytes: 1671338, Session: 18
+Frames: 16740, Bytes: 1674038, Session: 18
+Frames: 16767, Bytes: 1676738, Session: 18
+Frames: 16794, Bytes: 1679438, Session: 18
+Frames: 16821, Bytes: 1682138, Session: 18
+Frames: 16848, Bytes: 1684838, Session: 18
+Frames: 16875, Bytes: 1687538, Session: 18
+Frames: 16902, Bytes: 1690238, Session: 18
+Frames: 16929, Bytes: 1692938, Session: 18
+Frames: 16956, Bytes: 1695638, Session: 18
+Frames: 16983, Bytes: 1698338, Session: 18
+Frames: 17010, Bytes: 1701038, Session: 18
+Frames: 17037, Bytes: 1703738, Session: 18
+Frames: 17064, Bytes: 1706438, Session: 18
+Frames: 17091, Bytes: 1709138, Session: 18
+Frames: 17118, Bytes: 1711838, Session: 18
+Frames: 17145, Bytes: 1714538, Session: 18
+Frames: 17172, Bytes: 1717238, Session: 18
+Frames: 17199, Bytes: 1719938, Session: 18
+Frames: 17226, Bytes: 1722638, Session: 18
+Frames: 17253, Bytes: 1725338, Session: 18
+Frames: 17280, Bytes: 1728038, Session: 18
+Frames: 17307, Bytes: 1730738, Session: 18
+Frames: 17334, Bytes: 1733438, Session: 18
+Frames: 17361, Bytes: 1736138, Session: 18
+Frames: 17388, Bytes: 1738838, Session: 18
+Frames: 17415, Bytes: 1741538, Session: 18
+Frames: 17442, Bytes: 1744238, Session: 18
+Frames: 17469, Bytes: 1746938, Session: 18
+Frames: 17496, Bytes: 1749638, Session: 18
+Frames: 17523, Bytes: 1752338, Session: 18
+Frames: 17550, Bytes: 1755038, Session: 18
+Frames: 17577, Bytes: 1757738, Session: 18
+Frames: 17604, Bytes: 1760438, Session: 18
+Frames: 17631, Bytes: 1763138, Session: 18
+Frames: 17658, Bytes: 1765838, Session: 18
+Frames: 17685, Bytes: 1768538, Session: 18
+Frames: 17712, Bytes: 1771238, Session: 18
+Frames: 17739, Bytes: 1773938, Session: 18
+Frames: 17766, Bytes: 1776638, Session: 18
+Frames: 17793, Bytes: 1779338, Session: 18
+Frames: 17820, Bytes: 1782038, Session: 18
+Frames: 17847, Bytes: 1784738, Session: 18
+Frames: 17874, Bytes: 1787438, Session: 18
+Frames: 17901, Bytes: 1790138, Session: 18
+Frames: 17928, Bytes: 1792838, Session: 18
+Frames: 17955, Bytes: 1795538, Session: 18
+Frames: 17982, Bytes: 1798238, Session: 18
+Frames: 18009, Bytes: 1800938, Session: 18
+Frames: 18036, Bytes: 1803638, Session: 18
+Frames: 18063, Bytes: 1806338, Session: 18
+Frames: 18090, Bytes: 1809038, Session: 18
+Frames: 18117, Bytes: 1811738, Session: 18
+Frames: 18144, Bytes: 1814438, Session: 18
+Frames: 18171, Bytes: 1817138, Session: 18
+Frames: 18198, Bytes: 1819838, Session: 18
+Frames: 18225, Bytes: 1822538, Session: 18
+Frames: 18252, Bytes: 1825238, Session: 18
+Frames: 18279, Bytes: 1827938, Session: 18
+Frames: 18306, Bytes: 1830638, Session: 18
+Frames: 18333, Bytes: 1833338, Session: 18
+Frames: 18360, Bytes: 1836038, Session: 18
+Frames: 18387, Bytes: 1838738, Session: 18
+Frames: 18414, Bytes: 1841438, Session: 18
+Frames: 18441, Bytes: 1844138, Session: 18
+Frames: 18468, Bytes: 1846838, Session: 18
+Frames: 18495, Bytes: 1849538, Session: 18
+Frames: 18522, Bytes: 1852238, Session: 18
+Frames: 18549, Bytes: 1854938, Session: 18
+Frames: 18576, Bytes: 1857638, Session: 18
+Frames: 18603, Bytes: 1860338, Session: 18
+Frames: 18630, Bytes: 1863038, Session: 18
+Frames: 18657, Bytes: 1865738, Session: 18
+Frames: 18684, Bytes: 1868438, Session: 18
+Frames: 18711, Bytes: 1871138, Session: 18
+Frames: 18738, Bytes: 1873838, Session: 18
+Frames: 18765, Bytes: 1876538, Session: 18
+Frames: 18792, Bytes: 1879238, Session: 18
+Frames: 18819, Bytes: 1881938, Session: 18
+Frames: 18846, Bytes: 1884638, Session: 18
+Frames: 18873, Bytes: 1887338, Session: 18
+Frames: 18900, Bytes: 1890038, Session: 18
+Frames: 18927, Bytes: 1892738, Session: 18
+Frames: 18954, Bytes: 1895438, Session: 18
+Frames: 18981, Bytes: 1898138, Session: 18
+Frames: 19008, Bytes: 1900838, Session: 18
+Frames: 19035, Bytes: 1903538, Session: 18
+Frames: 19062, Bytes: 1906238, Session: 18
+Frames: 19089, Bytes: 1908938, Session: 18
+Frames: 19116, Bytes: 1911638, Session: 18
+Frames: 19143, Bytes: 1914338, Session: 18
+Frames: 19170, Bytes: 1917038, Session: 18
+Frames: 19197, Bytes: 1919738, Session: 18
+Frames: 19224, Bytes: 1922438, Session: 18
+Frames: 19251, Bytes: 1925138, Session: 18
+Frames: 19278, Bytes: 1927838, Session: 18
+Frames: 19305, Bytes: 1930538, Session: 18
+Frames: 19332, Bytes: 1933238, Session: 18
+Frames: 19359, Bytes: 1935938, Session: 18
+Frames: 19386, Bytes: 1938638, Session: 18
+Frames: 19413, Bytes: 1941338, Session: 18
+Frames: 19440, Bytes: 1944038, Session: 18
+Frames: 19467, Bytes: 1946738, Session: 18
+Frames: 19494, Bytes: 1949438, Session: 18
+Frames: 19521, Bytes: 1952138, Session: 18
+Frames: 19548, Bytes: 1954838, Session: 18
+Frames: 19575, Bytes: 1957538, Session: 18
+Frames: 19602, Bytes: 1960238, Session: 18
+Frames: 19629, Bytes: 1962938, Session: 18
+Frames: 19656, Bytes: 1965638, Session: 18
+Frames: 19683, Bytes: 1968338, Session: 18
+Frames: 19710, Bytes: 1971038, Session: 18
+Frames: 19737, Bytes: 1973738, Session: 18
+Frames: 19764, Bytes: 1976438, Session: 18
+Frames: 19791, Bytes: 1979138, Session: 18
+Frames: 19818, Bytes: 1981838, Session: 18
+Frames: 19845, Bytes: 1984538, Session: 18
+Frames: 19872, Bytes: 1987238, Session: 18
+Frames: 19899, Bytes: 1989938, Session: 18
+Frames: 19926, Bytes: 1992638, Session: 18
+Frames: 19953, Bytes: 1995338, Session: 18
+Frames: 19980, Bytes: 1998038, Session: 18
+Frames: 20007, Bytes: 2000738, Session: 18
+Frames: 20034, Bytes: 2003438, Session: 18
+Frames: 20061, Bytes: 2006138, Session: 18
+Frames: 20088, Bytes: 2008838, Session: 18
+Frames: 20115, Bytes: 2011538, Session: 18
+Frames: 20142, Bytes: 2014238, Session: 18
+Frames: 20169, Bytes: 2016938, Session: 18
+Frames: 20196, Bytes: 2019638, Session: 18
+Frames: 20223, Bytes: 2022338, Session: 18
+Frames: 20250, Bytes: 2025038, Session: 18
+Frames: 20277, Bytes: 2027738, Session: 18
+Frames: 20304, Bytes: 2030438, Session: 18
+Frames: 20331, Bytes: 2033138, Session: 18
+Frames: 20358, Bytes: 2035838, Session: 18
+Frames: 20385, Bytes: 2038538, Session: 18
+Frames: 20412, Bytes: 2041238, Session: 18
+Frames: 20439, Bytes: 2043938, Session: 18
+Connected hardware:
+  [0] CX505 (S/N EL680921)
+Health API listening on http://127.0.0.1:8051/health
+[DEBUG] Sending initial handshake: 01 23 30 23 30 23 30 23 03
+[DEBUG] Handshake sent successfully
+Session 22 started for device CX505
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Frames: 1, Bytes: 100, Session: 22
+Waiting for data... (RX queue: 0 bytes)
+[watchdog] 2025-10-01T08:49:07.671019+00:00 timeout: No frames observed within watchdog timeout payload={'elapsed_s': 31.510418, 'frames': 1, 'bytes_read': 100}
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Frames: 1, Bytes: 100, Session: 22
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Frames: 1, Bytes: 100, Session: 22
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Frames: 1, Bytes: 100, Session: 22
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Frames: 1, Bytes: 100, Session: 22
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Frames: 1, Bytes: 100, Session: 22
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Frames: 1, Bytes: 100, Session: 22
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Frames: 1, Bytes: 100, Session: 22
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Frames: 1, Bytes: 100, Session: 22
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Frames: 1, Bytes: 100, Session: 22
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Frames: 1, Bytes: 100, Session: 22
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Frames: 1, Bytes: 100, Session: 22
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Frames: 1, Bytes: 100, Session: 22
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Frames: 1, Bytes: 100, Session: 22
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Frames: 1, Bytes: 100, Session: 22
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Frames: 1, Bytes: 100, Session: 22
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Frames: 1, Bytes: 100, Session: 22
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Frames: 1, Bytes: 100, Session: 22
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Frames: 1, Bytes: 100, Session: 22
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Frames: 1, Bytes: 100, Session: 22
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Frames: 1, Bytes: 100, Session: 22
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Frames: 1, Bytes: 100, Session: 22
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Frames: 1, Bytes: 100, Session: 22
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Frames: 1, Bytes: 100, Session: 22
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Frames: 1, Bytes: 100, Session: 22
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Frames: 1, Bytes: 100, Session: 22
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Frames: 1, Bytes: 100, Session: 22
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Frames: 1, Bytes: 100, Session: 22
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Frames: 1, Bytes: 100, Session: 22
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Frames: 1, Bytes: 100, Session: 22
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Frames: 1, Bytes: 100, Session: 22
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Frames: 1, Bytes: 100, Session: 22
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Frames: 1, Bytes: 100, Session: 22
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Frames: 1, Bytes: 100, Session: 22
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Frames: 1, Bytes: 100, Session: 22
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Frames: 1, Bytes: 100, Session: 22
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Frames: 1, Bytes: 100, Session: 22
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Frames: 1, Bytes: 100, Session: 22
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Frames: 1, Bytes: 100, Session: 22
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Frames: 1, Bytes: 100, Session: 22
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Frames: 1, Bytes: 100, Session: 22
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Frames: 1, Bytes: 100, Session: 22
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Frames: 1, Bytes: 100, Session: 22
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Frames: 1, Bytes: 100, Session: 22
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Frames: 1, Bytes: 100, Session: 22
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Frames: 1, Bytes: 100, Session: 22
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Frames: 1, Bytes: 100, Session: 22
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Frames: 1, Bytes: 100, Session: 22
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Waiting for data... (RX queue: 0 bytes)
+Frames: 1, Bytes: 100, Session: 22
+Waiting for data... (RX queue: 0 bytes)
