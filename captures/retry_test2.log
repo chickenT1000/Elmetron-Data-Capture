@@ -1,3 +1,0 @@
-Warning: device open failed: Failed to open FTDI device after 5 attempts: Serial 'FAKE-SERIAL' not found among connected devices. Retrying in 1.0s (attempt 1)
-Warning: device open failed: Failed to open FTDI device after 5 attempts: Serial 'FAKE-SERIAL' not found among connected devices. Retrying in 1.0s (attempt 2)
-Warning: device open failed: Failed to open FTDI device after 5 attempts: Serial 'FAKE-SERIAL' not found among connected devices. Retrying in 2.0s (attempt 3)

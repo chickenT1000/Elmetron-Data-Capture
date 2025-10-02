@@ -1,4 +1,4 @@
-import { buildApiUrl } from '../config';
+import { buildApiUrl, buildHealthUrl } from '../config';
 import JSZip from 'jszip';
 
 export interface LogRotationStatus {
@@ -103,7 +103,7 @@ export interface HealthResponse {
 export const healthQueryKey = ['health-status'] as const;
 
 export async function fetchHealthStatus(signal?: AbortSignal): Promise<HealthResponse> {
-  const response = await fetch(buildApiUrl('/health'), {
+  const response = await fetch(buildHealthUrl('/health'), {
     method: 'GET',
     headers: {
       Accept: 'application/json',
@@ -149,7 +149,7 @@ export async function fetchHealthLogEvents(
     params.set('category', category);
   }
 
-  const response = await fetch(buildApiUrl(`/health/logs?${params.toString()}`), {
+  const response = await fetch(buildHealthUrl(`/health/logs?${params.toString()}`), {
     method: 'GET',
     headers: {
       Accept: 'application/json',
@@ -185,7 +185,7 @@ export async function streamHealthLogsNdjson({
   const params = new URLSearchParams({ limit: String(limit) });
   if (level) params.set('level', level);
   if (category) params.set('category', category);
-  const response = await fetch(buildApiUrl(`/health/logs.ndjson?${params.toString()}`), {
+  const response = await fetch(buildHealthUrl(`/health/logs.ndjson?${params.toString()}`), {
     method: 'GET',
     headers: {
       Accept: 'application/x-ndjson',
@@ -279,7 +279,7 @@ export async function fetchDiagnosticBundle(
   }
   const query = params.toString();
   const response = await fetch(
-    buildApiUrl(`/health/bundle${query ? `?${query}` : ''}`),
+    buildHealthUrl(`/health/bundle${query ? `?${query}` : ''}`),
     {
       method: 'GET',
       headers: {

@@ -97,6 +97,11 @@ def main(argv: list[str] | None = None) -> int:
 
     database = Database(config.storage)
     database.connect()
+    
+    # Status file for Data API communication
+    captures_dir = Path(__file__).resolve().parent / "captures"
+    captures_dir.mkdir(exist_ok=True)
+    status_file = captures_dir / ".live_capture_status.json"
 
     print('Connected hardware:')
     devices = list_devices()

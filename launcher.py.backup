@@ -27,12 +27,20 @@ import ctypes.wintypes as wintypes
 ROOT = Path(__file__).resolve().parent
 CAPTURES_DIR = ROOT / "captures"
 LOCKFILE = CAPTURES_DIR / ".launcher.lock"
+DATA_API_LOG = CAPTURES_DIR / "data_api_service.log"
+DATA_API_ERR = CAPTURES_DIR / "data_api_service.err.log"
 CAPTURE_LOG = CAPTURES_DIR / "live_ui_dev.log"
 CAPTURE_ERR = CAPTURES_DIR / "live_ui_dev.err.log"
 UI_LOG = CAPTURES_DIR / "live_ui_dev_ui.log"
 UI_ERR = CAPTURES_DIR / "live_ui_dev_ui.err.log"
 
-HEALTH_URL = "http://127.0.0.1:8050/health"
+DATA_API_HEALTH_URL = "http://127.0.0.1:8050/health"
+CAPTURE_HEALTH_URL = "http://127.0.0.1:8051/health"
+LIVE_STATUS_URL = "http://127.0.0.1:8050/api/live/status"
+UI_URL = "http://127.0.0.1:5173/"
+
+# Backwards compatibility
+HEALTH_URL = DATA_API_HEALTH_URL
 UI_URL = "http://127.0.0.1:5173/"
 
 CREATE_NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
@@ -402,10 +410,50 @@ class LauncherApp:
     def _reopen_browser(self) -> None:
         """Reopen the browser tab with the UI dashboard."""
         if self._state != LauncherState.RUNNING:
-            self._log("[Browser] Cannot reopen browser - service not started")
+            self._log("[Browser] Cannot reopen browser - service not running")
             messagebox.showwarning(
                 "Service Not Running",
                 "The capture service must be running to open the dashboard.\n\nPlease click 'Start' first."
+            )
+            return
+        
+        # Check if processes are actually alive
+        capture_alive = "capture" in self._processes and self._processes["capture"].poll() is None
+        ui_alive = "ui" in self._processes and self._processes["ui"].poll() is None
+        
+        if not capture_alive or not ui_alive:
+            self._log("[Browser] Cannot reopen browser - service processes not responding")
+            missing = []
+            if not capture_alive:
+                missing.append("capture service")
+            if not ui_alive:
+                missing.append("UI server")
+            
+            messagebox.showerror(
+                "Service Error",
+                f"The {' and '.join(missing)} stopped unexpectedly.\n\n"
+                "Please click 'Stop' to clean up, then 'Start' to restart services."
+            )
+            return
+        
+        # Check if UI is actually responding
+        try:
+            with urllib.request.urlopen(UI_URL, timeout=2) as response:
+                if not (200 <= response.getcode() < 300):
+                    self._log(f"[Browser] UI server returned status {response.getcode()}")
+                    messagebox.showwarning(
+                        "UI Not Ready",
+                        f"The UI server is not responding properly (HTTP {response.getcode()}).\n\n"
+                        "Please wait a moment or try clicking 'Reset'."
+                    )
+                    return
+        except Exception as e:
+            self._log(f"[Browser] Cannot reach UI server: {e}")
+            messagebox.showerror(
+                "UI Not Accessible",
+                f"The UI server is not accessible at {UI_URL}.\n\n"
+                f"Error: {e}\n\n"
+                "Please click 'Reset' to restart services."
             )
             return
         
@@ -422,18 +470,38 @@ class LauncherApp:
         self._transition_to(LauncherState.STARTING)
         self._set_initial_statuses()
         try:
-            # Check hardware first
-            self._check_hardware()
+            # Check hardware status (but don't block startup if not found)
+            hw_status = self._check_hardware()
+            device_available = hw_status in (HardwareStatus.AVAILABLE, HardwareStatus.IN_USE)
             
             self._set_status("prereq", "Checking prerequisites...", "waiting")
             self._prepare_environment()
             self._set_status("prereq", "Prerequisites ready", "success")
 
-            self._set_status("capture", "Starting capture service...", "waiting")
-            self._start_capture_service()
-            if not self._wait_for_url(HEALTH_URL, 40, "capture"):
-                raise RuntimeError("Capture service did not respond at /health.")
-            self._set_status("capture", "Capture service online", "success")
+            # Start Data API Service first (port 8050)
+            self._set_status("capture", "Starting Data API service...", "waiting")
+            self._start_data_api_service()
+            if not self._wait_for_url(DATA_API_HEALTH_URL, 40, "data_api"):
+                raise RuntimeError("Data API service did not respond at /health.")
+            
+            # Only start Capture Service (port 8051) if device is available
+            if device_available:
+                self._set_status("capture", "Starting capture service...", "waiting")
+                try:
+                    self._start_capture_service()
+                    if self._wait_for_url(CAPTURE_HEALTH_URL, 40, "capture"):
+                        self._set_status("capture", "Live capture service online", "success")
+                        self._log("Capture service started successfully (live mode available)")
+                    else:
+                        self._log("WARNING: Capture service did not respond, continuing in archive-only mode")
+                        self._set_status("capture", "Archive mode only (capture service failed)", "waiting")
+                except Exception as capture_error:
+                    self._log(f"WARNING: Failed to start capture service: {capture_error}")
+                    self._log("Continuing in archive-only mode")
+                    self._set_status("capture", "Archive mode only (no device)", "waiting")
+            else:
+                self._log("CX-505 device not detected, starting in archive-only mode")
+                self._set_status("capture", "Archive mode only (no device)", "waiting")
 
             self._set_status("ui", "Starting Service Health UI...", "waiting")
             self._start_ui_server()
@@ -445,7 +513,15 @@ class LauncherApp:
             self._open_browser()
             self._set_status("browser", "Dashboard opened", "success")
 
-            self._set_status("system", "All services online", "success")
+            # Set final system status based on what's running
+            if device_available:
+                self._set_status("system", "All services online (Live Mode)", "success")
+                self._log("=== System ready in LIVE MODE ===")
+            else:
+                self._set_status("system", "Archive mode ready (no device)", "success")
+                self._log("=== System ready in ARCHIVE MODE ===")
+                self._log("Connect CX-505 device and click 'Reset' to enable live capture")
+            
             self._transition_to(LauncherState.RUNNING)
         except Exception as exc:
             self._log(f"ERROR: {exc}")
@@ -501,6 +577,13 @@ class LauncherApp:
             self._log("Forcing resource cleanup after failed state.")
             self._force_cleanup()
         
+        # Wait for ports to be freed before restarting
+        self._log("Waiting for service ports to be freed...")
+        self._wait_for_port_free(8050, max_wait=15)  # Data API
+        self._wait_for_port_free(8051, max_wait=15)  # Capture Service
+        self._wait_for_port_free(5173, max_wait=15)  # UI Server
+        self._log("Ports freed, restarting services...")
+        
         # Reset to IDLE before starting
         self._transition_to(LauncherState.IDLE)
         self._set_initial_statuses()
@@ -516,6 +599,30 @@ class LauncherApp:
         self._npm_path = npm_path
         CAPTURES_DIR.mkdir(exist_ok=True)
 
+    def _start_data_api_service(self) -> None:
+        """Start the Data API service (always required)."""
+        log = DATA_API_LOG.open("a", encoding="utf-8")
+        err = DATA_API_ERR.open("a", encoding="utf-8")
+        self._logs["data_api"] = (log, err)
+
+        cmd = [
+            sys.executable,
+            str(ROOT / "data_api_service.py"),
+        ]
+
+        try:
+            process = subprocess.Popen(
+                cmd,
+                stdout=log,
+                stderr=err,
+                cwd=str(ROOT),
+                creationflags=CREATE_NO_WINDOW,
+            )
+        except FileNotFoundError as exc:
+            raise RuntimeError(f"Failed to start Data API service ({exc})") from exc
+        self._processes["data_api"] = process
+        self._log("Data API service launched; waiting for /health.")
+
     def _start_capture_service(self) -> None:
         log = CAPTURE_LOG.open("a", encoding="utf-8")
         err = CAPTURE_ERR.open("a", encoding="utf-8")
@@ -529,7 +636,7 @@ class LauncherApp:
             "--protocols",
             str(ROOT / "config" / "protocols.toml"),
             "--health-api-port",
-            "8050",
+            "8051",
             "--watchdog-timeout",
             "30",
             "--health-log",
@@ -612,6 +719,27 @@ class LauncherApp:
         self._log("Opening dashboard in default browser.")
         webbrowser.open(UI_URL, new=0, autoraise=True)
         self._browser_opened = True  # Mark that we opened the browser
+
+    def _wait_for_port_free(self, port: int, max_wait: int = 30) -> bool:
+        """Wait for a port to be freed. Returns True if port is free, False if timeout."""
+        import socket
+        for attempt in range(max_wait):
+            try:
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+                    result = sock.connect_ex(("127.0.0.1", port))
+                    if result != 0:
+                        # Port is free (connection failed)
+                        return True
+            except Exception:
+                # If we get an exception, assume port is free
+                return True
+            
+            if attempt == 0:
+                self._log(f"Waiting for port {port} to be freed...")
+            time.sleep(1)
+        
+        self._log(f"WARNING: Port {port} still in use after {max_wait} seconds")
+        return False
 
     def _wait_for_url(self, url: str, attempts: int, process_key: str) -> bool:
         for _ in range(attempts):

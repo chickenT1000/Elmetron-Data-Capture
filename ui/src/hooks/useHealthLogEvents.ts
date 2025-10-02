@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { buildApiUrl } from '../config';
+import { buildApiUrl, buildHealthUrl } from '../config';
 import {
   fetchHealthLogEvents,
   streamHealthLogsNdjson,
@@ -221,7 +221,7 @@ export const useHealthLogEvents = (
       if (category) {
         params.set('category', category);
       }
-      const streamUrl = `${buildApiUrl('/health/logs/stream')}?${params.toString()}`;
+      const streamUrl = `${buildHealthUrl('/logs/stream')}?${params.toString()}`;
       const source = new window.EventSource(streamUrl);
       eventSource = source;
 

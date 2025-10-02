@@ -153,7 +153,7 @@ export const MeasurementPanel: React.FC<MeasurementPanelProps> = ({ state, metri
     : state.connection === 'error'
     ? 'Unable to retrieve instrument health data.'
     : 'No recent frames detected from the instrument.';
-  const logChipColor = state.logStream === 'streaming' ? 'success' : state.logStream === 'polling' ? 'warning' : 'default';
+  const logChipColor = state.logStream === 'streaming' ? 'success' : state.logStream === 'polling' ? 'success' : 'default';
 
   return (
     <Stack spacing={3}>
