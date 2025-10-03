@@ -172,6 +172,7 @@ class LauncherApp:
         self._log_history: List[str] = []
         self._npm_path: Optional[str] = None
         self._closing = False
+        self._browser_opened = False
 
         self._build_ui()
         self._update_controls()

@@ -12,7 +12,7 @@ from elmetron.hardware import list_devices
 from elmetron.protocols import load_registry
 from elmetron.service import ServiceSupervisor
 from elmetron.service.runner import ServiceRunner
-from elmetron.storage import Database
+from elmetron.storage import Database, SessionBuffer
 
 
 def _apply_overrides(config: AppConfig, args: argparse.Namespace) -> AppConfig:
@@ -103,6 +103,25 @@ def main(argv: list[str] | None = None) -> int:
     captures_dir.mkdir(exist_ok=True)
     status_file = captures_dir / ".live_capture_status.json"
 
+    # Recover any orphaned session buffers from previous crashes
+    print('Checking for orphaned session buffers...')
+    try:
+        recovery_summary = SessionBuffer.recover_orphaned_buffers(
+            captures_dir,
+            database,
+            delete_after_recovery=True
+        )
+        if recovery_summary["recovered_sessions"] > 0:
+            print(f'✅ Recovered {recovery_summary["recovered_measurements"]} '
+                  f'measurements from {recovery_summary["recovered_sessions"]} crashed session(s)')
+            for session_id in recovery_summary["session_ids"]:
+                print(f'   - Session {session_id}: {recovery_summary["sessions"][session_id]["measurements"]} measurements')
+        else:
+            print('   No orphaned buffers found.')
+    except Exception as exc:
+        print(f'⚠️  Warning: Buffer recovery failed: {exc}')
+        print('   Continuing with normal startup...')
+
     print('Connected hardware:')
     devices = list_devices()
     if devices:
@@ -118,6 +137,7 @@ def main(argv: list[str] | None = None) -> int:
         config,
         database,
         protocol_registry=registry,
+        captures_dir=captures_dir,
     )
 
     watchdog_timeout = args.watchdog_timeout if args.watchdog_timeout and args.watchdog_timeout > 0 else 0.0

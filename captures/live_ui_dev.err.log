@@ -1015,3 +1015,202 @@ Traceback (most recent call last):
            ^^^^^^^^^^^^^^^^^^^^^^^
 ConnectionResetError: [WinError 10054] Istniej鉍e po章czenie zosta這 gwa速ownie zamkni皻e przez zdalnego hosta
 ----------------------------------------
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 63678)
+Traceback (most recent call last):
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 691, in process_request_thread
+    self.finish_request(request, client_address)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 361, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 755, in __init__
+    self.handle()
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 438, in handle
+    self.handle_one_request()
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 404, in handle_one_request
+    self.raw_requestline = self.rfile.readline(65537)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\socket.py", line 706, in readinto
+    return self._sock.recv_into(b)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+ConnectionResetError: [WinError 10054] Istniej鉍e po章czenie zosta這 gwa速ownie zamkni皻e przez zdalnego hosta
+----------------------------------------
+Traceback (most recent call last):
+  File "C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\cx505_capture_service.py", line 115, in main
+    print(f'\u2705 Recovered {recovery_summary["recovered_measurements"]} '
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\encodings\cp1250.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2705' in position 0: character maps to <undefined>
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\cx505_capture_service.py", line 202, in <module>
+    raise SystemExit(main(sys.argv[1:]))
+                     ^^^^^^^^^^^^^^^^^^
+  File "C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\cx505_capture_service.py", line 122, in main
+    print(f'\u26a0\ufe0f  Warning: Buffer recovery failed: {exc}')
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\encodings\cp1250.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode characters in position 0-1: character maps to <undefined>
+Traceback (most recent call last):
+  File "C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\cx505_capture_service.py", line 115, in main
+    print(f'\u2705 Recovered {recovery_summary["recovered_measurements"]} '
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\encodings\cp1250.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2705' in position 0: character maps to <undefined>
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\cx505_capture_service.py", line 202, in <module>
+    raise SystemExit(main(sys.argv[1:]))
+                     ^^^^^^^^^^^^^^^^^^
+  File "C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\cx505_capture_service.py", line 122, in main
+    print(f'\u26a0\ufe0f  Warning: Buffer recovery failed: {exc}')
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\encodings\cp1250.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode characters in position 0-1: character maps to <undefined>
+Traceback (most recent call last):
+  File "C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\cx505_capture_service.py", line 115, in main
+    print(f'\u2705 Recovered {recovery_summary["recovered_measurements"]} '
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\encodings\cp1250.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2705' in position 0: character maps to <undefined>
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\cx505_capture_service.py", line 202, in <module>
+    raise SystemExit(main(sys.argv[1:]))
+                     ^^^^^^^^^^^^^^^^^^
+  File "C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\cx505_capture_service.py", line 122, in main
+    print(f'\u26a0\ufe0f  Warning: Buffer recovery failed: {exc}')
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\encodings\cp1250.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode characters in position 0-1: character maps to <undefined>
+Traceback (most recent call last):
+  File "C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\cx505_capture_service.py", line 115, in main
+    print(f'\u2705 Recovered {recovery_summary["recovered_measurements"]} '
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\encodings\cp1250.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2705' in position 0: character maps to <undefined>
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\cx505_capture_service.py", line 202, in <module>
+    raise SystemExit(main(sys.argv[1:]))
+                     ^^^^^^^^^^^^^^^^^^
+  File "C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\cx505_capture_service.py", line 122, in main
+    print(f'\u26a0\ufe0f  Warning: Buffer recovery failed: {exc}')
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\encodings\cp1250.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode characters in position 0-1: character maps to <undefined>
+Traceback (most recent call last):
+  File "C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\cx505_capture_service.py", line 115, in main
+    print(f'\u2705 Recovered {recovery_summary["recovered_measurements"]} '
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\encodings\cp1250.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2705' in position 0: character maps to <undefined>
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\cx505_capture_service.py", line 202, in <module>
+    raise SystemExit(main(sys.argv[1:]))
+                     ^^^^^^^^^^^^^^^^^^
+  File "C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\cx505_capture_service.py", line 122, in main
+    print(f'\u26a0\ufe0f  Warning: Buffer recovery failed: {exc}')
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\encodings\cp1250.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode characters in position 0-1: character maps to <undefined>
+Traceback (most recent call last):
+  File "C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\cx505_capture_service.py", line 115, in main
+    print(f'\u2705 Recovered {recovery_summary["recovered_measurements"]} '
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\encodings\cp1250.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2705' in position 0: character maps to <undefined>
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\cx505_capture_service.py", line 202, in <module>
+    raise SystemExit(main(sys.argv[1:]))
+                     ^^^^^^^^^^^^^^^^^^
+  File "C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\cx505_capture_service.py", line 122, in main
+    print(f'\u26a0\ufe0f  Warning: Buffer recovery failed: {exc}')
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\encodings\cp1250.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode characters in position 0-1: character maps to <undefined>
+Traceback (most recent call last):
+  File "C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\cx505_capture_service.py", line 115, in main
+    print(f'\u2705 Recovered {recovery_summary["recovered_measurements"]} '
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\encodings\cp1250.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2705' in position 0: character maps to <undefined>
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\cx505_capture_service.py", line 202, in <module>
+    raise SystemExit(main(sys.argv[1:]))
+                     ^^^^^^^^^^^^^^^^^^
+  File "C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\cx505_capture_service.py", line 122, in main
+    print(f'\u26a0\ufe0f  Warning: Buffer recovery failed: {exc}')
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\encodings\cp1250.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode characters in position 0-1: character maps to <undefined>
+Traceback (most recent call last):
+  File "C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\cx505_capture_service.py", line 115, in main
+    print(f'\u2705 Recovered {recovery_summary["recovered_measurements"]} '
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\encodings\cp1250.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2705' in position 0: character maps to <undefined>
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\cx505_capture_service.py", line 202, in <module>
+    raise SystemExit(main(sys.argv[1:]))
+                     ^^^^^^^^^^^^^^^^^^
+  File "C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\cx505_capture_service.py", line 122, in main
+    print(f'\u26a0\ufe0f  Warning: Buffer recovery failed: {exc}')
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\encodings\cp1250.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode characters in position 0-1: character maps to <undefined>
+Traceback (most recent call last):
+  File "C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\cx505_capture_service.py", line 115, in main
+    print(f'\u2705 Recovered {recovery_summary["recovered_measurements"]} '
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\encodings\cp1250.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2705' in position 0: character maps to <undefined>
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\cx505_capture_service.py", line 202, in <module>
+    raise SystemExit(main(sys.argv[1:]))
+                     ^^^^^^^^^^^^^^^^^^
+  File "C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\cx505_capture_service.py", line 122, in main
+    print(f'\u26a0\ufe0f  Warning: Buffer recovery failed: {exc}')
+  File "C:\Users\EKO\AppData\Local\Programs\Python\Python311\Lib\encodings\cp1250.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode characters in position 0-1: character maps to <undefined>

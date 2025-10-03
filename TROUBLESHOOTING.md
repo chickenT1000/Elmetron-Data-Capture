@@ -7,6 +7,8 @@ This document covers common issues and their solutions for the Elmetron Data Cap
 - [Database Corruption](#database-corruption)
 - [No Data Being Received](#no-data-being-received)
 - [Device Connection Issues](#device-connection-issues)
+- [UI Shows Archive Mode](#ui-shows-archive-mode)
+- [UI API Errors (404/500)](#ui-api-errors-404500)
 - [Git Branch Switching Problems](#git-branch-switching-problems)
 
 ---
@@ -193,6 +195,185 @@ def signal_handler(sig, frame):
 signal.signal(signal.SIGINT, signal_handler)
 signal.signal(signal.SIGTERM, signal_handler)
 ```
+
+---
+
+## UI Shows Archive Mode
+
+### Symptom
+Web UI displays "Archive Mode" message and shows greyed-out sections even when device is connected.
+
+### What is Archive Mode?
+Archive Mode is a graceful degradation state when:
+- CX-505 device is not connected
+- Capture service is not running
+- No live data is flowing (`frames = 0`)
+
+In this mode, users can still **browse historical sessions** but cannot monitor live data.
+
+### Diagnostic Steps
+
+#### 1. Check Device Connection
+```powershell
+# Check if capture service sees device
+curl http://localhost:8051/health | ConvertFrom-Json | Select-Object frames, state
+```
+
+**Expected when live**:
+```json
+{
+  "frames": 1234,
+  "state": "running"
+}
+```
+
+**If frames = 0**: Device not sending data (see [No Data Being Received](#no-data-being-received))
+
+#### 2. Check Live Status Endpoint
+```powershell
+curl http://localhost:8050/api/live/status | ConvertFrom-Json
+```
+
+**Expected when live**:
+```json
+{
+  "mode": "live",
+  "live_capture_active": true,
+  "device_connected": true
+}
+```
+
+**If mode = "archive"**: System correctly detected no live data
+
+### Solutions
+
+#### Solution 1: Device Not Connected
+1. Check CX-505 USB connection
+2. Restart capture service
+3. Verify device shows in Device Manager
+
+#### Solution 2: Capture Service Not Running
+```powershell
+# Check if service is running
+netstat -ano | findstr :8051
+
+# Restart if needed
+py cx505_capture_service.py --config config/app.toml --protocols config/protocols.toml --health-api-port 8051
+```
+
+#### Solution 3: Device Connected But No Data
+See [No Data Being Received](#no-data-being-received) section for poll interval and configuration fixes.
+
+### Expected Behavior
+
+**When Device is Unplugged (Archive Mode is NORMAL)**:
+- ✅ Shows "Archive Mode" info message
+- ✅ Can browse Sessions tab for historical data
+- ✅ Live monitoring sections hidden (clean UI)
+- ℹ️ This is the correct, user-friendly behavior!
+
+**When Device is Connected (Live Mode)**:
+- ✅ Shows live measurements updating
+- ✅ Health monitoring active
+- ✅ All green indicators
+- ✅ Command history and logs visible
+
+---
+
+## UI API Errors (404/500)
+
+### Symptom: 404 Not Found Errors
+
+**Common 404 errors in browser console:**
+```
+GET http://localhost:8050/health/logs 404 (Not Found)
+GET http://localhost:8050/sessions/recent 404 (Not Found)
+```
+
+### Root Cause
+API endpoints were recently reorganized. Older UI code may be calling wrong paths.
+
+### Fixed Endpoints (Current Version)
+
+| Old Path (❌ Wrong) | New Path (✅ Correct) |
+|---------------------|----------------------|
+| `/health/logs` | `/health/logs` *(health service on :8051)* |
+| `/sessions/recent` | `/api/sessions` *(data API on :8050)* |
+| `/sessions/{id}/evaluation` | `/api/sessions/{id}/evaluation` |
+
+### Port Configuration
+
+**Two services run on different ports:**
+
+1. **Data API Service (Port 8050)**
+   - `/health` - API health check
+   - `/api/sessions` - Session list
+   - `/api/sessions/{id}` - Session details
+   - `/api/sessions/{id}/measurements` - Session measurements
+   - `/api/sessions/{id}/evaluation` - Export evaluation data
+   - `/api/sessions/{id}/export` - Export session
+   - `/api/live/status` - Live/archive mode status
+
+2. **Capture Service (Port 8051)**
+   - `/health` - Capture service health
+   - `/health/logs` - Health log events
+   - `/health/logs.ndjson` - NDJSON log stream (for advanced use)
+   - `/health/bundle` - Diagnostic bundle download
+
+### Solutions
+
+#### Solution 1: Verify Services Are Running
+```powershell
+# Check both services
+netstat -ano | findstr "8050 8051"
+```
+
+**Expected**: Both ports should show LISTENING
+
+#### Solution 2: Check UI Configuration
+Verify `ui/src/config.ts`:
+```typescript
+const DEFAULT_API_BASE_URL = 'http://127.0.0.1:8050';  // Data API
+const DEFAULT_HEALTH_BASE_URL = 'http://127.0.0.1:8051';  // Capture health
+```
+
+#### Solution 3: Hard Refresh Browser
+```
+Ctrl + F5  (or Ctrl + Shift + R)
+```
+
+Clears cached API calls and reloads with latest endpoints.
+
+### Symptom: 500 Internal Server Error
+
+**Common causes:**
+1. Database schema mismatch
+2. Missing table or column
+3. Backend exception
+
+### Diagnostic Steps
+
+#### 1. Check Backend Logs
+Look for Python exceptions in capture service terminal
+
+#### 2. Test Endpoint Directly
+```powershell
+curl http://localhost:8050/api/sessions/1/evaluation
+```
+
+#### 3. Verify Database Schema
+```powershell
+py -c "import sqlite3; conn = sqlite3.connect('data/elmetron.sqlite'); print([row for row in conn.execute('PRAGMA table_info(raw_frames)').fetchall()])"
+```
+
+### Known Fixes Applied
+
+**✅ Fixed in current version:**
+- Database table name: `frames` → `raw_frames`
+- Column name: `captured_at` → `created_at`
+- Added missing `/api/sessions/{id}/evaluation` endpoint
+
+If you still see 500 errors, database may need recreation (see [Database Corruption](#database-corruption))
 
 ---
 

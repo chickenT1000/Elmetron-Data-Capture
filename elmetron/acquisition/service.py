@@ -6,6 +6,7 @@ import threading
 from collections import deque
 from dataclasses import dataclass, field
 from datetime import datetime
+from pathlib import Path
 from queue import Empty, Queue
 from typing import Any, Callable, Deque, Dict, List, Optional
 
@@ -15,6 +16,7 @@ from ..commands.executor import CommandDefinition, CommandResult, execute_comman
 from ..hardware import DeviceInterface, ListedDevice, create_interface
 from ..ingestion.pipeline import FrameIngestor
 from ..storage.database import Database, DeviceMetadata, SessionHandle
+from ..storage.session_buffer import SessionBuffer
 from ..protocols.registry import ProtocolRegistry
 
 
@@ -216,6 +218,7 @@ class AcquisitionService:
         command_runner: Optional[Callable[[DeviceInterface, CommandDefinition], CommandResult]] = None,
         *,
         use_async_commands: bool = True,
+        captures_dir: Optional[Path] = None,
     ) -> None:
         self._config = config
         self._database = database
@@ -224,6 +227,8 @@ class AcquisitionService:
         self._command_runner = command_runner or (lambda interface, definition: execute_command(interface, definition))
         self._use_async_commands = use_async_commands
         self._protocol_registry = protocol_registry
+        self._captures_dir = captures_dir
+        self._current_session_buffer: Optional[SessionBuffer] = None
         self._stop_requested = False
         self._stats = ServiceStats()
         self._interface_lock = threading.RLock()
@@ -1183,6 +1188,20 @@ class AcquisitionService:
                         'device.latency_timer_ms': device_cfg.latency_timer_ms,
                     }
                     session_handle = self._database.start_session(datetime.utcnow(), metadata, session_context)
+                    # Create crash-resistant session buffer
+                    self._current_session_buffer = None
+                    if self._captures_dir is not None:
+                        try:
+                            self._current_session_buffer = SessionBuffer(self._config.storage, session_handle.id, self._captures_dir)
+                            device_metadata_dict = {
+                                'serial': metadata.serial,
+                                'description': metadata.description,
+                                'model': metadata.model,
+                            }
+                            self._current_session_buffer.create(datetime.utcnow(), device_metadata_dict)
+                        except Exception as exc:
+                            print(f'Warning: Failed to create session buffer: {exc}')
+                            self._current_session_buffer = None
                     analytics_engine = None
                     if getattr(self._config, 'analytics', None) and self._config.analytics.enabled:
                         analytics_engine = AnalyticsEngine(self._config.analytics)
@@ -1191,6 +1210,7 @@ class AcquisitionService:
                         session_handle,
                         analytics=analytics_engine,
                         decode_error_callback=lambda frame, exc, sh=session_handle: self._handle_decode_failure(frame, exc, sh),
+                        session_buffer=self._current_session_buffer,
                     )
                     self._stats.analytics_profile = None
                     self._stats.latest_measurement = None
@@ -1280,6 +1300,14 @@ class AcquisitionService:
                                     'profile': fallback_profile,
                                 },
                             )
+                            # Close crash-resistant buffer
+                            if self._current_session_buffer is not None:
+                                try:
+                                    self._current_session_buffer.close(ended_at=datetime.utcnow())
+                                except Exception as exc:
+                                    print(f'Warning: Failed to close session buffer: {exc}')
+                                finally:
+                                    self._current_session_buffer = None
                             session_handle.close(datetime.utcnow())
                         with self._interface_lock:
                             interface.close()
@@ -1332,6 +1360,14 @@ class AcquisitionService:
                 if self._use_async_commands and ingestor is not None:
                     self._drain_command_results(session_handle, ingestor)
                 session_handle.log_event('info', 'session', 'Session closing')
+                # Close crash-resistant buffer
+                if self._current_session_buffer is not None:
+                    try:
+                        self._current_session_buffer.close(ended_at=datetime.utcnow())
+                    except Exception as exc:
+                        print(f'Warning: Failed to close session buffer: {exc}')
+                    finally:
+                        self._current_session_buffer = None
                 session_handle.close(datetime.utcnow())
             self._stats.latest_measurement = None
             self._shutdown_command_worker()

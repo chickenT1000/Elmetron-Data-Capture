@@ -5,6 +5,7 @@ import { useLiveStatus } from '../hooks/useLiveStatus';
 import { MeasurementPanel } from '../components/MeasurementPanel';
 import { CommandHistory } from '../components/CommandHistory';
 import { LogFeed } from '../components/LogFeed';
+import { RollingChartsPanel } from '../components/RollingChartsPanel';
 import type {
   CommandHistoryEntryState,
   DiagnosticLogRowState,
@@ -14,20 +15,21 @@ import type {
 
 const formatNumber = (value?: number | null, digits = 2): string => {
   if (value === undefined || value === null || Number.isNaN(value)) {
-    return 'â€”';
+    return '-';
   }
   return value.toLocaleString(undefined, { maximumFractionDigits: digits });
 };
 
+
 const formatDurationMs = (value?: number | null): string => {
-  if (!value && value !== 0) return 'â€”';
+  if (!value && value !== 0) return '-';
   if (value >= 1000) {
     return `${(value / 1000).toFixed(2)} s`;
   }
   return `${value.toFixed(1)} ms`;
 };
 
-const normaliseLogStream = (state: HealthLogConnectionState): MeasurementPanelState['logStream'] => {
+const normaliseLogStream = (state: HealthLogConnectionState): 'streaming' | 'polling' | 'idle' => {
   if (state === 'streaming' || state === 'polling') {
     return state;
   }
@@ -90,7 +92,7 @@ export default function DashboardPage() {
       id: 'processing',
       label: 'Avg processing time',
       value: formatDurationMs(analyticsProfile?.average_processing_time_ms),
-      helperText: `Max ${formatDurationMs(analyticsProfile?.max_processing_time_ms)} â€˘ throttled ${formatNumber(
+      helperText: `Max ${formatDurationMs(analyticsProfile?.max_processing_time_ms)} - throttled ${formatNumber(
         analyticsProfile?.throttled_frames,
         0,
       )}`,
@@ -100,7 +102,7 @@ export default function DashboardPage() {
       id: 'latency',
       label: 'Health response latency',
       value: formatDurationMs(responseTimes?.average_ms),
-      helperText: `Last ${formatDurationMs(responseTimes?.last_ms)} â€˘ Max ${formatDurationMs(
+      helperText: `Last ${formatDurationMs(responseTimes?.last_ms)} - Max ${formatDurationMs(
         responseTimes?.max_ms,
       )}`,
       iconToken: 'latency',
@@ -181,6 +183,7 @@ export default function DashboardPage() {
         Service Health Dashboard
       </Typography>
       <MeasurementPanel state={measurementState} metrics={metricCards} />
+      <RollingChartsPanel windowMinutes={10} />
       {!isArchiveMode && (
         <>
           <CommandHistory entries={commandHistoryEntries} loading={healthLoading} />

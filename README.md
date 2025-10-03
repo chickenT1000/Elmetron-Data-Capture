@@ -40,11 +40,37 @@ python cx505_capture_service.py \
 - The Service Health dashboard exposes `/health/logs/stream` plus a one-click diagnostic bundle download (`/health/bundle`) for support escalations.
 
 ### Important Operational Notes
-?? **Always stop services gracefully** - Never use `Stop-Process -Force` on the capture service as it can corrupt the SQLite database. Use the UI Stop button or `Ctrl+C` in terminal.
+⚠️ **Always stop services gracefully** - Never use `Stop-Process -Force` on the capture service as it can corrupt the SQLite database. Use the UI Stop button or `Ctrl+C` in terminal.
 
-?? **Before Git operations** - Stop capture service and React dev server before switching branches to avoid file lock conflicts.
+⚠️ **Before Git operations** - Stop capture service and React dev server before switching branches to avoid file lock conflicts.
 
-?? **Troubleshooting** - See `TROUBLESHOOTING.md` for common issues and solutions, and `FIXES_SUMMARY.md` for historical fixes.
+ℹ️ **Archive Mode** - When the CX-505 device is not connected, the UI automatically switches to Archive Mode, allowing you to browse historical sessions while gracefully hiding live monitoring features. This provides a user-friendly experience for new users testing the system without hardware.
+
+⚠️ **Troubleshooting** - See `TROUBLESHOOTING.md` for common issues and solutions, and `CHANGELOG.md` for version history.
+
+## Documentation
+
+### 📖 For Users & Operators
+- **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** - Common issues and solutions (start here!)
+- **[docs/user/QUICK_REFERENCE.md](docs/user/QUICK_REFERENCE.md)** - Quick reference for daily operations
+- **[docs/OPERATOR_PLAYBOOK.md](docs/OPERATOR_PLAYBOOK.md)** - Daily startup checklist and monitoring
+- **[docs/WINDOWS_SERVICE_GUIDE.md](docs/WINDOWS_SERVICE_GUIDE.md)** - Windows service deployment
+
+### 👩‍💻 For Developers
+- **[docs/developer/SPEC.md](docs/developer/SPEC.md)** - Technical specification
+- **[docs/developer/ARCHITECTURE_REDESIGN.md](docs/developer/ARCHITECTURE_REDESIGN.md)** - Architecture decisions
+- **[docs/developer/TESTING_*.md](docs/developer/)** - Test plans and procedures
+- **[docs/developer/AGENTS.md](docs/developer/AGENTS.md)** - AI agent documentation
+
+### 📦 Deployment & Operations
+- **[docs/EXPORT_TEMPLATES.md](docs/EXPORT_TEMPLATES.md)** - PDF/LIMS template customization
+- **[docs/UI_DESIGN_SYSTEM.md](docs/UI_DESIGN_SYSTEM.md)** - UI component strategy
+- **[docs/RELEASE_AUTOMATION.md](docs/RELEASE_AUTOMATION.md)** - CI/CD procedures
+
+### 📝 Project History
+- **[CHANGELOG.md](CHANGELOG.md)** - Version history and changes
+- **[Road_map.md](Road_map.md)** - Future roadmap
+- **[docs/archive/](docs/archive/)** - Historical session notes
 
 ## Export Toolkit
 - Use `python scripts/build_release_bundle.py --latest 1` to generate release-ready archives (manifest, checksums, and zipped artefacts).

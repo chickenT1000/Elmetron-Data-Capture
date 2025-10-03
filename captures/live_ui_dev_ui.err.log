@@ -2255,3 +2255,201 @@ Error: Port 5173 is already in use
     at Server.emit (node:events:519:28)
     at emitErrorNT (node:net:1976:8)
     at process.processTicksAndRejections (node:internal/process/task_queues:90:21)[39m
+[2m14:13:51[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m Pre-transform error: Failed to resolve import "@mui/material/Unstable_Grid2" from "src/components/RollingChartsPanel.tsx". Does the file exist?
+  Plugin: [35mvite:import-analysis[39m
+  File: [36mC:/Users/EKO/Desktop/GitHub/Elmetron-Data-Capture/ui/src/components/RollingChartsPanel.tsx[39m:3:17
+[33m  3  |  import React from "react";
+  4  |  import { Box, Typography, Paper, Alert } from "@mui/material";
+  5  |  import Grid from "@mui/material/Unstable_Grid2";
+     |                    ^
+  6  |  import { MeasurementChart } from "./MeasurementChart";
+  7  |  import { useRecentMeasurements } from "../hooks/useRecentMeasurements";[39m
+[2m14:13:51[22m [31m[1m[vite][22m[39m [31mInternal server error: Failed to resolve import "@mui/material/Unstable_Grid2" from "src/components/RollingChartsPanel.tsx". Does the file exist?[39m
+  Plugin: [35mvite:import-analysis[39m
+  File: [36mC:/Users/EKO/Desktop/GitHub/Elmetron-Data-Capture/ui/src/components/RollingChartsPanel.tsx[39m:3:17
+[33m  3  |  import React from "react";
+  4  |  import { Box, Typography, Paper, Alert } from "@mui/material";
+  5  |  import Grid from "@mui/material/Unstable_Grid2";
+     |                    ^
+  6  |  import { MeasurementChart } from "./MeasurementChart";
+  7  |  import { useRecentMeasurements } from "../hooks/useRecentMeasurements";[39m
+      at TransformPluginContext._formatLog (file:///C:/Users/EKO/Desktop/GitHub/Elmetron-Data-Capture/ui/node_modules/vite/dist/node/chunks/dep-Bm2ujbhY.js:31185:43)
+      at TransformPluginContext.error (file:///C:/Users/EKO/Desktop/GitHub/Elmetron-Data-Capture/ui/node_modules/vite/dist/node/chunks/dep-Bm2ujbhY.js:31182:14)
+      at normalizeUrl (file:///C:/Users/EKO/Desktop/GitHub/Elmetron-Data-Capture/ui/node_modules/vite/dist/node/chunks/dep-Bm2ujbhY.js:29665:18)
+      at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+      at async file:///C:/Users/EKO/Desktop/GitHub/Elmetron-Data-Capture/ui/node_modules/vite/dist/node/chunks/dep-Bm2ujbhY.js:29723:32
+      at async Promise.all (index 3)
+      at async TransformPluginContext.transform (file:///C:/Users/EKO/Desktop/GitHub/Elmetron-Data-Capture/ui/node_modules/vite/dist/node/chunks/dep-Bm2ujbhY.js:29691:4)
+      at async EnvironmentPluginContainer.transform (file:///C:/Users/EKO/Desktop/GitHub/Elmetron-Data-Capture/ui/node_modules/vite/dist/node/chunks/dep-Bm2ujbhY.js:30984:14)
+      at async loadAndTransform (file:///C:/Users/EKO/Desktop/GitHub/Elmetron-Data-Capture/ui/node_modules/vite/dist/node/chunks/dep-Bm2ujbhY.js:26116:26)
+      at async viteTransformMiddleware (file:///C:/Users/EKO/Desktop/GitHub/Elmetron-Data-Capture/ui/node_modules/vite/dist/node/chunks/dep-Bm2ujbhY.js:27187:20)
+[2m14:14:23[22m [31m[1m[vite][22m[39m [31mInternal server error: Failed to resolve import "@mui/material/Unstable_Grid2" from "src/components/RollingChartsPanel.tsx". Does the file exist?[39m
+  Plugin: [35mvite:import-analysis[39m
+  File: [36mC:/Users/EKO/Desktop/GitHub/Elmetron-Data-Capture/ui/src/components/RollingChartsPanel.tsx[39m:3:17
+[33m  3  |  import React from "react";
+  4  |  import { Box, Typography, Paper, Alert } from "@mui/material";
+  5  |  import Grid from "@mui/material/Unstable_Grid2";
+     |                    ^
+  6  |  import { MeasurementChart } from "./MeasurementChart";
+  7  |  import { useRecentMeasurements } from "../hooks/useRecentMeasurements";[39m
+      at TransformPluginContext._formatLog (file:///C:/Users/EKO/Desktop/GitHub/Elmetron-Data-Capture/ui/node_modules/vite/dist/node/chunks/dep-Bm2ujbhY.js:31185:43)
+      at TransformPluginContext.error (file:///C:/Users/EKO/Desktop/GitHub/Elmetron-Data-Capture/ui/node_modules/vite/dist/node/chunks/dep-Bm2ujbhY.js:31182:14)
+      at normalizeUrl (file:///C:/Users/EKO/Desktop/GitHub/Elmetron-Data-Capture/ui/node_modules/vite/dist/node/chunks/dep-Bm2ujbhY.js:29665:18)
+      at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+      at async file:///C:/Users/EKO/Desktop/GitHub/Elmetron-Data-Capture/ui/node_modules/vite/dist/node/chunks/dep-Bm2ujbhY.js:29723:32
+      at async Promise.all (index 3)
+      at async TransformPluginContext.transform (file:///C:/Users/EKO/Desktop/GitHub/Elmetron-Data-Capture/ui/node_modules/vite/dist/node/chunks/dep-Bm2ujbhY.js:29691:4)
+      at async EnvironmentPluginContainer.transform (file:///C:/Users/EKO/Desktop/GitHub/Elmetron-Data-Capture/ui/node_modules/vite/dist/node/chunks/dep-Bm2ujbhY.js:30984:14)
+      at async loadAndTransform (file:///C:/Users/EKO/Desktop/GitHub/Elmetron-Data-Capture/ui/node_modules/vite/dist/node/chunks/dep-Bm2ujbhY.js:26116:26)
+      at async viteTransformMiddleware (file:///C:/Users/EKO/Desktop/GitHub/Elmetron-Data-Capture/ui/node_modules/vite/dist/node/chunks/dep-Bm2ujbhY.js:27187:20)
+[2m14:14:45[22m [31m[1m[vite][22m[39m [31mInternal server error: Failed to resolve import "@mui/material/Unstable_Grid2" from "src/components/RollingChartsPanel.tsx". Does the file exist?[39m
+  Plugin: [35mvite:import-analysis[39m
+  File: [36mC:/Users/EKO/Desktop/GitHub/Elmetron-Data-Capture/ui/src/components/RollingChartsPanel.tsx[39m:3:17
+[33m  3  |  import React from "react";
+  4  |  import { Box, Typography, Paper, Alert } from "@mui/material";
+  5  |  import Grid from "@mui/material/Unstable_Grid2";
+     |                    ^
+  6  |  import { MeasurementChart } from "./MeasurementChart";
+  7  |  import { useRecentMeasurements } from "../hooks/useRecentMeasurements";[39m
+      at TransformPluginContext._formatLog (file:///C:/Users/EKO/Desktop/GitHub/Elmetron-Data-Capture/ui/node_modules/vite/dist/node/chunks/dep-Bm2ujbhY.js:31185:43)
+      at TransformPluginContext.error (file:///C:/Users/EKO/Desktop/GitHub/Elmetron-Data-Capture/ui/node_modules/vite/dist/node/chunks/dep-Bm2ujbhY.js:31182:14)
+      at normalizeUrl (file:///C:/Users/EKO/Desktop/GitHub/Elmetron-Data-Capture/ui/node_modules/vite/dist/node/chunks/dep-Bm2ujbhY.js:29665:18)
+      at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+      at async file:///C:/Users/EKO/Desktop/GitHub/Elmetron-Data-Capture/ui/node_modules/vite/dist/node/chunks/dep-Bm2ujbhY.js:29723:32
+      at async Promise.all (index 3)
+      at async TransformPluginContext.transform (file:///C:/Users/EKO/Desktop/GitHub/Elmetron-Data-Capture/ui/node_modules/vite/dist/node/chunks/dep-Bm2ujbhY.js:29691:4)
+      at async EnvironmentPluginContainer.transform (file:///C:/Users/EKO/Desktop/GitHub/Elmetron-Data-Capture/ui/node_modules/vite/dist/node/chunks/dep-Bm2ujbhY.js:30984:14)
+      at async loadAndTransform (file:///C:/Users/EKO/Desktop/GitHub/Elmetron-Data-Capture/ui/node_modules/vite/dist/node/chunks/dep-Bm2ujbhY.js:26116:26)
+      at async viteTransformMiddleware (file:///C:/Users/EKO/Desktop/GitHub/Elmetron-Data-Capture/ui/node_modules/vite/dist/node/chunks/dep-Bm2ujbhY.js:27187:20)
+[2m14:15:35[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m Pre-transform error: C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\src\components\RollingChartsPanel.tsx: Expected corresponding JSX closing tag for <Box>. (56:10)
+
+[0m [90m 54 |[39m               decimalPlaces[33m=[39m{[35m2[39m}
+ [90m 55 |[39m             [33m/[39m[33m>[39m
+[31m[1m>[22m[39m[90m 56 |[39m           [33m<[39m[33m/[39m[33mGrid[39m[33m>[39m
+ [90m    |[39m           [31m[1m^[22m[39m
+ [90m 57 |[39m
+ [90m 58 |[39m           [33m<[39m[33mGrid[39m item xs[33m=[39m{[35m12[39m} md[33m=[39m{[35m6[39m}[33m>[39m
+ [90m 59 |[39m             [33m<[39m[33mMeasurementChart[39m[0m
+  Plugin: [35mvite:react-babel[39m
+  File: [36mC:/Users/EKO/Desktop/GitHub/Elmetron-Data-Capture/ui/src/components/RollingChartsPanel.tsx[39m:56:10
+[33m  54 |                decimalPlaces={2}
+  55 |              />
+  56 |            </Grid>
+     |            ^
+  57 |  
+  58 |            <Grid item xs={12} md={6}>[39m
+[2m14:15:35[22m [31m[1m[vite][22m[39m [31mInternal server error: C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\src\components\RollingChartsPanel.tsx: Expected corresponding JSX closing tag for <Box>. (56:10)
+
+[0m [90m 54 |[31m               decimalPlaces[33m=[31m{[35m2[31m}
+ [90m 55 |[31m             [33m/[31m[33m>[31m
+[31m[1m>[22m[31m[90m 56 |[31m           [33m<[31m[33m/[31m[33mGrid[31m[33m>[31m
+ [90m    |[31m           [31m[1m^[22m[31m
+ [90m 57 |[31m
+ [90m 58 |[31m           [33m<[31m[33mGrid[31m item xs[33m=[31m{[35m12[31m} md[33m=[31m{[35m6[31m}[33m>[31m
+ [90m 59 |[31m             [33m<[31m[33mMeasurementChart[31m[0m[39m
+  Plugin: [35mvite:react-babel[39m
+  File: [36mC:/Users/EKO/Desktop/GitHub/Elmetron-Data-Capture/ui/src/components/RollingChartsPanel.tsx[39m:56:10
+[33m  54 |                decimalPlaces={2}
+  55 |              />
+  56 |            </Grid>
+     |            ^
+  57 |  
+  58 |            <Grid item xs={12} md={6}>[39m
+      at constructor (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:367:19)
+      at TypeScriptParserMixin.raise (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:6630:19)
+      at TypeScriptParserMixin.jsxParseElementAt (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:4760:16)
+      at TypeScriptParserMixin.jsxParseElementAt (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:4731:32)
+      at TypeScriptParserMixin.jsxParseElementAt (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:4731:32)
+      at TypeScriptParserMixin.jsxParseElementAt (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:4731:32)
+      at TypeScriptParserMixin.jsxParseElement (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:4782:17)
+      at TypeScriptParserMixin.parseExprAtom (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:4792:19)
+      at TypeScriptParserMixin.parseExprSubscripts (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:11085:23)
+      at TypeScriptParserMixin.parseUpdate (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:11070:21)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:11050:23)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:9857:18)
+      at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:10903:61)
+      at TypeScriptParserMixin.parseExprOps (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:10908:23)
+      at TypeScriptParserMixin.parseMaybeConditional (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:10885:23)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:10835:21)
+      at C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:9795:39
+      at TypeScriptParserMixin.tryParse (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:6938:20)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:9795:18)
+      at C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:10804:39
+      at TypeScriptParserMixin.allowInAnd (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:12436:12)
+      at TypeScriptParserMixin.parseMaybeAssignAllowIn (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:10804:17)
+      at TypeScriptParserMixin.parseMaybeAssignAllowInOrVoidPattern (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:12503:17)
+      at TypeScriptParserMixin.parseParenAndDistinguishExpression (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:11683:28)
+      at TypeScriptParserMixin.parseExprAtom (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:11335:23)
+      at TypeScriptParserMixin.parseExprAtom (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:4797:20)
+      at TypeScriptParserMixin.parseExprSubscripts (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:11085:23)
+      at TypeScriptParserMixin.parseUpdate (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:11070:21)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:11050:23)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:9857:18)
+      at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:10903:61)
+      at TypeScriptParserMixin.parseExprOps (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:10908:23)
+      at TypeScriptParserMixin.parseMaybeConditional (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:10885:23)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:10835:21)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:9806:20)
+      at TypeScriptParserMixin.parseExpressionBase (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:10788:23)
+      at C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:10784:39
+      at TypeScriptParserMixin.allowInAnd (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:12431:16)
+      at TypeScriptParserMixin.parseExpression (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:10784:17)
+      at TypeScriptParserMixin.parseReturnStatement (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:13151:28)
+      at TypeScriptParserMixin.parseStatementContent (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:12807:21)
+      at TypeScriptParserMixin.parseStatementContent (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:9532:18)
+      at TypeScriptParserMixin.parseStatementLike (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:12776:17)
+      at TypeScriptParserMixin.parseStatementListItem (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:12756:17)
+      at TypeScriptParserMixin.parseBlockOrModuleBlockBody (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:13325:61)
+      at TypeScriptParserMixin.parseBlockBody (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:13318:10)
+      at TypeScriptParserMixin.parseBlock (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:13306:10)
+      at TypeScriptParserMixin.parseFunctionBody (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:12110:24)
+      at TypeScriptParserMixin.parseArrowExpression (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:12085:10)
+      at TypeScriptParserMixin.parseParenAndDistinguishExpression (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:11695:12)
+[31merror when starting dev server:
+Error: Port 5173 is already in use
+    at Server.onError$1 (file:///C:/Users/EKO/Desktop/GitHub/Elmetron-Data-Capture/ui/node_modules/vite/dist/node/chunks/dep-Bm2ujbhY.js:18449:28)
+    at Server.emit (node:events:519:28)
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)[39m
+[31merror when starting dev server:
+Error: Port 5173 is already in use
+    at Server.onError$1 (file:///C:/Users/EKO/Desktop/GitHub/Elmetron-Data-Capture/ui/node_modules/vite/dist/node/chunks/dep-Bm2ujbhY.js:18449:28)
+    at Server.emit (node:events:519:28)
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)[39m
+[31merror when starting dev server:
+Error: Port 5173 is already in use
+    at Server.onError$1 (file:///C:/Users/EKO/Desktop/GitHub/Elmetron-Data-Capture/ui/node_modules/vite/dist/node/chunks/dep-Bm2ujbhY.js:18449:28)
+    at Server.emit (node:events:519:28)
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)[39m
+[31merror when starting dev server:
+Error: Port 5173 is already in use
+    at Server.onError$1 (file:///C:/Users/EKO/Desktop/GitHub/Elmetron-Data-Capture/ui/node_modules/vite/dist/node/chunks/dep-Bm2ujbhY.js:18449:28)
+    at Server.emit (node:events:519:28)
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)[39m
+[31merror when starting dev server:
+Error: Port 5173 is already in use
+    at Server.onError$1 (file:///C:/Users/EKO/Desktop/GitHub/Elmetron-Data-Capture/ui/node_modules/vite/dist/node/chunks/dep-Bm2ujbhY.js:18449:28)
+    at Server.emit (node:events:519:28)
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)[39m
+[31merror when starting dev server:
+Error: Port 5173 is already in use
+    at Server.onError$1 (file:///C:/Users/EKO/Desktop/GitHub/Elmetron-Data-Capture/ui/node_modules/vite/dist/node/chunks/dep-Bm2ujbhY.js:18449:28)
+    at Server.emit (node:events:519:28)
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)[39m
+[31merror when starting dev server:
+Error: Port 5173 is already in use
+    at Server.onError$1 (file:///C:/Users/EKO/Desktop/GitHub/Elmetron-Data-Capture/ui/node_modules/vite/dist/node/chunks/dep-Bm2ujbhY.js:18449:28)
+    at Server.emit (node:events:519:28)
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)[39m
+[31merror when starting dev server:
+Error: Port 5173 is already in use
+    at Server.onError$1 (file:///C:/Users/EKO/Desktop/GitHub/Elmetron-Data-Capture/ui/node_modules/vite/dist/node/chunks/dep-Bm2ujbhY.js:18449:28)
+    at Server.emit (node:events:519:28)
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)[39m

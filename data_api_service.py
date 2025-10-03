@@ -1,4 +1,4 @@
-﻿"""
+"""
 Elmetron Data API Service
 
 Standalone REST API server that provides access to captured session data.
@@ -311,7 +311,7 @@ def get_session_measurements(session_id: int):
                     "value": -83.5,
                     "unit": "mV",
                     "temperature": 25.3,
-                    "temperature_unit": "°C",
+                    "temperature_unit": "C",
                     "payload": {...}
                 },
                 ...
@@ -384,6 +384,142 @@ def get_session_measurements(session_id: int):
     
     except Exception as e:
         logger.error(f"Error fetching measurements for session {session_id}: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/measurements/recent', methods=['GET'])
+def get_recent_measurements():
+    """
+    Get recent measurements from the most recent session for rolling charts.
+    
+    Query params:
+        minutes: Number of minutes of history to return (default: 10, max: 60)
+        session_id: Specific session ID (optional, defaults to most recent)
+    
+    Returns:
+        {
+            "session_id": 1,
+            "start_time": "2025-10-02T10:00:00Z",
+            "end_time": "2025-10-02T10:10:00Z",
+            "measurements": [
+                {
+                    "timestamp": "2025-10-02T10:00:01Z",
+                    "ph": 7.12,
+                    "redox": -110.5,
+                    "conductivity": 1450.2,
+                    "temperature": 22.5
+                },
+                ...
+            ],
+            "count": 150
+        }
+    """
+    try:
+        minutes = request.args.get('minutes', 10, type=int)
+        session_id = request.args.get('session_id', type=int)
+        
+        minutes = max(1, min(minutes, 60))  # Clamp between 1-60 minutes
+        
+        conn = sqlite3.connect(str(db.path))
+        conn.row_factory = sqlite3.Row
+        
+        # If no session_id provided, get the most recent active session
+        if session_id is None:
+            session_row = conn.execute("""
+                SELECT id FROM sessions 
+                WHERE ended_at IS NULL
+                ORDER BY started_at DESC
+                LIMIT 1
+            """).fetchone()
+            
+            if not session_row:
+                # No active session, get most recent closed session
+                session_row = conn.execute("""
+                    SELECT id FROM sessions 
+                    ORDER BY started_at DESC
+                    LIMIT 1
+                """).fetchone()
+            
+            if not session_row:
+                conn.close()
+                return jsonify({
+                    'session_id': None,
+                    'measurements': [],
+                    'count': 0,
+                    'message': 'No sessions found'
+                })
+            
+            session_id = session_row['id']
+        
+        # Get measurements from the last N minutes
+        rows = conn.execute("""
+            SELECT 
+                measurement_timestamp as timestamp,
+                value,
+                unit,
+                temperature,
+                temperature_unit,
+                payload_json
+            FROM measurements
+            WHERE session_id = ?
+            AND measurement_timestamp >= datetime('now', ? || ' minutes')
+            ORDER BY measurement_timestamp ASC
+        """, (session_id, -minutes)).fetchall()
+        
+        conn.close()
+        
+        # Extract measurement values 
+        measurements = []
+        for row in rows:
+            try:
+                # Measurements are stored in table columns: value, unit, temperature, temperature_unit
+                # Use these directly to determine the metric type
+                measurement = {
+                    'timestamp': row['timestamp'],
+                    'ph': None,
+                    'redox': None,
+                    'conductivity': None,
+                    'temperature': row['temperature']
+                }
+                
+                # Map the value to the correct metric based on unit
+                value = row['value']
+                unit = row['unit']
+                
+                if unit and value is not None:
+                    unit_lower = unit.lower()
+                    
+                    # pH measurement
+                    if 'ph' in unit_lower:
+                        measurement['ph'] = value
+                    
+                    # Redox/ORP measurement (mV, mV rel, etc.)
+                    elif 'mv' in unit_lower or 'orp' in unit_lower:
+                        measurement['redox'] = value
+                    
+                    # Conductivity (uS/cm, mS/cm, µS/cm, etc.)
+                    elif 'us' in unit_lower or 'ms' in unit_lower or 's/cm' in unit_lower or 'siemens' in unit_lower:
+                        measurement['conductivity'] = value
+                
+                measurements.append(measurement)
+            except (json.JSONDecodeError, KeyError, TypeError) as e:
+                logger.warning(f"Failed to parse measurement payload: {e}")
+                continue
+        
+        # Get time range
+        start_time = measurements[0]['timestamp'] if measurements else None
+        end_time = measurements[-1]['timestamp'] if measurements else None
+        
+        return jsonify({
+            'session_id': session_id,
+            'start_time': start_time,
+            'end_time': end_time,
+            'measurements': measurements,
+            'count': len(measurements)
+        })
+    
+    except Exception as e:
+        logger.error(f"Error fetching recent measurements: {e}", exc_info=True)
         return jsonify({'error': str(e)}), 500
 
 
