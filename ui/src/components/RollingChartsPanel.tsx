@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Box, Typography, Paper, Alert } from '@mui/material';
 import { MeasurementChart } from './MeasurementChart';
 import { useRecentMeasurements } from '../hooks/useRecentMeasurements';
+import { useChartSettings } from '../hooks/useChartSettings';
 
 interface RollingChartsPanelProps {
   windowMinutes?: number;
@@ -15,6 +16,15 @@ export const RollingChartsPanel: React.FC<RollingChartsPanelProps> = ({
     2000, // Poll every 2 seconds
     true
   );
+
+  // Chart settings (gap threshold, etc.)
+  const { settings, updateGapThreshold } = useChartSettings();
+  
+  // Debug: log the actual threshold value
+  console.log('[RollingChartsPanel] Gap threshold from settings:', settings.gapThresholdSeconds);
+
+  // Shared hover state across all charts (in minutes ago)
+  const [sharedHoverPosition, setSharedHoverPosition] = useState<number | null>(null);
 
   return (
     <Box sx={{ mb: 3 }}>
@@ -52,12 +62,15 @@ export const RollingChartsPanel: React.FC<RollingChartsPanelProps> = ({
               loading={loading}
               yAxisDomain={[0, 14]}
               decimalPlaces={2}
+              sharedHoverPosition={sharedHoverPosition}
+              onHoverChange={setSharedHoverPosition}
+              gapThresholdSeconds={settings.gapThresholdSeconds}
             />
           </Box>
 
           <Box>
             <MeasurementChart
-              title="Redox (ORP)"
+              title="Redox (mV)"
               data={data}
               dataKey="redox"
               color="#ff9800"
@@ -65,12 +78,15 @@ export const RollingChartsPanel: React.FC<RollingChartsPanelProps> = ({
               loading={loading}
               yAxisDomain={[-2000, 2000]}
               decimalPlaces={0}
+              sharedHoverPosition={sharedHoverPosition}
+              onHoverChange={setSharedHoverPosition}
+              gapThresholdSeconds={settings.gapThresholdSeconds}
             />
           </Box>
 
           <Box>
             <MeasurementChart
-              title="Conductivity"
+              title="Conductivity (µS/cm)"
               data={data}
               dataKey="conductivity"
               color="#4caf50"
@@ -78,12 +94,15 @@ export const RollingChartsPanel: React.FC<RollingChartsPanelProps> = ({
               loading={loading}
               yAxisDomain={[0, 10000]}
               decimalPlaces={0}
+              sharedHoverPosition={sharedHoverPosition}
+              onHoverChange={setSharedHoverPosition}
+              gapThresholdSeconds={settings.gapThresholdSeconds}
             />
           </Box>
 
           <Box>
             <MeasurementChart
-              title="Temperature"
+              title="Temperature (°C)"
               data={data}
               dataKey="temperature"
               color="#f44336"
@@ -91,6 +110,9 @@ export const RollingChartsPanel: React.FC<RollingChartsPanelProps> = ({
               loading={loading}
               yAxisDomain={[0, 50]}
               decimalPlaces={1}
+              sharedHoverPosition={sharedHoverPosition}
+              onHoverChange={setSharedHoverPosition}
+              gapThresholdSeconds={settings.gapThresholdSeconds}
             />
           </Box>
         </Box>

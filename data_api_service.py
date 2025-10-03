@@ -94,11 +94,42 @@ def live_status():
             "live_capture_active": true/false,
             "device_connected": true/false,
             "current_session_id": 123 or null,
+            "instrument": {"model": "CX-505", "serial": "00308/25"} or null,
             "last_update": "2025-09-30T12:34:56Z"
         }
     """
     import urllib.request
     import urllib.error
+    
+    # Get current session and instrument info from database
+    session_id = None
+    instrument_info = None
+    try:
+        conn = sqlite3.connect(str(db.path))
+        conn.row_factory = sqlite3.Row
+        
+        # Get most recent active session
+        session_row = conn.execute("""
+            SELECT s.id, i.serial, i.model, i.description
+            FROM sessions s
+            LEFT JOIN instruments i ON s.instrument_id = i.id
+            WHERE s.ended_at IS NULL
+            ORDER BY s.started_at DESC
+            LIMIT 1
+        """).fetchone()
+        
+        if session_row:
+            session_id = session_row['id']
+            if session_row['serial']:
+                instrument_info = {
+                    'model': session_row['model'],
+                    'serial': session_row['serial'],
+                    'description': session_row['description']
+                }
+        
+        conn.close()
+    except Exception as e:
+        logger.error(f"Error fetching session info: {e}")
     
     # Try to poll the capture service health endpoint (port 8051)
     try:
@@ -116,7 +147,8 @@ def live_status():
             return jsonify({
                 'live_capture_active': device_connected,
                 'device_connected': device_connected,
-                'current_session_id': None,  # TODO: Get from latest session in DB
+                'current_session_id': session_id,
+                'instrument': instrument_info,
                 'last_update': last_frame,
                 'mode': 'live' if device_connected else 'archive',
                 'frames_captured': capture_health.get('frames', 0)
@@ -463,6 +495,7 @@ def get_recent_measurements():
             FROM measurements
             WHERE session_id = ?
             AND created_at >= datetime('now', ? || ' minutes')
+            AND value IS NOT NULL
             ORDER BY created_at ASC
         """, (session_id, -minutes)).fetchall()
         

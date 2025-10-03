@@ -6,63 +6,24 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
   ResponsiveContainer,
+  ReferenceLine,
 } from 'recharts';
-import type { TooltipProps } from 'recharts';
 import type { MeasurementDataPoint } from '../hooks/useRecentMeasurements';
 
 interface MeasurementChartProps {
   title: string;
-  data: MeasurementDataPoint[];
+  data: MeasurementDataPoint[]; // All measurement data (all channels)
   dataKey: 'ph' | 'redox' | 'conductivity' | 'temperature';
   color: string;
   unit: string;
   loading?: boolean;
   yAxisDomain?: [number, number] | ['auto', 'auto'];
   decimalPlaces?: number;
+  sharedHoverPosition?: number | null;
+  onHoverChange?: (position: number | null) => void;
+  gapThresholdSeconds?: number;
 }
-
-const CustomTooltip: React.FC<
-  TooltipProps<number, string> & {
-    unit: string;
-    decimalPlaces: number;
-  }
-> = ({ active, payload, unit, decimalPlaces }) => {
-  if (!active || !payload || !payload.length) {
-    return null;
-  }
-
-  const data = payload[0].payload;
-  const value = payload[0].value;
-
-  // Format timestamp
-  const date = new Date(data.timestamp);
-  const timeStr = date.toLocaleTimeString('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  });
-
-  return (
-    <Paper
-      sx={{
-        padding: 1.5,
-        backgroundColor: 'rgba(255, 255, 255, 0.95)',
-        border: '1px solid #ccc',
-      }}
-    >
-      <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
-        {timeStr}
-      </Typography>
-      <Typography variant="body2" color="text.secondary">
-        {value !== null && value !== undefined
-          ? `${value.toFixed(decimalPlaces)} ${unit}`
-          : 'N/A'}
-      </Typography>
-    </Paper>
-  );
-};
 
 export const MeasurementChart: React.FC<MeasurementChartProps> = ({
   title,
@@ -73,9 +34,15 @@ export const MeasurementChart: React.FC<MeasurementChartProps> = ({
   loading = false,
   yAxisDomain = ['auto', 'auto'],
   decimalPlaces = 2,
+  sharedHoverPosition = null,
+  onHoverChange,
+  gapThresholdSeconds = 15,
 }) => {
   // Force re-render every second to update the time positions
   const [, setTick] = useState(0);
+  
+  // Track hovered data point
+  const [hoveredPoint, setHoveredPoint] = useState<any>(null);
   
   useEffect(() => {
     const interval = setInterval(() => {
@@ -108,12 +75,100 @@ export const MeasurementChart: React.FC<MeasurementChartProps> = ({
     .filter((d) => d.minutesAgo >= -10 && d.minutesAgo <= 0)
     .sort((a, b) => a.minutesAgo - b.minutesAgo);
 
-  // Debug logging to see what's happening
-  if (dataKey === 'temperature' && filteredData.length > 0) {
-    console.log(`[${title}] Now: ${new Date(now).toLocaleTimeString()}`);
-    console.log(`[${title}] Newest data:`, filteredData[filteredData.length - 1]);
-    console.log(`[${title}] minutesAgo range: ${filteredData[0]?.minutesAgo.toFixed(2)} to ${filteredData[filteredData.length - 1]?.minutesAgo.toFixed(2)}`);
-  }
+  // Create dummy data points spanning the entire time range for hover detection
+  // This ensures hover works even where there's no actual measurement data
+  const dummyDataForHover = React.useMemo(() => {
+    const points = [];
+    for (let i = -10; i <= 0; i += 0.5) { // Every 30 seconds
+      points.push({
+        minutesAgo: i,
+        dummyValue: 0, // Will be invisible
+      });
+    }
+    return points;
+  }, []);
+
+  // Insert explicit null values in measurement data where gaps are too large
+  // SMART GAP DETECTION: Use temperature as reference since it always streams in parallel
+  // Only break the line if temperature has no data (device disconnected)
+  // If temperature has data in the gap, keep lines connected (just channel timing variation)
+  const dataWithGapBreaks = React.useMemo(() => {
+    if (filteredData.length === 0) return filteredData;
+    
+    const GAP_THRESHOLD_MINUTES = gapThresholdSeconds / 60; // Convert seconds to minutes
+    const result = [];
+    
+    // Build a set of timestamps where temperature (reference channel) has data
+    // Temperature always streams, so if it has data, device was connected
+    const temperatureTimestamps = new Set();
+    chartData.forEach(point => {
+      if (point.temperature !== null && point.temperature !== undefined) {
+        temperatureTimestamps.add(point.minutesAgo);
+      }
+    });
+    
+    for (let i = 0; i < filteredData.length; i++) {
+      result.push(filteredData[i]);
+      
+      // Check if there's a large gap to the next point
+      if (i < filteredData.length - 1) {
+        const currentTime = filteredData[i].minutesAgo;
+        const nextTime = filteredData[i + 1].minutesAgo;
+        const gap = Math.abs(nextTime - currentTime);
+        
+        // Debug logging
+        if (gap > GAP_THRESHOLD_MINUTES && dataKey === 'ph') {
+          console.log(`[${dataKey}] Large gap detected:`, {
+            gap: gap * 60,
+            gapSeconds: gap * 60,
+            threshold: gapThresholdSeconds,
+            currentTime,
+            nextTime,
+            temperatureTimestampsCount: temperatureTimestamps.size
+          });
+        }
+        
+        // CORRECT LOGIC:
+        // - If temperature HAS data in gap → channel not measured intentionally → BREAK line
+        // - If temperature has NO data in gap → device offline → CONNECT if gap < threshold
+        if (gap > GAP_THRESHOLD_MINUTES) {
+          // Check if temperature (reference) has data in the gap
+          const temperatureHasDataInGap = Array.from(temperatureTimestamps).some(t => {
+            const timestamp = t as number;
+            return timestamp > currentTime && timestamp < nextTime;
+          });
+          
+          if (dataKey === 'ph') {
+            console.log(`[${dataKey}] Temperature has data in gap:`, temperatureHasDataInGap);
+          }
+          
+          // If temperature HAS data, this channel wasn't being measured → BREAK the line
+          if (temperatureHasDataInGap) {
+            if (dataKey === 'ph') {
+              console.log(`[${dataKey}] Temperature present but channel missing → Breaking line (intentional gap)`);
+            }
+            result.push({
+              ...filteredData[i],
+              [dataKey]: null, // This breaks the line
+              minutesAgo: (currentTime + nextTime) / 2, // Place in middle of gap
+            });
+          }
+          // If temperature has NO data, device was offline → keep connected (timing variation)
+          else {
+            if (dataKey === 'ph') {
+              console.log(`[${dataKey}] No temperature data → Keeping connected (device offline, not intentional gap)`);
+            }
+          }
+        }
+      }
+    }
+    
+    return result;
+  }, [filteredData, dataKey, gapThresholdSeconds, chartData]);
+
+  // Use dataWithGapBreaks directly for rendering
+  // Hover will work where there's data, which is sufficient
+  const combinedData = dataWithGapBreaks;
 
   // Format time for X-axis (show minutes ago)
   const formatTime = (minutesAgo: number) => {
@@ -126,6 +181,44 @@ export const MeasurementChart: React.FC<MeasurementChartProps> = ({
   const xDomain: [number, number] = [-10, 0];
   const xTicks = [-10, -8, -6, -4, -2, 0];
 
+  // Find data point closest to shared hover position
+  const hoverPoint = React.useMemo(() => {
+    if (sharedHoverPosition === null || filteredData.length === 0) {
+      return null;
+    }
+    
+    // Find the closest data point to the hover position
+    let closest = filteredData[0];
+    let minDistance = Math.abs(filteredData[0].minutesAgo - sharedHoverPosition);
+    
+    for (const point of filteredData) {
+      const distance = Math.abs(point.minutesAgo - sharedHoverPosition);
+      if (distance < minDistance) {
+        minDistance = distance;
+        closest = point;
+      }
+    }
+    
+    // Only return if reasonably close (within 0.5 minutes)
+    if (minDistance < 0.5) {
+      return closest;
+    }
+    return null;
+  }, [sharedHoverPosition, filteredData]);
+
+  // Format hover value display
+  const hoverDisplay = hoverPoint ? (
+    <>
+      <strong>{hoverPoint[dataKey]?.toFixed(decimalPlaces)} {unit}</strong>
+      {' @ '}
+      {new Date(hoverPoint.timestamp).toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      })}
+    </>
+  ) : null;
+
   return (
     <Paper
       elevation={2}
@@ -136,9 +229,14 @@ export const MeasurementChart: React.FC<MeasurementChartProps> = ({
         flexDirection: 'column',
       }}
     >
-      <Typography variant="h6" gutterBottom>
-        {title}
-      </Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1, ml: 6 }}>
+        <Typography variant="h6">
+          {title}
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          {hoverDisplay}
+        </Typography>
+      </Box>
 
       {loading ? (
         <Box
@@ -154,8 +252,32 @@ export const MeasurementChart: React.FC<MeasurementChartProps> = ({
       ) : (
         <ResponsiveContainer width="100%" height={200}>
           <LineChart
-            data={filteredData}
+            data={combinedData}
             margin={{ top: 5, right: 20, left: 10, bottom: 5 }}
+            onMouseMove={(e: any) => {
+              // Use activeLabel (x-axis value) for shared hover position
+              if (e && e.activeLabel !== undefined) {
+                const minutesAgo = e.activeLabel;
+                console.log(`[${title}] Hover at x position:`, minutesAgo);
+                
+                // Find the closest data point for local hover display
+                if (e.activePayload && e.activePayload.length > 0) {
+                  setHoveredPoint(e.activePayload[0].payload);
+                }
+                
+                // Update shared hover position for all charts
+                if (onHoverChange) {
+                  onHoverChange(minutesAgo);
+                }
+              }
+            }}
+            onMouseLeave={() => {
+              setHoveredPoint(null);
+              // Clear shared hover position
+              if (onHoverChange) {
+                onHoverChange(null);
+              }
+            }}
           >
             <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
             <XAxis
@@ -177,9 +299,18 @@ export const MeasurementChart: React.FC<MeasurementChartProps> = ({
               allowDataOverflow={true}
               scale="linear"
             />
-            <Tooltip
-              content={<CustomTooltip unit={unit} decimalPlaces={decimalPlaces} />}
-            />
+            {/* Show vertical guideline at shared hover position */}
+            {sharedHoverPosition !== null && (
+              <ReferenceLine
+                x={sharedHoverPosition}
+                stroke="#ccc"
+                strokeWidth={1}
+                strokeDasharray="3 3"
+                isFront={true}
+                label=""
+              />
+            )}
+            {/* Measurement data line */}
             <Line
               type="monotone"
               dataKey={dataKey}

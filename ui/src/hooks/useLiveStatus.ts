@@ -7,6 +7,11 @@ export interface LiveStatusResponse {
   mode: 'live' | 'archive';
   current_session_id: number | null;
   last_update: string | null;
+  instrument?: {
+    model: string;
+    serial: string;
+    description: string;
+  } | null;
 }
 
 const fetchLiveStatus = async (signal?: AbortSignal): Promise<LiveStatusResponse> => {

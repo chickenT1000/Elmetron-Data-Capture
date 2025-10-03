@@ -112,7 +112,7 @@ export default function DashboardPage() {
   const measurementState: MeasurementPanelState = (() => {
     // In archive mode, skip loading states and show static message
     if (isArchiveMode) {
-      return { status: 'empty', message: 'CX-505 not connected. Browse historical sessions in the Sessions tab.' };
+      return { status: 'empty', message: 'Device not connected. Browse historical sessions in the Sessions tab.' };
     }
 
     if (healthLoading) {
@@ -177,11 +177,21 @@ export default function DashboardPage() {
     ? 'No recent frames detected from the instrument.'
     : 'No recent log events.';
 
+  // Get device info from live status
+  const deviceTitle = liveStatus?.instrument 
+    ? `${liveStatus.instrument.model} (S/N: ${liveStatus.instrument.serial})`
+    : 'Elmetron Device';
+
   return (
     <Stack spacing={3} sx={{ py: 3 }}>
       <Typography variant="h4" component="h1" fontWeight={600}>
-        Service Health Dashboard
+        {deviceTitle} Dashboard
       </Typography>
+      {liveStatus?.instrument && (
+        <Typography variant="body2" color="text.secondary" sx={{ mt: -2 }}>
+          {liveStatus.instrument.description}
+        </Typography>
+      )}
       <MeasurementPanel state={measurementState} metrics={metricCards} />
       <RollingChartsPanel windowMinutes={10} />
       {!isArchiveMode && (
