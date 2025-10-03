@@ -454,7 +454,7 @@ def get_recent_measurements():
         # Get measurements from the last N minutes
         rows = conn.execute("""
             SELECT 
-                measurement_timestamp as timestamp,
+                datetime(created_at, 'localtime') as timestamp,
                 value,
                 unit,
                 temperature,
@@ -462,8 +462,8 @@ def get_recent_measurements():
                 payload_json
             FROM measurements
             WHERE session_id = ?
-            AND measurement_timestamp >= datetime('now', ? || ' minutes')
-            ORDER BY measurement_timestamp ASC
+            AND created_at >= datetime('now', ? || ' minutes')
+            ORDER BY created_at ASC
         """, (session_id, -minutes)).fetchall()
         
         conn.close()

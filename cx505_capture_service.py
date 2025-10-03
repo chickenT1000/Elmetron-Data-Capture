@@ -112,14 +112,14 @@ def main(argv: list[str] | None = None) -> int:
             delete_after_recovery=True
         )
         if recovery_summary["recovered_sessions"] > 0:
-            print(f'✅ Recovered {recovery_summary["recovered_measurements"]} '
+            print(f'[OK] Recovered {recovery_summary["recovered_measurements"]} '
                   f'measurements from {recovery_summary["recovered_sessions"]} crashed session(s)')
             for session_id in recovery_summary["session_ids"]:
                 print(f'   - Session {session_id}: {recovery_summary["sessions"][session_id]["measurements"]} measurements')
         else:
             print('   No orphaned buffers found.')
     except Exception as exc:
-        print(f'⚠️  Warning: Buffer recovery failed: {exc}')
+        print(f'[WARNING] Buffer recovery failed: {exc}')
         print('   Continuing with normal startup...')
 
     print('Connected hardware:')

@@ -551,6 +551,45 @@ t
 [2m14:15:59[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/DashboardPage.tsx[22m
 [2m14:32:24[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/RollingChartsPanel.tsx[22m
 [2m14:32:46[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/RollingChartsPanel.tsx[22m
+[2m09:30:41[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/MeasurementChart.tsx[22m
+[2m09:31:13[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/MeasurementChart.tsx[22m
+[2m09:31:57[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/RollingChartsPanel.tsx[22m
+[2m09:40:32[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/MeasurementChart.tsx[22m
+
+> ui@0.0.0 dev
+> vite --host 127.0.0.1 --port 5173 --strictPort
+
+
+> ui@0.0.0 dev
+> vite --host 127.0.0.1 --port 5173 --strictPort
+
+
+> ui@0.0.0 dev
+> vite --host 127.0.0.1 --port 5173 --strictPort
+
+
+> ui@0.0.0 dev
+> vite --host 127.0.0.1 --port 5173 --strictPort
+
+
+  [32m[1mVITE[22m v7.1.7[39m  [2mready in [0m[1m630[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://127.0.0.1:[1m5173[22m/[39m
+[2m[32m  ➜[39m[22m[2m  press [22m[1mh + enter[22m[2m to show help[22m
+[2m09:58:33[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/MeasurementChart.tsx[22m
+[2m09:58:59[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/MeasurementChart.tsx[22m
+[2m09:59:23[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/MeasurementChart.tsx[22m
+[2m10:39:44[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/MeasurementChart.tsx[22m
+[2m10:40:05[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/MeasurementChart.tsx[22m
+[2m10:40:28[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/MeasurementChart.tsx[22m
+[2m11:07:12[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/MeasurementChart.tsx[22m
+[2m11:07:38[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/MeasurementChart.tsx[22m
+[2m11:08:01[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/MeasurementChart.tsx[22m
+[2m11:11:08[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/MeasurementChart.tsx[22m
+
+> ui@0.0.0 dev
+> vite --host 127.0.0.1 --port 5173 --strictPort
+
 
 > ui@0.0.0 dev
 > vite --host 127.0.0.1 --port 5173 --strictPort

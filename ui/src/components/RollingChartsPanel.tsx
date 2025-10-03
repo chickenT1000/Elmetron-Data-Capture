@@ -64,7 +64,7 @@ export const RollingChartsPanel: React.FC<RollingChartsPanelProps> = ({
               unit="mV"
               loading={loading}
               yAxisDomain={[-2000, 2000]}
-              decimalPlaces={1}
+              decimalPlaces={0}
             />
           </Box>
 
@@ -76,8 +76,8 @@ export const RollingChartsPanel: React.FC<RollingChartsPanelProps> = ({
               color="#4caf50"
               unit="µS/cm"
               loading={loading}
-              yAxisDomain={['auto', 'auto']}
-              decimalPlaces={1}
+              yAxisDomain={[0, 10000]}
+              decimalPlaces={0}
             />
           </Box>
 
@@ -89,7 +89,7 @@ export const RollingChartsPanel: React.FC<RollingChartsPanelProps> = ({
               color="#f44336"
               unit="°C"
               loading={loading}
-              yAxisDomain={['auto', 'auto']}
+              yAxisDomain={[0, 50]}
               decimalPlaces={1}
             />
           </Box>
