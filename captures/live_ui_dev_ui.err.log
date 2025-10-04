@@ -2751,51 +2751,137 @@ Error: Port 5173 is already in use
     at Server.emit (node:events:519:28)
     at emitErrorNT (node:net:1976:8)
     at process.processTicksAndRejections (node:internal/process/task_queues:90:21)[39m
-[31merror when starting dev server:
-Error: Port 5173 is already in use
-    at Server.onError$1 (file:///C:/Users/EKO/Desktop/GitHub/Elmetron-Data-Capture/ui/node_modules/vite/dist/node/chunks/dep-Bm2ujbhY.js:18449:28)
-    at Server.emit (node:events:519:28)
-    at emitErrorNT (node:net:1976:8)
-    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)[39m
-[31merror when starting dev server:
-Error: Port 5173 is already in use
-    at Server.onError$1 (file:///C:/Users/EKO/Desktop/GitHub/Elmetron-Data-Capture/ui/node_modules/vite/dist/node/chunks/dep-Bm2ujbhY.js:18449:28)
-    at Server.emit (node:events:519:28)
-    at emitErrorNT (node:net:1976:8)
-    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)[39m
-[31merror when starting dev server:
-Error: Port 5173 is already in use
-    at Server.onError$1 (file:///C:/Users/EKO/Desktop/GitHub/Elmetron-Data-Capture/ui/node_modules/vite/dist/node/chunks/dep-Bm2ujbhY.js:18449:28)
-    at Server.emit (node:events:519:28)
-    at emitErrorNT (node:net:1976:8)
-    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)[39m
-[31merror when starting dev server:
-Error: Port 5173 is already in use
-    at Server.onError$1 (file:///C:/Users/EKO/Desktop/GitHub/Elmetron-Data-Capture/ui/node_modules/vite/dist/node/chunks/dep-Bm2ujbhY.js:18449:28)
-    at Server.emit (node:events:519:28)
-    at emitErrorNT (node:net:1976:8)
-    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)[39m
-[31merror when starting dev server:
-Error: Port 5173 is already in use
-    at Server.onError$1 (file:///C:/Users/EKO/Desktop/GitHub/Elmetron-Data-Capture/ui/node_modules/vite/dist/node/chunks/dep-Bm2ujbhY.js:18449:28)
-    at Server.emit (node:events:519:28)
-    at emitErrorNT (node:net:1976:8)
-    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)[39m
-[31merror when starting dev server:
-Error: Port 5173 is already in use
-    at Server.onError$1 (file:///C:/Users/EKO/Desktop/GitHub/Elmetron-Data-Capture/ui/node_modules/vite/dist/node/chunks/dep-Bm2ujbhY.js:18449:28)
-    at Server.emit (node:events:519:28)
-    at emitErrorNT (node:net:1976:8)
-    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)[39m
-[31merror when starting dev server:
-Error: Port 5173 is already in use
-    at Server.onError$1 (file:///C:/Users/EKO/Desktop/GitHub/Elmetron-Data-Capture/ui/node_modules/vite/dist/node/chunks/dep-Bm2ujbhY.js:18449:28)
-    at Server.emit (node:events:519:28)
-    at emitErrorNT (node:net:1976:8)
-    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)[39m
-[31merror when starting dev server:
-Error: Port 5173 is already in use
-    at Server.onError$1 (file:///C:/Users/EKO/Desktop/GitHub/Elmetron-Data-Capture/ui/node_modules/vite/dist/node/chunks/dep-Bm2ujbhY.js:18449:28)
-    at Server.emit (node:events:519:28)
-    at emitErrorNT (node:net:1976:8)
-    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)[39m
+[2m21:05:15[22m [31m[1m[vite][22m[39m [31mInternal server error: C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\src\components\RollingChartsPanel.tsx: Expected corresponding JSX closing tag for <Box>. (115:6)
+
+[0m [90m 113 |[31m           [33m<[31m[33m/[31m[33mBox[31m[33m>[31m
+ [90m 114 |[31m         [33m<[31m[33m/[31m[33mBox[31m[33m>[31m
+[31m[1m>[22m[31m[90m 115 |[31m       [33m<[31m[33m/[31m[33mPaper[31m[33m>[31m
+ [90m     |[31m       [31m[1m^[22m[31m
+ [90m 116 |[31m     [33m<[31m[33m/[31m[33mBox[31m[33m>[31m
+ [90m 117 |[31m   )[33m;[31m
+ [90m 118 |[31m }[33m;[31m[0m[39m
+  Plugin: [35mvite:react-babel[39m
+  File: [36mC:/Users/EKO/Desktop/GitHub/Elmetron-Data-Capture/ui/src/components/RollingChartsPanel.tsx[39m:115:6
+[33m  113 |            </Box>
+  114 |          </Box>
+  115 |        </Paper>
+      |        ^
+  116 |      </Box>
+  117 |    );[39m
+      at constructor (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:367:19)
+      at TypeScriptParserMixin.raise (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:6630:19)
+      at TypeScriptParserMixin.jsxParseElementAt (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:4760:16)
+      at TypeScriptParserMixin.jsxParseElement (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:4782:17)
+      at TypeScriptParserMixin.parseExprAtom (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:4792:19)
+      at TypeScriptParserMixin.parseExprSubscripts (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:11085:23)
+      at TypeScriptParserMixin.parseUpdate (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:11070:21)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:11050:23)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:9857:18)
+      at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:10903:61)
+      at TypeScriptParserMixin.parseExprOps (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:10908:23)
+      at TypeScriptParserMixin.parseMaybeConditional (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:10885:23)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:10835:21)
+      at C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:9795:39
+      at TypeScriptParserMixin.tryParse (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:6938:20)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:9795:18)
+      at C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:10804:39
+      at TypeScriptParserMixin.allowInAnd (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:12436:12)
+      at TypeScriptParserMixin.parseMaybeAssignAllowIn (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:10804:17)
+      at TypeScriptParserMixin.parseMaybeAssignAllowInOrVoidPattern (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:12503:17)
+      at TypeScriptParserMixin.parseParenAndDistinguishExpression (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:11683:28)
+      at TypeScriptParserMixin.parseExprAtom (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:11335:23)
+      at TypeScriptParserMixin.parseExprAtom (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:4797:20)
+      at TypeScriptParserMixin.parseExprSubscripts (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:11085:23)
+      at TypeScriptParserMixin.parseUpdate (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:11070:21)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:11050:23)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:9857:18)
+      at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:10903:61)
+      at TypeScriptParserMixin.parseExprOps (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:10908:23)
+      at TypeScriptParserMixin.parseMaybeConditional (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:10885:23)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:10835:21)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:9806:20)
+      at TypeScriptParserMixin.parseExpressionBase (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:10788:23)
+      at C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:10784:39
+      at TypeScriptParserMixin.allowInAnd (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:12431:16)
+      at TypeScriptParserMixin.parseExpression (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:10784:17)
+      at TypeScriptParserMixin.parseReturnStatement (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:13151:28)
+      at TypeScriptParserMixin.parseStatementContent (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:12807:21)
+      at TypeScriptParserMixin.parseStatementContent (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:9532:18)
+      at TypeScriptParserMixin.parseStatementLike (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:12776:17)
+      at TypeScriptParserMixin.parseStatementListItem (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:12756:17)
+      at TypeScriptParserMixin.parseBlockOrModuleBlockBody (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:13325:61)
+      at TypeScriptParserMixin.parseBlockBody (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:13318:10)
+      at TypeScriptParserMixin.parseBlock (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:13306:10)
+      at TypeScriptParserMixin.parseFunctionBody (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:12110:24)
+      at TypeScriptParserMixin.parseArrowExpression (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:12085:10)
+      at TypeScriptParserMixin.parseParenAndDistinguishExpression (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:11695:12)
+      at TypeScriptParserMixin.parseExprAtom (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:11335:23)
+      at TypeScriptParserMixin.parseExprAtom (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:4797:20)
+      at TypeScriptParserMixin.parseExprSubscripts (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:11085:23)
+[2m21:06:15[22m [31m[1m[vite][22m[39m [31mInternal server error: C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\src\components\MeasurementChart.tsx: Expected corresponding JSX closing tag for <Box>. (432:4)
+
+[0m [90m 430 |[31m           [33m:[31m [32m'Waiting for measurements...'[31m}
+ [90m 431 |[31m       [33m<[31m[33m/[31m[33mTypography[31m[33m>[31m
+[31m[1m>[22m[31m[90m 432 |[31m     [33m<[31m[33m/[31m[33mPaper[31m[33m>[31m
+ [90m     |[31m     [31m[1m^[22m[31m
+ [90m 433 |[31m   )[33m;[31m
+ [90m 434 |[31m }[33m;[31m
+ [90m 435 |[31m[0m[39m
+  Plugin: [35mvite:react-babel[39m
+  File: [36mC:/Users/EKO/Desktop/GitHub/Elmetron-Data-Capture/ui/src/components/MeasurementChart.tsx[39m:432:4
+[33m  430 |            : 'Waiting for measurements...'}
+  431 |        </Typography>
+  432 |      </Paper>
+      |      ^
+  433 |    );
+  434 |  };[39m
+      at constructor (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:367:19)
+      at TypeScriptParserMixin.raise (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:6630:19)
+      at TypeScriptParserMixin.jsxParseElementAt (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:4760:16)
+      at TypeScriptParserMixin.jsxParseElement (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:4782:17)
+      at TypeScriptParserMixin.parseExprAtom (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:4792:19)
+      at TypeScriptParserMixin.parseExprSubscripts (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:11085:23)
+      at TypeScriptParserMixin.parseUpdate (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:11070:21)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:11050:23)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:9857:18)
+      at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:10903:61)
+      at TypeScriptParserMixin.parseExprOps (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:10908:23)
+      at TypeScriptParserMixin.parseMaybeConditional (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:10885:23)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:10835:21)
+      at C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:9795:39
+      at TypeScriptParserMixin.tryParse (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:6938:20)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:9795:18)
+      at C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:10804:39
+      at TypeScriptParserMixin.allowInAnd (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:12436:12)
+      at TypeScriptParserMixin.parseMaybeAssignAllowIn (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:10804:17)
+      at TypeScriptParserMixin.parseMaybeAssignAllowInOrVoidPattern (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:12503:17)
+      at TypeScriptParserMixin.parseParenAndDistinguishExpression (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:11683:28)
+      at TypeScriptParserMixin.parseExprAtom (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:11335:23)
+      at TypeScriptParserMixin.parseExprAtom (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:4797:20)
+      at TypeScriptParserMixin.parseExprSubscripts (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:11085:23)
+      at TypeScriptParserMixin.parseUpdate (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:11070:21)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:11050:23)
+      at TypeScriptParserMixin.parseMaybeUnary (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:9857:18)
+      at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:10903:61)
+      at TypeScriptParserMixin.parseExprOps (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:10908:23)
+      at TypeScriptParserMixin.parseMaybeConditional (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:10885:23)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:10835:21)
+      at TypeScriptParserMixin.parseMaybeAssign (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:9806:20)
+      at TypeScriptParserMixin.parseExpressionBase (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:10788:23)
+      at C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:10784:39
+      at TypeScriptParserMixin.allowInAnd (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:12431:16)
+      at TypeScriptParserMixin.parseExpression (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:10784:17)
+      at TypeScriptParserMixin.parseReturnStatement (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:13151:28)
+      at TypeScriptParserMixin.parseStatementContent (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:12807:21)
+      at TypeScriptParserMixin.parseStatementContent (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:9532:18)
+      at TypeScriptParserMixin.parseStatementLike (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:12776:17)
+      at TypeScriptParserMixin.parseStatementListItem (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:12756:17)
+      at TypeScriptParserMixin.parseBlockOrModuleBlockBody (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:13325:61)
+      at TypeScriptParserMixin.parseBlockBody (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:13318:10)
+      at TypeScriptParserMixin.parseBlock (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:13306:10)
+      at TypeScriptParserMixin.parseFunctionBody (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:12110:24)
+      at TypeScriptParserMixin.parseArrowExpression (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:12085:10)
+      at TypeScriptParserMixin.parseParenAndDistinguishExpression (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:11695:12)
+      at TypeScriptParserMixin.parseExprAtom (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:11335:23)
+      at TypeScriptParserMixin.parseExprAtom (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:4797:20)
+      at TypeScriptParserMixin.parseExprSubscripts (C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture\ui\node_modules\@babel\parser\lib\index.js:11085:23)

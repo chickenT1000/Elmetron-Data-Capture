@@ -31,30 +31,19 @@ export const RollingChartsPanel: React.FC<RollingChartsPanelProps> = ({
 
   return (
     <Box sx={{ mb: 3 }}>
-      <Paper elevation={3} sx={{ p: 3 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Typography variant="h5" component="h2">
-            Rolling Measurement Trends
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Last {windowMinutes} minutes
-            {sessionId && ` - Session #${sessionId}`}
-          </Typography>
-        </Box>
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          Failed to load measurement data: {error.message}
+        </Alert>
+      )}
 
-        {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            Failed to load measurement data: {error.message}
-          </Alert>
-        )}
+      {!loading && !error && data.length === 0 && (
+        <Alert severity="info" sx={{ mb: 2 }}>
+          No measurement data available. Start a capture session to see live trends.
+        </Alert>
+      )}
 
-        {!loading && !error && data.length === 0 && (
-          <Alert severity="info" sx={{ mb: 2 }}>
-            No measurement data available. Start a capture session to see live trends.
-          </Alert>
-        )}
-
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
           <Box>
             <MeasurementChart
               title="pH"
@@ -123,7 +112,6 @@ export const RollingChartsPanel: React.FC<RollingChartsPanelProps> = ({
             />
           </Box>
         </Box>
-      </Paper>
     </Box>
   );
 };

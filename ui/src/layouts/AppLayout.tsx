@@ -23,6 +23,7 @@ import Brightness7Icon from '@mui/icons-material/Brightness7';
 import { appRoutes } from '../routes/navigation';
 import { useLiveStatus } from '../hooks/useLiveStatus';
 import { useHealthStatus } from '../hooks/useHealthStatus';
+import { useHealthLogEvents } from '../hooks/useHealthLogEvents';
 import { useSettings } from '../contexts/SettingsContext';
 
 const drawerWidth = 240;
@@ -40,6 +41,7 @@ export function AppLayout({ onToggleTheme, isDarkMode = false }: AppLayoutProps)
 
   const { data: liveStatus } = useLiveStatus();
   const { data: health } = useHealthStatus(3000);
+  const { connectionState: logConnectionState } = useHealthLogEvents({ limit: 5, fallbackMs: 5000 });
   const { settings } = useSettings();
 
   const handleDrawerToggle = () => {
@@ -53,7 +55,7 @@ export function AppLayout({ onToggleTheme, isDarkMode = false }: AppLayoutProps)
   // Determine mode
   const mode = liveStatus?.mode ?? 'archive';
   const isLiveMode = mode === 'live';
-  const modeColor = isLiveMode ? 'success' : 'info';
+  const modeColor = isLiveMode ? 'success' : 'default';
 
   // Device info
   const deviceLabel = liveStatus?.instrument
@@ -63,12 +65,59 @@ export function AppLayout({ onToggleTheme, isDarkMode = false }: AppLayoutProps)
   const deviceConnected = liveStatus?.device_connected ?? false;
   const deviceColor = deviceConnected ? 'success' : 'default';
 
-  // Health status (aggregate)
-  const healthStatus = health?.watchdog_alert
-    ? 'error'
-    : health?.state === 'running'
-    ? 'success'
-    : 'warning';
+  // Service Health Aggregation
+  // Comprehensive health check combining multiple indicators
+  const getServiceHealth = (): { status: 'error' | 'warning' | 'success'; tooltip: string } => {
+    // CRITICAL (RED DOT) - Service is broken or critical failure
+    if (health?.watchdog_alert) {
+      return { status: 'error', tooltip: '🔴 Critical: Watchdog alert detected - service may be hung' };
+    }
+    
+    if (!health) {
+      return { status: 'error', tooltip: '🔴 Critical: Cannot reach health API - service may be down' };
+    }
+
+    // WARNING (YELLOW DOT) - Service is running but has issues
+    const warnings: string[] = [];
+    
+    // 1. Capture service not running
+    if (health.state !== 'running') {
+      warnings.push('Capture service not running');
+    }
+    
+    // 2. Log connection issues in Live Mode
+    if (isLiveMode && logConnectionState === 'error') {
+      warnings.push('Log stream connection failed');
+    }
+    
+    // 3. No device connected in Live Mode (should be connected)
+    if (isLiveMode && !deviceConnected) {
+      warnings.push('Device not connected');
+    }
+    
+    // 4. Log stream idle in Live Mode (expected to be streaming/polling)
+    if (isLiveMode && logConnectionState !== 'streaming' && logConnectionState !== 'polling') {
+      warnings.push('Log stream idle');
+    }
+
+    // If we have warnings, return yellow dot
+    if (warnings.length > 0) {
+      return { 
+        status: 'warning', 
+        tooltip: `⚠️ Warning: ${warnings.join(', ')}` 
+      };
+    }
+
+    // HEALTHY (GREEN DOT) - Everything is working
+    return { 
+      status: 'success', 
+      tooltip: '✓ All services healthy and operating normally' 
+    };
+  };
+
+  const serviceHealth = getServiceHealth();
+  const healthStatus = serviceHealth.status;
+  const healthTooltip = serviceHealth.tooltip;
 
   const drawer = (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -157,11 +206,7 @@ export function AppLayout({ onToggleTheme, isDarkMode = false }: AppLayoutProps)
           </Tooltip>
 
           {/* CENTER: Service Health */}
-          <Tooltip title={
-            healthStatus === 'error' ? 'Service health critical - check Service Health tab' :
-            healthStatus === 'warning' ? 'Service warnings detected' :
-            'All services healthy'
-          }>
+          <Tooltip title={healthTooltip}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <FiberManualRecordIcon 
                 color={healthStatus} 
@@ -173,7 +218,7 @@ export function AppLayout({ onToggleTheme, isDarkMode = false }: AppLayoutProps)
             </Box>
           </Tooltip>
 
-          {/* Recording Toggle */}
+          {/* Recording Indicator */}
           <Tooltip title={recordingEnabled ? "Recording ON - Data is being saved to database" : "Recording OFF - Data will NOT be saved"}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <FiberManualRecordIcon 
@@ -183,12 +228,6 @@ export function AppLayout({ onToggleTheme, isDarkMode = false }: AppLayoutProps)
               <Typography variant="body2" color="text.secondary">
                 Recording
               </Typography>
-              <Switch 
-                size="small" 
-                checked={recordingEnabled} 
-                onChange={handleRecordingToggle}
-                disabled={!isLiveMode}
-              />
             </Box>
           </Tooltip>
 
@@ -247,7 +286,7 @@ export function AppLayout({ onToggleTheme, isDarkMode = false }: AppLayoutProps)
           backgroundColor: 'background.default',
         }}
       >
-        <Outlet />
+        <Outlet context={{ recordingEnabled, onRecordingToggle: handleRecordingToggle }} />
       </Box>
     </Box>
   );

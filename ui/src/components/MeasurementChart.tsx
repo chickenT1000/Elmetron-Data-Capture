@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Typography, Paper, CircularProgress } from '@mui/material';
+import { Box, Typography, CircularProgress } from '@mui/material';
+import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 import {
   LineChart,
   Line,
@@ -299,20 +300,40 @@ export const MeasurementChart: React.FC<MeasurementChartProps> = ({
     </>
   ) : null;
 
+  // Check if data is actively incoming (has recent data within last 5 seconds)
+  // IMPORTANT: Check actual timestamp, not minutesAgo (which is recalculated every render)
+  const hasRecentData = React.useMemo(() => {
+    if (filteredData.length === 0) return false;
+    const mostRecentPoint = filteredData[filteredData.length - 1];
+    
+    // Calculate actual time difference using timestamps
+    const dataTimestamp = new Date(mostRecentPoint.timestamp).getTime();
+    const currentTime = Date.now();
+    const ageMilliseconds = currentTime - dataTimestamp;
+    
+    // Data is "incoming" if most recent point is less than 5 seconds old
+    // This makes the indicator very responsive to mode changes
+    return ageMilliseconds < 5000; // 5 seconds in milliseconds
+  }, [filteredData]);
+
   return (
-    <Paper
-      elevation={2}
+    <Box
       sx={{
-        padding: 2,
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
       }}
     >
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1, ml: 6 }}>
-        <Typography variant="h6">
-          {title}
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <FiberManualRecordIcon 
+            color={hasRecentData ? 'success' : 'default'} 
+            sx={{ fontSize: 12 }} 
+          />
+          <Typography variant="h6">
+            {title}
+          </Typography>
+        </Box>
         <Typography variant="body2" color="text.secondary">
           {hoverDisplay}
         </Typography>
@@ -406,16 +427,6 @@ export const MeasurementChart: React.FC<MeasurementChartProps> = ({
           </LineChart>
         </ResponsiveContainer>
       )}
-
-      <Typography
-        variant="caption"
-        color="text.secondary"
-        sx={{ mt: 1, textAlign: 'center' }}
-      >
-        {filteredData.length > 0
-          ? `${filteredData.length} data points`
-          : 'Waiting for measurements...'}
-      </Typography>
-    </Paper>
+    </Box>
   );
 };

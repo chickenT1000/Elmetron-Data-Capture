@@ -1,4 +1,5 @@
 ﻿import { Stack, Typography } from '@mui/material';
+import { useOutletContext } from 'react-router-dom';
 import { useHealthStatus } from '../hooks/useHealthStatus';
 import { useHealthLogEvents, type HealthLogConnectionState } from '../hooks/useHealthLogEvents';
 import { useLiveStatus } from '../hooks/useLiveStatus';
@@ -7,6 +8,11 @@ import { RollingChartsPanel } from '../components/RollingChartsPanel';
 import type {
   MeasurementPanelState,
 } from '../components/contracts';
+
+interface OutletContext {
+  recordingEnabled: boolean;
+  onRecordingToggle: () => void;
+}
 
 const formatNumber = (value?: number | null, digits = 2): string => {
   if (value === undefined || value === null || Number.isNaN(value)) {
@@ -34,8 +40,10 @@ const normaliseLogStream = (state: HealthLogConnectionState): 'streaming' | 'pol
 
 
 export default function DashboardPage() {
+  const { recordingEnabled, onRecordingToggle } = useOutletContext<OutletContext>();
   const { data: liveStatus } = useLiveStatus();
   const isArchiveMode = liveStatus?.mode === 'archive';
+  const isLiveMode = liveStatus?.mode === 'live';
 
   const {
     data: health,
@@ -100,7 +108,12 @@ export default function DashboardPage() {
 
   return (
     <Stack spacing={3} sx={{ py: 3 }}>
-      <MeasurementPanel state={measurementState} />
+      <MeasurementPanel 
+        state={measurementState} 
+        recordingEnabled={recordingEnabled}
+        onRecordingToggle={onRecordingToggle}
+        isLiveMode={isLiveMode}
+      />
       <RollingChartsPanel windowMinutes={10} />
     </Stack>
   );
