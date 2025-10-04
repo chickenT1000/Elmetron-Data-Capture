@@ -14,14 +14,16 @@ import {
   CssBaseline,
   Divider,
   Tooltip,
+  Switch,
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
 import { appRoutes } from '../routes/navigation';
-import { CloseWarningBanner } from '../components/CloseWarningBanner';
-import { ModeBanner } from '../components/ModeBanner';
+import { useLiveStatus } from '../hooks/useLiveStatus';
+import { useHealthStatus } from '../hooks/useHealthStatus';
+import { useSettings } from '../contexts/SettingsContext';
 
 const drawerWidth = 240;
 
@@ -32,21 +34,50 @@ interface AppLayoutProps {
 
 export function AppLayout({ onToggleTheme, isDarkMode = false }: AppLayoutProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [recordingEnabled, setRecordingEnabled] = useState(true); // Simple on/off, default ON
   const location = useLocation();
   const navigate = useNavigate();
+
+  const { data: liveStatus } = useLiveStatus();
+  const { data: health } = useHealthStatus(3000);
+  const { settings } = useSettings();
 
   const handleDrawerToggle = () => {
     setMobileOpen((prev) => !prev);
   };
 
+  const handleRecordingToggle = () => {
+    setRecordingEnabled((prev) => !prev);
+  };
+
+  // Determine mode
+  const mode = liveStatus?.mode ?? 'archive';
+  const isLiveMode = mode === 'live';
+  const modeColor = isLiveMode ? 'success' : 'info';
+
+  // Device info
+  const deviceLabel = liveStatus?.instrument
+    ? `${liveStatus.instrument.model} · ${liveStatus.instrument.serial}`
+    : 'No Device Connected';
+  
+  const deviceConnected = liveStatus?.device_connected ?? false;
+  const deviceColor = deviceConnected ? 'success' : 'default';
+
+  // Health status (aggregate)
+  const healthStatus = health?.watchdog_alert
+    ? 'error'
+    : health?.state === 'running'
+    ? 'success'
+    : 'warning';
+
   const drawer = (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <Box sx={{ px: 2, py: 3 }}>
         <Typography variant="h6" fontWeight={700} color="primary">
-          Elmetron UI
+          Elmetron
         </Typography>
         <Typography variant="body2" color="text.secondary">
-          CX-505 Monitoring Suite
+          Monitoring Suite
         </Typography>
       </Box>
       <Divider />
@@ -70,16 +101,6 @@ export function AppLayout({ onToggleTheme, isDarkMode = false }: AppLayoutProps)
           );
         })}
       </List>
-      <Divider />
-      <Box sx={{ px: 2, py: 2 }}>
-        <Typography variant="caption" color="text.secondary">
-          Device:
-        </Typography>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <FiberManualRecordIcon color="success" sx={{ fontSize: 12 }} />
-          <Typography variant="body2">CX-505 Serial 00213</Typography>
-        </Box>
-      </Box>
     </Box>
   );
 
@@ -96,31 +117,91 @@ export function AppLayout({ onToggleTheme, isDarkMode = false }: AppLayoutProps)
         }}
         color="inherit"
       >
-        <Toolbar sx={{ display: 'flex', justifyContent: 'space-between' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Toolbar sx={{ display: 'flex', justifyContent: 'space-between', gap: 3, flexWrap: 'wrap', py: 1 }}>
+          {/* LEFT: Mobile menu + Mode */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
             <IconButton
               color="inherit"
               aria-label="open drawer"
               edge="start"
               onClick={handleDrawerToggle}
-              sx={{ mr: 2, display: { sm: 'none' } }}
+              sx={{ mr: 0, display: { sm: 'none' } }}
             >
               <MenuIcon />
             </IconButton>
-            <Typography variant="h6" fontWeight={600} color="primary">
-              CX-505 Live Monitoring
-            </Typography>
+            
+            {/* Mode Indicator */}
+            <Tooltip title={isLiveMode ? "Device is connected and streaming data" : "No device connected, viewing historical data"}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <FiberManualRecordIcon 
+                  color={modeColor} 
+                  sx={{ fontSize: 12 }} 
+                />
+                <Typography variant="body2" color="text.secondary">
+                  {isLiveMode ? 'Live Mode' : 'Archive Mode'}
+                </Typography>
+              </Box>
+            </Tooltip>
           </Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Box>
-              <Typography variant="caption" color="text.secondary">
-                Operator
+          
+          {/* Device Status */}
+          <Tooltip title={deviceConnected ? `Device connected: ${deviceLabel}` : "No device connected"}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              {deviceConnected && (
+                <FiberManualRecordIcon color={deviceColor} sx={{ fontSize: 12 }} />
+              )}
+              <Typography variant="body2" color="text.secondary">
+                {deviceLabel}
               </Typography>
-              <Typography variant="body2">Tech User</Typography>
             </Box>
+          </Tooltip>
+
+          {/* CENTER: Service Health */}
+          <Tooltip title={
+            healthStatus === 'error' ? 'Service health critical - check Service Health tab' :
+            healthStatus === 'warning' ? 'Service warnings detected' :
+            'All services healthy'
+          }>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <FiberManualRecordIcon 
+                color={healthStatus} 
+                sx={{ fontSize: 12 }} 
+              />
+              <Typography variant="body2" color="text.secondary">
+                Service Health
+              </Typography>
+            </Box>
+          </Tooltip>
+
+          {/* Recording Toggle */}
+          <Tooltip title={recordingEnabled ? "Recording ON - Data is being saved to database" : "Recording OFF - Data will NOT be saved"}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <FiberManualRecordIcon 
+                color={recordingEnabled ? 'success' : 'default'} 
+                sx={{ fontSize: 12 }} 
+              />
+              <Typography variant="body2" color="text.secondary">
+                Recording
+              </Typography>
+              <Switch 
+                size="small" 
+                checked={recordingEnabled} 
+                onChange={handleRecordingToggle}
+                disabled={!isLiveMode}
+              />
+            </Box>
+          </Tooltip>
+
+          {/* RIGHT: Operator + Theme Toggle */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Tooltip title="Change operator name in Settings">
+              <Typography variant="body2" color="text.secondary">
+                Operator: <Box component="span" color="text.primary">{settings.operatorName}</Box>
+              </Typography>
+            </Tooltip>
             {onToggleTheme && (
               <Tooltip title={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}>
-                <IconButton onClick={onToggleTheme} color="primary">
+                <IconButton onClick={onToggleTheme} color="primary" size="small">
                   {isDarkMode ? <Brightness7Icon /> : <Brightness4Icon />}
                 </IconButton>
               </Tooltip>
@@ -166,8 +247,6 @@ export function AppLayout({ onToggleTheme, isDarkMode = false }: AppLayoutProps)
           backgroundColor: 'background.default',
         }}
       >
-        <CloseWarningBanner />
-        <ModeBanner />
         <Outlet />
       </Box>
     </Box>

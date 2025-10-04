@@ -1,15 +1,17 @@
 import { useState, useEffect } from 'react';
 
-const STORAGE_KEY = 'chartSettings';
+const STORAGE_KEY = 'appSettings';
 
-interface ChartSettings {
+interface AppSettings {
   gapThresholdSeconds: number;
   autoScalingEnabled: boolean;
+  operatorName: string;
 }
 
-const DEFAULT_SETTINGS: ChartSettings = {
+const DEFAULT_SETTINGS: AppSettings = {
   gapThresholdSeconds: 15,
   autoScalingEnabled: true,
+  operatorName: 'User',
 };
 
 /**
@@ -21,7 +23,7 @@ const DEFAULT_SETTINGS: ChartSettings = {
  * - autoScalingEnabled: Enable/disable automatic Y-axis scaling with preset ranges
  */
 export const useChartSettings = () => {
-  const [settings, setSettings] = useState<ChartSettings>(() => {
+  const [settings, setSettings] = useState<AppSettings>(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
@@ -29,7 +31,7 @@ export const useChartSettings = () => {
         return { ...DEFAULT_SETTINGS, ...parsed };
       }
     } catch (error) {
-      console.error('Failed to load chart settings:', error);
+      console.error('Failed to load app settings:', error);
     }
     return DEFAULT_SETTINGS;
   });
@@ -39,7 +41,7 @@ export const useChartSettings = () => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
     } catch (error) {
-      console.error('Failed to save chart settings:', error);
+      console.error('Failed to save app settings:', error);
     }
   }, [settings]);
 
@@ -53,6 +55,10 @@ export const useChartSettings = () => {
     setSettings(prev => ({ ...prev, autoScalingEnabled: enabled }));
   };
 
+  const updateOperatorName = (name: string) => {
+    setSettings(prev => ({ ...prev, operatorName: name.trim() || 'User' }));
+  };
+
   const resetToDefaults = () => {
     setSettings(DEFAULT_SETTINGS);
   };
@@ -61,6 +67,7 @@ export const useChartSettings = () => {
     settings,
     updateGapThreshold,
     toggleAutoScaling,
+    updateOperatorName,
     resetToDefaults,
   };
 };

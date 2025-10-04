@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Box, Typography, Paper, Alert } from '@mui/material';
 import { MeasurementChart } from './MeasurementChart';
 import { useRecentMeasurements } from '../hooks/useRecentMeasurements';
-import { useChartSettings } from '../hooks/useChartSettings';
+import { useSettings } from '../contexts/SettingsContext';
 
 interface RollingChartsPanelProps {
   windowMinutes?: number;
@@ -18,7 +18,7 @@ export const RollingChartsPanel: React.FC<RollingChartsPanelProps> = ({
   );
 
   // Chart settings (gap threshold, auto-scaling, etc.)
-  const { settings } = useChartSettings();
+  const { settings } = useSettings();
   
   // Debug: log the actual threshold value
   console.log('[RollingChartsPanel] Settings:', {

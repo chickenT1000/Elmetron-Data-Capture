@@ -9,6 +9,7 @@ import ServiceHealthPage from './pages/ServiceHealthPage';
 import SettingsPage from './pages/SettingsPage';
 import { useConnectionMonitor } from './hooks/useConnectionMonitor';
 import { OfflineWarning } from './components/OfflineWarning';
+import { SettingsProvider } from './contexts/SettingsContext';
 import { useState, useEffect } from 'react';
 
 function App() {
@@ -40,7 +41,7 @@ function App() {
   };
 
   return (
-    <>
+    <SettingsProvider>
       <Routes>
         <Route path="/" element={<AppLayout />}>
           <Route index element={<DashboardPage />} />
@@ -55,7 +56,7 @@ function App() {
 
       {/* Offline Warning Modal */}
       <OfflineWarning open={showWarning} onClose={handleDismissWarning} />
-    </>
+    </SettingsProvider>
   );
 }
 

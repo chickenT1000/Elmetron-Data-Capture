@@ -1,11 +1,71 @@
-import { Card, CardContent, Stack, Typography, Switch, FormControlLabel, TextField, Button, Box, Slider } from '@mui/material';
-import { useChartSettings } from '../hooks/useChartSettings';
+import { Card, CardContent, Stack, Typography, Switch, FormControlLabel, TextField, Button, Box, Slider, Alert } from '@mui/material';
+import { useSettings, validateOperatorName } from '../contexts/SettingsContext';
+import { useState, useEffect } from 'react';
+import SaveIcon from '@mui/icons-material/Save';
+import CancelIcon from '@mui/icons-material/Cancel';
 
 export default function SettingsPage() {
-  const { settings, updateGapThreshold, toggleAutoScaling } = useChartSettings();
+  const { settings, updateSettings } = useSettings();
+  const [localSettings, setLocalSettings] = useState(settings);
+  const [hasChanges, setHasChanges] = useState(false);
+  const [operatorNameError, setOperatorNameError] = useState<string | null>(null);
+
+  // Update local settings when saved settings change
+  useEffect(() => {
+    setLocalSettings(settings);
+    setHasChanges(false);
+    setOperatorNameError(null);
+  }, [settings]);
+
+  // Track changes and validate
+  useEffect(() => {
+    const changed = JSON.stringify(localSettings) !== JSON.stringify(settings);
+    setHasChanges(changed);
+    
+    // Validate operator name
+    const error = validateOperatorName(localSettings.operatorName);
+    setOperatorNameError(error);
+  }, [localSettings, settings]);
+
+  const handleSave = () => {
+    // Final validation before saving
+    const error = validateOperatorName(localSettings.operatorName);
+    if (error) {
+      setOperatorNameError(error);
+      return;
+    }
+    updateSettings(localSettings);
+  };
+
+  const handleCancel = () => {
+    setLocalSettings(settings);
+    setOperatorNameError(null);
+  };
 
   return (
     <Stack spacing={3}>
+      {hasChanges && (
+        <Alert severity={operatorNameError ? "error" : "warning"} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Box>
+            {operatorNameError ? 'Fix validation errors before saving' : 'You have unsaved changes'}
+          </Box>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Button 
+              size="small" 
+              variant="contained" 
+              startIcon={<SaveIcon />} 
+              onClick={handleSave}
+              disabled={!!operatorNameError}
+            >
+              Save Changes
+            </Button>
+            <Button size="small" variant="outlined" startIcon={<CancelIcon />} onClick={handleCancel}>
+              Cancel
+            </Button>
+          </Box>
+        </Alert>
+      )}
+
       <Card>
         <CardContent>
           <Typography variant="h5" fontWeight={600} gutterBottom>
@@ -41,8 +101,8 @@ export default function SettingsPage() {
               </Typography>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                 <Slider
-                  value={settings.gapThresholdSeconds}
-                  onChange={(_, value) => updateGapThreshold(value as number)}
+                  value={localSettings.gapThresholdSeconds}
+                  onChange={(_, value) => setLocalSettings({ ...localSettings, gapThresholdSeconds: Math.min(60, Math.max(1, value as number)) })}
                   min={1}
                   max={60}
                   step={1}
@@ -58,8 +118,8 @@ export default function SettingsPage() {
                 />
                 <TextField
                   type="number"
-                  value={settings.gapThresholdSeconds}
-                  onChange={(e) => updateGapThreshold(Number(e.target.value))}
+                  value={localSettings.gapThresholdSeconds}
+                  onChange={(e) => setLocalSettings({ ...localSettings, gapThresholdSeconds: Math.min(60, Math.max(1, Number(e.target.value))) })}
                   inputProps={{ min: 1, max: 60, step: 1 }}
                   size="small"
                   sx={{ width: 100 }}
@@ -85,11 +145,11 @@ export default function SettingsPage() {
               <FormControlLabel
                 control={
                   <Switch
-                    checked={settings.autoScalingEnabled}
-                    onChange={(e) => toggleAutoScaling(e.target.checked)}
+                    checked={localSettings.autoScalingEnabled}
+                    onChange={(e) => setLocalSettings({ ...localSettings, autoScalingEnabled: e.target.checked })}
                   />
                 }
-                label={settings.autoScalingEnabled ? "Auto-scaling enabled (recommended)" : "Auto-scaling disabled (fixed ranges)"}
+                label={localSettings.autoScalingEnabled ? "Auto-scaling enabled (recommended)" : "Auto-scaling disabled (fixed ranges)"}
               />
             </Box>
           </Stack>
@@ -101,13 +161,36 @@ export default function SettingsPage() {
           <Typography variant="h6" gutterBottom>
             General Settings
           </Typography>
-          <Stack spacing={2}>
-            <FormControlLabel control={<Switch defaultChecked />} label="Enable dark mode automatically" />
-            <TextField label="Default operator" placeholder="Operator name" size="small" />
-            <TextField label="Data retention (days)" type="number" size="small" defaultValue={30} />
-            <Button variant="contained" sx={{ alignSelf: 'flex-start' }}>
-              Save Settings
-            </Button>
+          <Stack spacing={3}>
+            <Box>
+              <Typography variant="subtitle2" gutterBottom>
+                Operator Name
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Set the default operator name that appears in the header and is associated with new sessions.
+                This helps track who performed measurements and data collection.
+              </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+                Allowed: Letters, numbers, spaces, hyphens (-), underscores (_), and periods (.)
+                <br />
+                Maximum length: 50 characters
+              </Typography>
+              <TextField 
+                label="Operator Name" 
+                placeholder="Enter operator name" 
+                size="small" 
+                fullWidth
+                value={localSettings.operatorName}
+                onChange={(e) => setLocalSettings({ ...localSettings, operatorName: e.target.value })}
+                error={!!operatorNameError}
+                helperText={
+                  operatorNameError 
+                    ? operatorNameError 
+                    : `${localSettings.operatorName.length}/50 characters - Click 'Save Changes' to apply`
+                }
+                inputProps={{ maxLength: 50 }}
+              />
+            </Box>
           </Stack>
         </CardContent>
       </Card>

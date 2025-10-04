@@ -156,54 +156,12 @@ export const MeasurementPanel: React.FC<MeasurementPanelProps> = ({ state, metri
   );
   // Always use PC capture time, not device timestamp (device clock may be wrong, especially in TIME mode)
   const lastUpdatedIso = measurement?.capturedAtIso ?? measurement?.timestampIso ?? null;
-  const connectionChipColor = state.connection === 'connected' ? 'success' : state.connection === 'error' ? 'error' : 'default';
-  const connectionChipLabel = state.connection === 'connected' ? 'CX-505 connected' : state.connection === 'error' ? 'Health data unavailable' : 'CX-505 offline';
-  const connectionChipTooltip = state.connection === 'connected'
-    ? 'Instrument link healthy and streaming frames.'
-    : state.connection === 'error'
-    ? 'Unable to retrieve instrument health data.'
-    : 'No recent frames detected from the instrument.';
-  const logChipColor = state.logStream === 'streaming' ? 'success' : state.logStream === 'polling' ? 'success' : 'default';
 
   return (
     <Stack spacing={3}>
       <Card>
         <CardContent>
           <Stack spacing={3}>
-            <Stack
-              direction={{ xs: 'column', md: 'row' }}
-              justifyContent="space-between"
-              alignItems={{ xs: 'flex-start', md: 'center' }}
-              spacing={2}
-            >
-              <Box>
-                <Typography variant="h5" fontWeight={600} gutterBottom>
-                  Live CX-505 Measurements
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Latest readings update automatically while the capture service is running.
-                </Typography>
-              </Box>
-              <Stack direction="row" spacing={1.5} alignItems="center">
-                <Tooltip title={connectionChipTooltip} placement="top">
-                  <Chip color={connectionChipColor} label={connectionChipLabel} />
-                </Tooltip>
-                <Tooltip
-                  title="Session logging starts automatically on launch and persists to the local database."
-                  placement="top"
-                >
-                  <Chip color={state.autosaveEnabled ? 'success' : 'default'} label={state.autosaveEnabled ? 'Autosave on' : 'Autosave off'} />
-                </Tooltip>
-                <Tooltip title={`Log stream state: ${state.logStream}`} placement="top">
-                  <Chip
-                    color={logChipColor}
-                    label={`Logs: ${state.logStream}`}
-                    sx={{ textTransform: 'capitalize' }}
-                  />
-                </Tooltip>
-              </Stack>
-            </Stack>
-
             {isTimeMode && (
               <Alert severity="info" sx={{ mb: 2 }}>
                 <Typography variant="body2">
