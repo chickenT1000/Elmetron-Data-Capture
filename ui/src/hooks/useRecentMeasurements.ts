@@ -67,12 +67,16 @@ export function useRecentMeasurements(
               : null,
         }));
 
+        console.log('[useRecentMeasurements] Processed measurements:', {
+          count: measurements.length,
+          sample: measurements.slice(0, 2),
+        });
         setData(measurements);
         setSessionId(result.session_id);
         setLoading(false);
         setError(null);
       } catch (err) {
-        console.error('Error fetching recent measurements:', err);
+        console.error('[useRecentMeasurements] Error:', err);
         setError(err as Error);
         setLoading(false);
       }

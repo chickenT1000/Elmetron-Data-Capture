@@ -1374,3 +1374,5 @@ Traceback (most recent call last):
 ConnectionAbortedError: [WinError 10053] Nawi¹zane po³¹czenie zosta³o przerwane przez oprogramowanie zainstalowane w komputerze-hoœcie
 ----------------------------------------
 Warning: poll write failed: FT_Write failed with FT_STATUS=4
+Warning: poll write failed: FT_Write failed with FT_STATUS=4
+Warning: poll write failed: FT_Write failed with FT_STATUS=4

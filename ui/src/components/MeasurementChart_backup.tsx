@@ -8,9 +8,9 @@ import {
   CartesianGrid,
   ResponsiveContainer,
   ReferenceLine,
+  ReferenceArea,
 } from 'recharts';
 import type { MeasurementDataPoint } from '../hooks/useRecentMeasurements';
-import { useChartAutoScaling } from '../hooks/useChartAutoScaling';
 
 interface MeasurementChartProps {
   title: string;
@@ -24,7 +24,6 @@ interface MeasurementChartProps {
   sharedHoverPosition?: number | null;
   onHoverChange?: (position: number | null) => void;
   gapThresholdSeconds?: number;
-  autoScalingEnabled?: boolean;
 }
 
 export const MeasurementChart: React.FC<MeasurementChartProps> = ({
@@ -39,36 +38,7 @@ export const MeasurementChart: React.FC<MeasurementChartProps> = ({
   sharedHoverPosition = null,
   onHoverChange,
   gapThresholdSeconds = 15,
-  autoScalingEnabled = true,
 }) => {
-  // Get auto-scaled domain and ticks from hook
-  const { domain: autoScaleDomain, ticks: autoScaleTicks, preset } = useChartAutoScaling({
-    data,
-    dataKey,
-    enabled: autoScalingEnabled,
-    bufferPercent: 0.10,
-  });
-
-  // Use auto-scaling if enabled, otherwise use manual domain
-  const effectiveDomain = autoScalingEnabled ? autoScaleDomain : yAxisDomain;
-  const effectiveTicks = autoScalingEnabled ? autoScaleTicks : undefined;
-
-  // Debug logging (only once on mount or when data changes significantly)
-  React.useEffect(() => {
-    if (dataKey === 'ph' && data.length > 0) {
-      console.log('[MeasurementChart pH] Auto-scaling:', {
-        enabled: autoScalingEnabled,
-        autoScaleDomain: JSON.stringify(autoScaleDomain),
-        autoScaleTicks: JSON.stringify(autoScaleTicks),
-        effectiveDomain: JSON.stringify(effectiveDomain),
-        effectiveTicks: JSON.stringify(effectiveTicks),
-        preset: preset.label,
-        dataPoints: data.length,
-        filteredDataPoints: data.filter(d => d[dataKey] !== null && d[dataKey] !== undefined).length,
-        sampleData: data.slice(0, 3).map(d => ({ ph: d.ph, time: d.timestamp })),
-      });
-    }
-  }, [data.length, dataKey]); // Only log when data length changes
   // Force re-render every second to update the time positions
   const [, setTick] = useState(0);
   
@@ -121,122 +91,85 @@ export const MeasurementChart: React.FC<MeasurementChartProps> = ({
 
   // Insert explicit null values in measurement data where gaps are too large
   // SMART GAP DETECTION: Use temperature as reference since it always streams in parallel
-  // LOGIC: If temperature data exists in a gap, the device was connected but this channel
-  // wasn't being measured (mode switching) → BREAK the line
-  // If no temperature data in gap, device was offline → use threshold to decide
+  // Only break the line if temperature has no data (device disconnected)
+  // If temperature has data in the gap, keep lines connected (just channel timing variation)
   const dataWithGapBreaks = React.useMemo(() => {
     if (filteredData.length === 0) return filteredData;
     
     const GAP_THRESHOLD_MINUTES = gapThresholdSeconds / 60; // Convert seconds to minutes
     const result = [];
     
-    // Build array of temperature data points with their actual timestamps
-    // We need the original timestamps, not minutesAgo (which changes every render)
-    const temperatureData = chartData
-      .filter(point => point.temperature !== null && point.temperature !== undefined)
-      .map(point => ({
-        timestamp: new Date(point.timestamp).getTime(),
-        minutesAgo: point.minutesAgo,
-      }));
+    // Build a set of timestamps where temperature (reference channel) has data
+    // Temperature always streams, so if it has data, device was connected
+    const temperatureTimestamps = new Set();
+    chartData.forEach(point => {
+      if (point.temperature !== null && point.temperature !== undefined) {
+        temperatureTimestamps.add(point.minutesAgo);
+      }
+    });
     
     for (let i = 0; i < filteredData.length; i++) {
       result.push(filteredData[i]);
       
-      // Check if there's a gap to the next point
+      // Check if there's a large gap to the next point
       if (i < filteredData.length - 1) {
-        const currentPoint = filteredData[i];
-        const nextPoint = filteredData[i + 1];
+        const currentTime = filteredData[i].minutesAgo;
+        const nextTime = filteredData[i + 1].minutesAgo;
+        const gap = Math.abs(nextTime - currentTime);
         
-        const currentTimestamp = new Date(currentPoint.timestamp).getTime();
-        const nextTimestamp = new Date(nextPoint.timestamp).getTime();
-        const gapMs = nextTimestamp - currentTimestamp;
-        const gapMinutes = gapMs / 60000;
-        
-        // Debug logging for gaps
-        if (gapMinutes > GAP_THRESHOLD_MINUTES && dataKey === 'ph') {
-          console.log(`[${dataKey}] Gap detected:`, {
-            gapSeconds: gapMs / 1000,
-            thresholdSeconds: gapThresholdSeconds,
-            currentTime: new Date(currentTimestamp).toISOString(),
-            nextTime: new Date(nextTimestamp).toISOString(),
+        // Debug logging
+        if (gap > GAP_THRESHOLD_MINUTES && dataKey === 'ph') {
+          console.log(`[${dataKey}] Large gap detected:`, {
+            gap: gap * 60,
+            gapSeconds: gap * 60,
+            threshold: gapThresholdSeconds,
+            currentTime,
+            nextTime,
+            temperatureTimestampsCount: temperatureTimestamps.size
           });
         }
         
-        // Check if temperature (reference) has data points in this gap
-        const temperaturePointsInGap = temperatureData.filter(tempPoint => {
-          return tempPoint.timestamp > currentTimestamp && tempPoint.timestamp < nextTimestamp;
-        });
-        
-        const temperatureHasDataInGap = temperaturePointsInGap.length > 0;
-        
-        if (dataKey === 'ph' && gapMinutes > GAP_THRESHOLD_MINUTES) {
-          console.log(`[${dataKey}] Temperature data in gap:`, {
-            hasData: temperatureHasDataInGap,
-            count: temperaturePointsInGap.length,
-            gapMinutes: gapMinutes.toFixed(2),
+        // CORRECT LOGIC:
+        // - If temperature HAS data in gap → channel not measured intentionally → BREAK line
+        // - If temperature has NO data in gap → device offline → CONNECT if gap < threshold
+        if (gap > GAP_THRESHOLD_MINUTES) {
+          // Check if temperature (reference) has data in the gap
+          const temperatureHasDataInGap = Array.from(temperatureTimestamps).some(t => {
+            const timestamp = t as number;
+            return timestamp > currentTime && timestamp < nextTime;
           });
-        }
-        
-        // Decision logic:
-        // 1. If temperature HAS data in gap → device connected, channel intentionally not measured → BREAK
-        // 2. If temperature has NO data AND gap > threshold → device offline for too long → BREAK
-        // 3. If temperature has NO data AND gap <= threshold → timing variation, keep connected
-        
-        if (temperatureHasDataInGap) {
-          // Case 1: Temperature present but this channel missing → mode switching
+          
           if (dataKey === 'ph') {
-            console.log(`[${dataKey}] Breaking line: temperature present, channel missing (mode switch)`);
+            console.log(`[${dataKey}] Temperature has data in gap:`, temperatureHasDataInGap);
           }
-          result.push({
-            ...currentPoint,
-            [dataKey]: null, // This breaks the line
-            minutesAgo: (currentPoint.minutesAgo + nextPoint.minutesAgo) / 2,
-          });
-        } else if (gapMinutes > GAP_THRESHOLD_MINUTES) {
-          // Case 2: No temperature data and gap too large → device offline
-          if (dataKey === 'ph') {
-            console.log(`[${dataKey}] Breaking line: no temperature, gap too large (device offline)`);
+          
+          // If temperature HAS data, this channel wasn't being measured → BREAK the line
+          if (temperatureHasDataInGap) {
+            if (dataKey === 'ph') {
+              console.log(`[${dataKey}] Temperature present but channel missing → Breaking line (intentional gap)`);
+            }
+            result.push({
+              ...filteredData[i],
+              [dataKey]: null, // This breaks the line
+              minutesAgo: (currentTime + nextTime) / 2, // Place in middle of gap
+            });
           }
-          result.push({
-            ...currentPoint,
-            [dataKey]: null,
-            minutesAgo: (currentPoint.minutesAgo + nextPoint.minutesAgo) / 2,
-          });
+          // If temperature has NO data, device was offline → keep connected (timing variation)
+          else {
+            if (dataKey === 'ph') {
+              console.log(`[${dataKey}] No temperature data → Keeping connected (device offline, not intentional gap)`);
+            }
+          }
         }
-        // Case 3: No temperature and gap within threshold → keep connected (timing variation)
       }
     }
     
     return result;
   }, [filteredData, dataKey, gapThresholdSeconds, chartData]);
 
-  // Merge actual data with dummy data for full hover coverage
-  // Strategy: Start with all actual data, then add dummy points only in gaps
-  const combinedData = React.useMemo(() => {
-    // Start with all actual measurement data
-    const result = [...dataWithGapBreaks];
-    
-    // Add dummy points only where there's no nearby actual data
-    // This ensures hover works across the entire time range
-    for (const dummyPoint of dummyDataForHover) {
-      const hasNearbyData = dataWithGapBreaks.some(
-        actualPoint => Math.abs(actualPoint.minutesAgo - dummyPoint.minutesAgo) < 0.3
-      );
-      
-      if (!hasNearbyData) {
-        // Add dummy point with all measurement fields undefined
-        // This allows hover to work but won't render any line
-        result.push({
-          ...dummyPoint,
-          timestamp: new Date(Date.now() + dummyPoint.minutesAgo * 60000).toISOString(),
-          // Don't set measurement fields - leave them undefined
-        });
-      }
-    }
-    
-    // Sort by time
-    return result.sort((a, b) => a.minutesAgo - b.minutesAgo);
-  }, [dataWithGapBreaks, dummyDataForHover]);
+  // Use dataWithGapBreaks directly for rendering
+  // Hover will work where there's data, which is sufficient
+  const combinedData = dataWithGapBreaks;
 
   // Debug: log the data with gap breaks
   if (dataKey === 'ph' && dataWithGapBreaks.length > 0) {
@@ -248,7 +181,40 @@ export const MeasurementChart: React.FC<MeasurementChartProps> = ({
     })));
   }
 
-
+  // Identify gap regions for grey shading
+  const gapRegions = React.useMemo(() => {
+    const gaps: Array<{ start: number; end: number }> = [];
+    
+    for (let i = 0; i < dataWithGapBreaks.length; i++) {
+      const point = dataWithGapBreaks[i];
+      if (point[dataKey] === null) {
+        let prevTime = -10;
+        let nextTime = 0;
+        
+        for (let j = i - 1; j >= 0; j--) {
+          if (dataWithGapBreaks[j][dataKey] !== null) {
+            prevTime = dataWithGapBreaks[j].minutesAgo;
+            break;
+          }
+        }
+        
+        for (let j = i + 1; j < dataWithGapBreaks.length; j++) {
+          if (dataWithGapBreaks[j][dataKey] !== null) {
+            nextTime = dataWithGapBreaks[j].minutesAgo;
+            break;
+          }
+        }
+        
+        gaps.push({ start: prevTime, end: nextTime });
+      }
+    }
+    
+    if (dataKey === 'ph' && gaps.length > 0) {
+      console.log(`[${dataKey}] Gap regions:`, gaps);
+    }
+    
+    return gaps;
+  }, [dataWithGapBreaks, dataKey]);
 
   // Format time for X-axis (show minutes ago)
   const formatTime = (minutesAgo: number) => {
@@ -334,7 +300,6 @@ export const MeasurementChart: React.FC<MeasurementChartProps> = ({
           <LineChart
             data={combinedData}
             margin={{ top: 5, right: 20, left: 10, bottom: 5 }}
-            style={{ backgroundColor: '#ffffff' }}
             onMouseMove={(e: any) => {
               // Use activeLabel (x-axis value) for shared hover position
               if (e && e.activeLabel !== undefined) {
@@ -360,7 +325,7 @@ export const MeasurementChart: React.FC<MeasurementChartProps> = ({
               }
             }}
           >
-            <CartesianGrid strokeDasharray="3 3" stroke="#999" />
+            <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
             <XAxis
               dataKey="minutesAgo"
               type="number"
@@ -373,18 +338,63 @@ export const MeasurementChart: React.FC<MeasurementChartProps> = ({
               scale="linear"
             />
             <YAxis
-              domain={effectiveDomain}
-              ticks={effectiveTicks}
+              domain={yAxisDomain}
               stroke="#666"
               style={{ fontSize: '12px' }}
               tickFormatter={(value) => value.toFixed(decimalPlaces)}
               allowDataOverflow={true}
               scale="linear"
             />
+            {/* Shade gap regions where there's no data */}
+            {gapRegions.map((gap, index) => (
+              <ReferenceArea
+                key={`gap-${index}`}
+                x1={gap.start}
+                x2={gap.end}
+                fill="#f5f5f5"
+                fillOpacity={0.6}
+                ifOverflow="extendDomain"
+              />
+            ))}
             {/* Show vertical guideline at shared hover position */}
             {sharedHoverPosition !== null && (
               <ReferenceLine
                 x={sharedHoverPosition}
+                stroke="#ccc"
+                strokeWidth={1}
+                strokeDasharray="3 3"
+                isFront={true}
+                label=""
+              />
+            )}
+            {/* Measurement data line */}
+            <Line
+              type="monotone"
+              dataKey={dataKey}
+              stroke={color}
+              strokeWidth={2}
+              dot={false}
+              activeDot={{ r: 4 }}
+              isAnimationActive={false}
+              connectNulls={false}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      )}
+
+      <Typography
+        variant="caption"
+        color="text.secondary"
+        sx={{ mt: 1, textAlign: 'center' }}
+      >
+        {filteredData.length > 0
+          ? `${filteredData.length} data points`
+          : 'Waiting for measurements...'}
+      </Typography>
+    </Paper>
+  );
+};
+edHoverPosition}
                 stroke="#ccc"
                 strokeWidth={1}
                 strokeDasharray="3 3"

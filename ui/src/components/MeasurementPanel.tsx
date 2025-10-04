@@ -136,16 +136,26 @@ export const MeasurementPanel: React.FC<MeasurementPanelProps> = ({ state, metri
   const measurement = state.measurement;
   const measurementDigits =
     measurement?.unit && measurement.unit.toLowerCase().includes('ph') ? 2 : 3;
+  
+  // Check if device is in TIME mode
+  // TIME mode is detected when valueText looks like time format (HH:MM) AND there's no numeric value
+  const isTimeMode = 
+    measurement?.mode?.toUpperCase() === 'TIME' || 
+    (measurement?.valueText && typeof measurement?.value !== 'number' && /^\d{1,2}:\d{2}(:\d{2})?$/.test(measurement.valueText.trim()));
+  
   const measurementValue =
     typeof measurement?.value === 'number'
       ? formatNumber(measurement.value, measurementDigits)
+      : isTimeMode && measurement?.valueText
+      ? measurement.valueText
       : measurement?.valueText ?? '—';
-  const measurementUnit = measurement?.unit ?? '';
+  const measurementUnit = isTimeMode ? '' : (measurement?.unit ?? '').replace(/\s*rel\.?$/i, '');
   const temperatureDisplay = formatTemperature(
     measurement?.temperature?.value,
     measurement?.temperature?.unit,
   );
-  const lastUpdatedIso = measurement?.timestampIso ?? measurement?.capturedAtIso ?? null;
+  // Always use PC capture time, not device timestamp (device clock may be wrong, especially in TIME mode)
+  const lastUpdatedIso = measurement?.capturedAtIso ?? measurement?.timestampIso ?? null;
   const connectionChipColor = state.connection === 'connected' ? 'success' : state.connection === 'error' ? 'error' : 'default';
   const connectionChipLabel = state.connection === 'connected' ? 'CX-505 connected' : state.connection === 'error' ? 'Health data unavailable' : 'CX-505 offline';
   const connectionChipTooltip = state.connection === 'connected'
@@ -194,6 +204,15 @@ export const MeasurementPanel: React.FC<MeasurementPanelProps> = ({ state, metri
               </Stack>
             </Stack>
 
+            {isTimeMode && (
+              <Alert severity="info" sx={{ mb: 2 }}>
+                <Typography variant="body2">
+                  <strong>Device in TIME mode:</strong> The meter is currently displaying time and is not sending measurement data. 
+                  Switch the device to measurement mode to resume data collection.
+                </Typography>
+              </Alert>
+            )}
+
             {measurementValue === '—' && !measurement?.temperature ? (
               <Box
                 sx={{
@@ -211,56 +230,44 @@ export const MeasurementPanel: React.FC<MeasurementPanelProps> = ({ state, metri
             ) : (
               <Stack spacing={3}
               >
-                <Box sx={{ display: 'flex', flexDirection: 'row', alignItems: 'baseline', gap: 1 }}>
-                  <Typography variant="h2" fontWeight={700}>
-                    {measurementValue}
-                  </Typography>
-                  {measurementUnit ? (
-                    <Typography variant="h5" color="text.secondary">
-                      {measurementUnit}
+                <Box sx={{ display: 'flex', flexDirection: 'row', alignItems: 'baseline', gap: 6 }}>
+                  <Box sx={{ display: 'flex', flexDirection: 'row', alignItems: 'baseline', gap: 2, minWidth: 450 }}>
+                    <Typography variant="h5" color="text.secondary" fontWeight={500} sx={{ display: 'inline-block', width: 140 }}>
+                      {measurementUnit?.toLowerCase().includes('ph') ? 'pH' :
+                       measurementUnit?.toLowerCase().includes('mv') ? 'Redox' :
+                       measurementUnit?.toLowerCase().includes('µs') || measurementUnit?.toLowerCase().includes('us') ? 'Conductivity' :
+                       measurementUnit ? measurementUnit : 'pH'}
                     </Typography>
-                  ) : null}
-                </Box>
-                <Stack direction={{ xs: 'column', md: 'row' }} spacing={3}>
-                  <Stack spacing={0.5}>
-                    <Typography variant="overline" color="text.secondary">
+                    <Typography variant="h2" fontWeight={700}>
+                      {measurementValue}
+                    </Typography>
+                    {measurementUnit && !measurementUnit.toLowerCase().includes('ph') ? (
+                      <Typography variant="h5" color="text.secondary">
+                        {measurementUnit}
+                      </Typography>
+                    ) : null}
+                  </Box>
+                  <Box sx={{ display: 'flex', flexDirection: 'row', alignItems: 'baseline', gap: 2 }}>
+                    <Typography variant="h5" color="text.secondary" fontWeight={500}>
                       Temperature
                     </Typography>
-                    <Typography variant="body1">{temperatureDisplay}</Typography>
-                  </Stack>
-                  <Stack spacing={0.5}>
-                    <Typography variant="overline" color="text.secondary">
-                      Mode
+                    <Typography variant="h2" fontWeight={700}>
+                      {measurement?.temperature?.value !== null && measurement?.temperature?.value !== undefined
+                        ? formatNumber(measurement.temperature.value, 1)
+                        : '—'}
                     </Typography>
-                    <Typography variant="body1">{measurement?.mode ?? '—'}</Typography>
-                  </Stack>
-                  <Stack spacing={0.5}>
-                    <Typography variant="overline" color="text.secondary">
-                      Status
-                    </Typography>
-                    <Typography variant="body1">{measurement?.status ?? '—'}</Typography>
-                  </Stack>
-                  <Stack spacing={0.5}>
-                    <Typography variant="overline" color="text.secondary">
-                      Last update
-                    </Typography>
-                    <Typography variant="body1">{formatTimestamp(lastUpdatedIso)}</Typography>
-                  </Stack>
-                </Stack>
-                <Stack direction={{ xs: 'column', md: 'row' }} spacing={3}>
-                  <Stack spacing={0.5}>
-                    <Typography variant="overline" color="text.secondary">
-                      Range
-                    </Typography>
-                    <Typography variant="body2">{measurement?.range ?? '—'}</Typography>
-                  </Stack>
-                  <Stack spacing={0.5}>
-                    <Typography variant="overline" color="text.secondary">
-                      Sequence
-                    </Typography>
-                    <Typography variant="body2">{measurement?.sequence ?? '—'}</Typography>
-                  </Stack>
-                </Stack>
+                    {measurement?.temperature?.unit ? (
+                      <Typography variant="h5" color="text.secondary">
+                        {measurement.temperature.unit.replace(/deg\s*/gi, '°')}
+                      </Typography>
+                    ) : null}
+                  </Box>
+                </Box>
+                <Box sx={{ mt: 1 }}>
+                  <Typography variant="caption" color="text.secondary">
+                    Last update: {formatTimestamp(lastUpdatedIso)}
+                  </Typography>
+                </Box>
               </Stack>
             )}
           </Stack>

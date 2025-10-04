@@ -4,10 +4,12 @@ const STORAGE_KEY = 'chartSettings';
 
 interface ChartSettings {
   gapThresholdSeconds: number;
+  autoScalingEnabled: boolean;
 }
 
 const DEFAULT_SETTINGS: ChartSettings = {
   gapThresholdSeconds: 15,
+  autoScalingEnabled: true,
 };
 
 /**
@@ -16,6 +18,7 @@ const DEFAULT_SETTINGS: ChartSettings = {
  * Settings:
  * - gapThresholdSeconds: Maximum time gap (1-60 seconds) to connect measurement points
  *   Points separated by more than this will show as disconnected lines
+ * - autoScalingEnabled: Enable/disable automatic Y-axis scaling with preset ranges
  */
 export const useChartSettings = () => {
   const [settings, setSettings] = useState<ChartSettings>(() => {
@@ -46,6 +49,10 @@ export const useChartSettings = () => {
     setSettings(prev => ({ ...prev, gapThresholdSeconds: clamped }));
   };
 
+  const toggleAutoScaling = (enabled: boolean) => {
+    setSettings(prev => ({ ...prev, autoScalingEnabled: enabled }));
+  };
+
   const resetToDefaults = () => {
     setSettings(DEFAULT_SETTINGS);
   };
@@ -53,6 +60,7 @@ export const useChartSettings = () => {
   return {
     settings,
     updateGapThreshold,
+    toggleAutoScaling,
     resetToDefaults,
   };
 };

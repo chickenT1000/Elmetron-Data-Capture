@@ -507,32 +507,51 @@ def get_recent_measurements():
             try:
                 # Measurements are stored in table columns: value, unit, temperature, temperature_unit
                 # Use these directly to determine the metric type
+                temperature = row['temperature']
+                value = row['value']
+                unit = row['unit']
+                
+                # Quality filter: Skip frames with zero/invalid temperature (device initialization)
+                if temperature is not None and temperature <= 0:
+                    logger.debug(f"Skipping measurement with invalid temperature: {temperature}")
+                    continue
+                
                 measurement = {
                     'timestamp': row['timestamp'],
                     'ph': None,
                     'redox': None,
                     'conductivity': None,
-                    'temperature': row['temperature']
+                    'temperature': temperature
                 }
                 
-                # Map the value to the correct metric based on unit
-                value = row['value']
-                unit = row['unit']
-                
+                # Map the value to the correct metric based on unit with range validation
                 if unit and value is not None:
                     unit_lower = unit.lower()
                     
-                    # pH measurement
+                    # pH measurement (valid range: -2 to 16)
                     if 'ph' in unit_lower:
-                        measurement['ph'] = value
+                        if -2 <= value <= 16:
+                            measurement['ph'] = value
+                        else:
+                            logger.debug(f"Skipping invalid pH: {value}")
+                            continue
                     
-                    # Redox/ORP measurement (mV, mV rel, etc.)
+                    # Redox/ORP measurement (valid range: -2000 to +2000 mV)
+                    # Filters out extreme spikes when switching from pH mode
                     elif 'mv' in unit_lower or 'orp' in unit_lower:
-                        measurement['redox'] = value
+                        if -2000 <= value <= 2000:
+                            measurement['redox'] = value
+                        else:
+                            logger.debug(f"Skipping invalid redox: {value} mV")
+                            continue
                     
-                    # Conductivity (uS/cm, mS/cm, µS/cm, etc.)
+                    # Conductivity (valid range: 0 to 500,000 µS/cm)
                     elif 'us' in unit_lower or 'ms' in unit_lower or 's/cm' in unit_lower or 'siemens' in unit_lower:
-                        measurement['conductivity'] = value
+                        if 0 <= value <= 500000:
+                            measurement['conductivity'] = value
+                        else:
+                            logger.debug(f"Skipping invalid conductivity: {value}")
+                            continue
                 
                 measurements.append(measurement)
             except (json.JSONDecodeError, KeyError, TypeError) as e:

@@ -2,7 +2,7 @@ import { Card, CardContent, Stack, Typography, Switch, FormControlLabel, TextFie
 import { useChartSettings } from '../hooks/useChartSettings';
 
 export default function SettingsPage() {
-  const { settings, updateGapThreshold } = useChartSettings();
+  const { settings, updateGapThreshold, toggleAutoScaling } = useChartSettings();
 
   return (
     <Stack spacing={3}>
@@ -66,6 +66,31 @@ export default function SettingsPage() {
                   label="seconds"
                 />
               </Box>
+            </Box>
+
+            <Box>
+              <Typography variant="subtitle2" gutterBottom>
+                Auto-Scaling Y-Axis
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Automatically adjust chart Y-axis ranges using optimized preset scales. 
+                Charts will select the smallest preset that fits your data with 10% buffer, 
+                ensuring clean grid lines and stable visualization without erratic jumping.
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                <strong>When enabled:</strong> pH might show 6-8 range for neutral samples, 0-1000 µS/cm for drinking water, etc.
+                <br />
+                <strong>When disabled:</strong> Charts use fixed maximum ranges (pH: 0-14, Redox: ±2000 mV, Conductivity: 0-10,000 µS/cm, Temp: 0-50°C)
+              </Typography>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={settings.autoScalingEnabled}
+                    onChange={(e) => toggleAutoScaling(e.target.checked)}
+                  />
+                }
+                label={settings.autoScalingEnabled ? "Auto-scaling enabled (recommended)" : "Auto-scaling disabled (fixed ranges)"}
+              />
             </Box>
           </Stack>
         </CardContent>

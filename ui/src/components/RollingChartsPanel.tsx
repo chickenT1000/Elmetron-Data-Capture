@@ -17,11 +17,14 @@ export const RollingChartsPanel: React.FC<RollingChartsPanelProps> = ({
     true
   );
 
-  // Chart settings (gap threshold, etc.)
-  const { settings, updateGapThreshold } = useChartSettings();
+  // Chart settings (gap threshold, auto-scaling, etc.)
+  const { settings } = useChartSettings();
   
   // Debug: log the actual threshold value
-  console.log('[RollingChartsPanel] Gap threshold from settings:', settings.gapThresholdSeconds);
+  console.log('[RollingChartsPanel] Settings:', {
+    gapThreshold: settings.gapThresholdSeconds,
+    autoScaling: settings.autoScalingEnabled
+  });
 
   // Shared hover state across all charts (in minutes ago)
   const [sharedHoverPosition, setSharedHoverPosition] = useState<number | null>(null);
@@ -65,6 +68,7 @@ export const RollingChartsPanel: React.FC<RollingChartsPanelProps> = ({
               sharedHoverPosition={sharedHoverPosition}
               onHoverChange={setSharedHoverPosition}
               gapThresholdSeconds={settings.gapThresholdSeconds}
+              autoScalingEnabled={settings.autoScalingEnabled}
             />
           </Box>
 
@@ -81,6 +85,7 @@ export const RollingChartsPanel: React.FC<RollingChartsPanelProps> = ({
               sharedHoverPosition={sharedHoverPosition}
               onHoverChange={setSharedHoverPosition}
               gapThresholdSeconds={settings.gapThresholdSeconds}
+              autoScalingEnabled={settings.autoScalingEnabled}
             />
           </Box>
 
@@ -97,6 +102,7 @@ export const RollingChartsPanel: React.FC<RollingChartsPanelProps> = ({
               sharedHoverPosition={sharedHoverPosition}
               onHoverChange={setSharedHoverPosition}
               gapThresholdSeconds={settings.gapThresholdSeconds}
+              autoScalingEnabled={settings.autoScalingEnabled}
             />
           </Box>
 
@@ -113,6 +119,7 @@ export const RollingChartsPanel: React.FC<RollingChartsPanelProps> = ({
               sharedHoverPosition={sharedHoverPosition}
               onHoverChange={setSharedHoverPosition}
               gapThresholdSeconds={settings.gapThresholdSeconds}
+              autoScalingEnabled={settings.autoScalingEnabled}
             />
           </Box>
         </Box>
