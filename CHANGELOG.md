@@ -8,6 +8,42 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Dashboard UI Enhancements - 2025-10-06
+
+#### Added
+- **Session Information Header**: Current session name, start time, duration counter (HH:MM:SS), and last update displayed prominently in measurements card
+- **Live Session Duration**: Real-time session length counter that updates every second
+- **Chart Container**: All measurement charts now wrapped in unified Card component with proper padding and visual framing
+- **Golden Ratio Layout**: Measurements and Session Settings cards now use golden ratio (1.618:1) for aesthetically pleasing proportions
+
+#### Changed
+- **Renamed "Dashboard Settings"** to **"Session Settings"** for clearer context
+- **Typography Consistency**: All settings labels, buttons, and slider marks now use consistent h5 variant typography matching measurement labels
+- **Chart Time Range Slider**: Now fully functional with dynamic data filtering, axis scaling, and intelligent tick generation (1/5/10/20/30/60/120 minutes)
+- **Layout Spacing**: Reduced unnecessary gaps between header and content for tighter, more professional layout
+- **Session Metadata Display**: Reorganized to show measurements (pH, Temperature) first, then session metadata below in logical order
+- **Card Widths**: Changed from equal 50/50 split to golden ratio for better visual balance
+
+#### Removed
+- **Slider Hover Tooltip**: Removed distracting hover information box from time range slider
+- **Horizontal Dividers**: Removed unnecessary dividers around Recording toggle for cleaner appearance
+- **Hardcoded Time Windows**: Eliminated hardcoded 10-minute values from charts, now respects user selection
+
+#### Fixed
+- **Chart Time Range Bug**: Fixed critical issue where slider appeared to work but charts were hardcoded to always show 10 minutes
+- **X-Axis Scaling**: Charts now dynamically adjust domain and tick marks based on selected time window
+- **Data Filtering**: Measurements properly filtered to match selected time range
+- **Hover Data**: Dummy data points regenerated when time window changes for consistent hover behavior
+
+#### Technical Details
+- **MeasurementChart.tsx**: Added `windowMinutes` prop, removed all hardcoded -10 values, implemented dynamic tick generation
+- **RollingChartsPanel.tsx**: Passes `windowMinutes` to all chart components, wrapped in Card container
+- **MeasurementPanel.tsx**: Session header with live duration counter, reorganized metadata display, updated typography
+- **AppLayout.tsx**: Removed top padding from main content area, renamed card title
+- **DashboardPage.tsx**: Removed top padding for tighter layout
+
+---
+
 ### Crash-Resistant Session Buffering - INTEGRATED ✅ - 2025-10-02
 
 #### Added

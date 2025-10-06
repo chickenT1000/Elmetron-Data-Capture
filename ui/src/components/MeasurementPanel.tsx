@@ -523,11 +523,11 @@ export const MeasurementPanel: React.FC<MeasurementPanelProps> = ({
           </CardContent>
         </Card>
 
-        {/* Right Card: Dashboard Settings */}
+        {/* Right Card: Session Settings */}
         <Card sx={{ flex: 1, minWidth: 0 }}>
           <CardContent sx={{ py: 2, '&:last-child': { pb: 2 } }}>
             <Typography variant="subtitle1" fontWeight={600} gutterBottom>
-              Dashboard Settings
+              Session Settings
             </Typography>
             
             <Stack spacing={2} sx={{ mt: 1.5 }}>
@@ -704,8 +704,6 @@ export const MeasurementPanel: React.FC<MeasurementPanelProps> = ({
                 </Button>
               )}
 
-              <Divider sx={{ my: 0.5 }} />
-
               {/* Recording Toggle */}
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -724,8 +722,6 @@ export const MeasurementPanel: React.FC<MeasurementPanelProps> = ({
                   disabled={!isLiveMode}
                 />
               </Box>
-
-              <Divider sx={{ my: 0.5 }} />
 
               {/* Chart Time Range Slider */}
               <Box>

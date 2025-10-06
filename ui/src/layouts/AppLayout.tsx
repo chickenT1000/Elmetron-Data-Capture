@@ -278,7 +278,8 @@ export function AppLayout({ onToggleTheme, isDarkMode = false }: AppLayoutProps)
         component="main"
         sx={{
           flexGrow: 1,
-          p: 3,
+          px: 3,
+          pb: 3,
           width: { sm: `calc(100% - ${drawerWidth}px)` },
           mt: 8,
           backgroundColor: 'background.default',
