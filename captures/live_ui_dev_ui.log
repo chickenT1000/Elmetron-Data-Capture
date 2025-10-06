@@ -887,3 +887,10 @@ t
 [2m09:41:01[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/MeasurementPanel.tsx[22m
 [2m09:44:32[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/MeasurementPanel.tsx[22m
 [2m09:45:33[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/DashboardPage.tsx[22m
+[2m09:50:03[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/layouts/AppLayout.tsx[22m
+[2m09:53:20[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/MeasurementPanel.tsx[22m
+[2m09:53:44[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/MeasurementPanel.tsx[22m
+
+> ui@0.0.0 dev
+> vite --host 127.0.0.1 --port 5173 --strictPort
+
