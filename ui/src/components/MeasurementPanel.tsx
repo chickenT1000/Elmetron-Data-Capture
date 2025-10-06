@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Alert,
   Box,
@@ -20,6 +20,8 @@ import SensorsIcon from '@mui/icons-material/Sensors';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 import Switch from '@mui/material/Switch';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import type { MeasurementPanelState, MetricIndicatorState } from './contracts';
 
 const formatNumber = (value?: number | null, digits = 2): string => {
@@ -97,6 +99,9 @@ export interface MeasurementPanelProps {
   recordingEnabled?: boolean;
   onRecordingToggle?: () => void;
   isLiveMode?: boolean;
+  chartTimeRangeIndex?: number;
+  onChartTimeRangeChange?: (index: number) => void;
+  timeRangeOptions?: number[];
 }
 
 // Session edit mode type
@@ -114,13 +119,18 @@ export const MeasurementPanel: React.FC<MeasurementPanelProps> = ({
   metrics, 
   recordingEnabled, 
   onRecordingToggle, 
-  isLiveMode 
+  isLiveMode,
+  chartTimeRangeIndex = 2,
+  onChartTimeRangeChange,
+  timeRangeOptions = [1, 5, 10, 20, 30, 60, 120]
 }) => {
-  // Mockup data for current session
-  const [currentSession] = useState({
-    session_number: 69,
+  // Current session data - fetched from API
+  const [currentSession, setCurrentSession] = useState({
+    id: null as number | null,
+    session_number: null as number | null,
     name: null as string | null,
-    display_name: 'Session 69',
+    display_name: 'Loading...',
+    started_at: null as string | null,
   });
   
   // Session editing state
@@ -130,10 +140,55 @@ export const MeasurementPanel: React.FC<MeasurementPanelProps> = ({
     loading: false,
     error: null,
   });
-  
-  // Discrete time range options (minutes)
-  const timeRangeOptions = [1, 5, 10, 20, 30, 60, 120];
-  const [chartTimeRangeIndex, setChartTimeRangeIndex] = useState(2); // Default to 10 min (index 2)
+
+  // Force re-render every second to update session duration
+  const [, forceUpdate] = useState(0);
+  useEffect(() => {
+    const interval = setInterval(() => {
+      forceUpdate(n => n + 1);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Fetch current session ID from API
+  useEffect(() => {
+    const fetchCurrentSession = async () => {
+      try {
+        const response = await fetch('http://localhost:8050/api/live/status');
+        const data = await response.json();
+        
+        if (data.current_session_id) {
+          // Fetch session details to get the name
+          const sessionResponse = await fetch(`http://localhost:8050/api/sessions/${data.current_session_id}`);
+          const sessionData = await sessionResponse.json();
+          
+          setCurrentSession({
+            id: sessionData.id,
+            session_number: sessionData.id, // Using ID as session number for now
+            name: sessionData.note,
+            display_name: sessionData.note || `Session ${sessionData.id}`,
+            started_at: sessionData.started_at,
+          });
+        } else {
+          // No active session
+          setCurrentSession({
+            id: null,
+            session_number: null,
+            name: null,
+            display_name: 'No active session',
+          });
+        }
+      } catch (error) {
+        console.error('[ERROR] Failed to fetch current session:', error);
+        toast.error('Failed to load session information');
+      }
+    };
+
+    fetchCurrentSession();
+    // Poll every 5 seconds to keep session info fresh
+    const interval = setInterval(fetchCurrentSession, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Validation: sanitize and validate session name
   const validateSessionName = (name: string): { valid: boolean; error: string | null; sanitized: string } => {
@@ -199,16 +254,53 @@ export const MeasurementPanel: React.FC<MeasurementPanelProps> = ({
 
     setEditState(prev => ({ ...prev, loading: true, error: null }));
 
-    // TODO: API call to rename session
-    console.log('[MOCKUP] Rename session to:', validation.sanitized);
-    
-    // Simulate API call
-    setTimeout(() => {
-      console.log('[MOCKUP] Session renamed successfully');
+    try {
+      // API call to rename session
+      const response = await fetch(`http://localhost:8050/api/sessions/${currentSession.id}/rename`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name: validation.sanitized }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to rename session');
+      }
+
+      const result = await response.json();
+      console.log('[SUCCESS] Session renamed:', result);
+      
+      // Update local state with new name
+      setCurrentSession(prev => ({ 
+        ...prev, 
+        name: validation.sanitized,
+        display_name: validation.sanitized
+      }));
       setEditState({ mode: 'none', editValue: '', loading: false, error: null });
-      // TODO: Show success toast
-      // TODO: Refresh current session data
-    }, 500);
+      
+      // Show success toast
+      toast.success(`Session renamed to "${validation.sanitized}"`, {
+        position: 'bottom-right',
+        autoClose: 3000,
+      });
+    } catch (error) {
+      console.error('[ERROR] Failed to rename session:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to rename session';
+      
+      setEditState(prev => ({ 
+        ...prev, 
+        loading: false, 
+        error: errorMessage
+      }));
+      
+      // Show error toast
+      toast.error(errorMessage, {
+        position: 'bottom-right',
+        autoClose: 5000,
+      });
+    }
   };
 
   // Handle confirming new session
@@ -257,9 +349,9 @@ export const MeasurementPanel: React.FC<MeasurementPanelProps> = ({
 
   const handleTimeRangeChange = (_event: Event, value: number | number[]) => {
     const newIndex = Array.isArray(value) ? value[0] : value;
-    setChartTimeRangeIndex(newIndex);
-    console.log('[MOCKUP] Chart time range changed:', timeRangeOptions[newIndex], 'minutes');
-    // TODO: Update charts time range in real-time
+    if (onChartTimeRangeChange) {
+      onChartTimeRangeChange(newIndex);
+    }
   };
 
   if (state.status === 'loading') {
@@ -330,20 +422,29 @@ export const MeasurementPanel: React.FC<MeasurementPanelProps> = ({
   const lastUpdatedIso = measurement?.capturedAtIso ?? measurement?.timestampIso ?? null;
 
   return (
-    <Stack spacing={3}>
-      {isTimeMode && (
-        <Alert severity="info">
-          <Typography variant="body2">
-            <strong>Device in TIME mode:</strong> The meter is currently displaying time and is not sending measurement data. 
-            Switch the device to measurement mode to resume data collection.
-          </Typography>
-        </Alert>
-      )}
+    <>
+      <ToastContainer />
+      <Stack spacing={2}>
+        {isTimeMode && (
+          <Alert severity="info">
+            <Typography variant="body2">
+              <strong>Device in TIME mode:</strong> The meter is currently displaying time and is not sending measurement data. 
+              Switch the device to measurement mode to resume data collection.
+            </Typography>
+          </Alert>
+        )}
 
       <Box sx={{ display: 'flex', gap: 3 }}>
         {/* Left Card: Measurements */}
-        <Card sx={{ flex: 1 }}>
+        <Card sx={{ flex: 1.618, minWidth: 0 }}>
           <CardContent>
+            {/* Header: Session Name */}
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="subtitle1" fontWeight={600} gutterBottom>
+                Current session: {currentSession.display_name}
+              </Typography>
+            </Box>
+
             {measurementValue === '—' && !measurement?.temperature ? (
               <Box
                 sx={{
@@ -395,19 +496,35 @@ export const MeasurementPanel: React.FC<MeasurementPanelProps> = ({
                   ) : null}
                 </Box>
 
-                {/* Last update timestamp */}
-                <Box sx={{ mt: 1 }}>
-                  <Typography variant="caption" color="text.secondary">
-                    Last update: {formatTimestamp(lastUpdatedIso)}
-                  </Typography>
-                </Box>
+                {/* Session Metadata (below measurements) */}
+                {currentSession.started_at && (
+                  <Stack spacing={0.5} sx={{ mt: 2 }}>
+                    <Typography variant="caption" color="text.secondary">
+                      Started at: {formatTimestamp(currentSession.started_at)}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Session length: {(() => {
+                        const start = new Date(currentSession.started_at).getTime();
+                        const now = Date.now();
+                        const diffMs = now - start;
+                        const hours = Math.floor(diffMs / 3600000);
+                        const minutes = Math.floor((diffMs % 3600000) / 60000);
+                        const seconds = Math.floor((diffMs % 60000) / 1000);
+                        return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                      })()}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Last update: {formatTimestamp(lastUpdatedIso)}
+                    </Typography>
+                  </Stack>
+                )}
               </Stack>
             )}
           </CardContent>
         </Card>
 
         {/* Right Card: Dashboard Settings */}
-        <Card sx={{ width: 320 }}>
+        <Card sx={{ flex: 1, minWidth: 0 }}>
           <CardContent sx={{ py: 2, '&:last-child': { pb: 2 } }}>
             <Typography variant="subtitle1" fontWeight={600} gutterBottom>
               Dashboard Settings
@@ -492,10 +609,10 @@ export const MeasurementPanel: React.FC<MeasurementPanelProps> = ({
                   disabled={editState.mode === 'creating'}
                   sx={{ 
                     textTransform: 'none',
-                    height: '32px',
+                    height: '36px',
                   }}
                 >
-                  <Typography variant="caption">
+                  <Typography variant="h5" fontWeight={500}>
                     Rename Current Session
                   </Typography>
                 </Button>
@@ -578,10 +695,10 @@ export const MeasurementPanel: React.FC<MeasurementPanelProps> = ({
                   disabled={editState.mode === 'renaming'}
                   sx={{ 
                     textTransform: 'none',
-                    height: '32px',
+                    height: '36px',
                   }}
                 >
-                  <Typography variant="caption">
+                  <Typography variant="h5" fontWeight={500}>
                     Start New Session
                   </Typography>
                 </Button>
@@ -594,14 +711,14 @@ export const MeasurementPanel: React.FC<MeasurementPanelProps> = ({
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <FiberManualRecordIcon 
                     color={recordingEnabled ? 'success' : 'default'} 
-                    sx={{ fontSize: 12 }} 
+                    sx={{ fontSize: 16 }} 
                   />
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography variant="h5" color="text.secondary" fontWeight={500}>
                     Recording
                   </Typography>
                 </Box>
                 <Switch 
-                  size="small" 
+                  size="medium" 
                   checked={recordingEnabled ?? false}
                   onChange={onRecordingToggle}
                   disabled={!isLiveMode}
@@ -613,10 +730,10 @@ export const MeasurementPanel: React.FC<MeasurementPanelProps> = ({
               {/* Chart Time Range Slider */}
               <Box>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', mb: 0.5 }}>
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography variant="h5" color="text.secondary" fontWeight={500}>
                     Chart Time Range:
                   </Typography>
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography variant="h5" color="text.secondary" fontWeight={500}>
                     {timeRangeOptions[chartTimeRangeIndex]} minutes
                   </Typography>
                 </Box>
@@ -631,11 +748,7 @@ export const MeasurementPanel: React.FC<MeasurementPanelProps> = ({
                       value: index,
                       label: minutes.toString(),
                     }))}
-                    valueLabelDisplay="auto"
-                    valueLabelFormat={(value) => {
-                      const minutes = timeRangeOptions[value];
-                      return minutes >= 60 ? `${minutes / 60} hour${minutes > 60 ? 's' : ''}` : `${minutes} min`;
-                    }}
+                    valueLabelDisplay="off"
                     sx={{
                       height: 4,
                       '& .MuiSlider-thumb': {
@@ -658,7 +771,8 @@ export const MeasurementPanel: React.FC<MeasurementPanelProps> = ({
                         height: 3,
                       },
                       '& .MuiSlider-markLabel': {
-                        fontSize: '0.65rem',
+                        fontSize: '0.875rem',
+                        fontWeight: 500,
                       },
                     }}
                   />
@@ -680,7 +794,8 @@ export const MeasurementPanel: React.FC<MeasurementPanelProps> = ({
           {metrics.map(renderMetricCard)}
         </Box>
       ) : null}
-    </Stack>
+      </Stack>
+    </>
   );
 };
 

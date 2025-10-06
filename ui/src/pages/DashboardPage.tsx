@@ -1,4 +1,5 @@
-﻿import { Stack, Typography } from '@mui/material';
+﻿import { useState } from 'react';
+import { Stack, Typography } from '@mui/material';
 import { useOutletContext } from 'react-router-dom';
 import { useHealthStatus } from '../hooks/useHealthStatus';
 import { useHealthLogEvents, type HealthLogConnectionState } from '../hooks/useHealthLogEvents';
@@ -13,6 +14,9 @@ interface OutletContext {
   recordingEnabled: boolean;
   onRecordingToggle: () => void;
 }
+
+// Time range options in minutes
+const TIME_RANGE_OPTIONS = [1, 5, 10, 20, 30, 60, 120];
 
 const formatNumber = (value?: number | null, digits = 2): string => {
   if (value === undefined || value === null || Number.isNaN(value)) {
@@ -44,6 +48,10 @@ export default function DashboardPage() {
   const { data: liveStatus } = useLiveStatus();
   const isArchiveMode = liveStatus?.mode === 'archive';
   const isLiveMode = liveStatus?.mode === 'live';
+
+  // Chart time range state (index into TIME_RANGE_OPTIONS array)
+  const [chartTimeRangeIndex, setChartTimeRangeIndex] = useState(2); // Default to 10 min (index 2)
+  const chartTimeRangeMinutes = TIME_RANGE_OPTIONS[chartTimeRangeIndex];
 
   const {
     data: health,
@@ -107,14 +115,17 @@ export default function DashboardPage() {
 
 
   return (
-    <Stack spacing={3} sx={{ py: 3 }}>
+    <Stack spacing={3} sx={{ pb: 3 }}>
       <MeasurementPanel 
         state={measurementState} 
         recordingEnabled={recordingEnabled}
         onRecordingToggle={onRecordingToggle}
         isLiveMode={isLiveMode}
+        chartTimeRangeIndex={chartTimeRangeIndex}
+        onChartTimeRangeChange={setChartTimeRangeIndex}
+        timeRangeOptions={TIME_RANGE_OPTIONS}
       />
-      <RollingChartsPanel windowMinutes={10} />
+      <RollingChartsPanel windowMinutes={chartTimeRangeMinutes} />
     </Stack>
   );
 }

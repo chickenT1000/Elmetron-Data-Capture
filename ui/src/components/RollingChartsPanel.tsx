@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Box, Typography, Paper, Alert } from '@mui/material';
+import { Box, Typography, Paper, Alert, Card, CardContent } from '@mui/material';
 import { MeasurementChart } from './MeasurementChart';
 import { useRecentMeasurements } from '../hooks/useRecentMeasurements';
 import { useSettings } from '../contexts/SettingsContext';
@@ -43,7 +43,9 @@ export const RollingChartsPanel: React.FC<RollingChartsPanelProps> = ({
         </Alert>
       )}
 
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
+      <Card>
+        <CardContent sx={{ p: 3 }}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
           <Box>
             <MeasurementChart
               title="pH"
@@ -58,6 +60,7 @@ export const RollingChartsPanel: React.FC<RollingChartsPanelProps> = ({
               onHoverChange={setSharedHoverPosition}
               gapThresholdSeconds={settings.gapThresholdSeconds}
               autoScalingEnabled={settings.autoScalingEnabled}
+              windowMinutes={windowMinutes}
             />
           </Box>
 
@@ -75,6 +78,7 @@ export const RollingChartsPanel: React.FC<RollingChartsPanelProps> = ({
               onHoverChange={setSharedHoverPosition}
               gapThresholdSeconds={settings.gapThresholdSeconds}
               autoScalingEnabled={settings.autoScalingEnabled}
+              windowMinutes={windowMinutes}
             />
           </Box>
 
@@ -92,6 +96,7 @@ export const RollingChartsPanel: React.FC<RollingChartsPanelProps> = ({
               onHoverChange={setSharedHoverPosition}
               gapThresholdSeconds={settings.gapThresholdSeconds}
               autoScalingEnabled={settings.autoScalingEnabled}
+              windowMinutes={windowMinutes}
             />
           </Box>
 
@@ -109,9 +114,12 @@ export const RollingChartsPanel: React.FC<RollingChartsPanelProps> = ({
               onHoverChange={setSharedHoverPosition}
               gapThresholdSeconds={settings.gapThresholdSeconds}
               autoScalingEnabled={settings.autoScalingEnabled}
+              windowMinutes={windowMinutes}
             />
           </Box>
-        </Box>
+          </Box>
+        </CardContent>
+      </Card>
     </Box>
   );
 };

@@ -323,6 +323,87 @@ def get_session_details(session_id: int):
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/sessions/<int:session_id>/rename', methods=['PATCH'])
+def rename_session(session_id: int):
+    """
+    Rename a session by updating its note field.
+    
+    Request body:
+        {
+            "name": "New session name"
+        }
+    
+    Returns:
+        {
+            "id": 1,
+            "name": "New session name",
+            "updated_at": "2025-10-04T12:34:56Z"
+        }
+    """
+    try:
+        data = request.get_json()
+        if not data or 'name' not in data:
+            return jsonify({'error': 'Missing "name" in request body'}), 400
+        
+        name = data['name']
+        
+        # Validation
+        if not isinstance(name, str):
+            return jsonify({'error': 'Name must be a string'}), 400
+        
+        # Sanitize and validate
+        name = name.strip()
+        if len(name) == 0:
+            return jsonify({'error': 'Session name cannot be empty'}), 400
+        
+        if len(name) > 50:
+            return jsonify({'error': 'Session name must be 50 characters or less'}), 400
+        
+        # Check if session exists and validate uniqueness
+        conn = sqlite3.connect(str(db.path))
+        conn.row_factory = sqlite3.Row
+        
+        session_row = conn.execute(
+            "SELECT id FROM sessions WHERE id = ?",
+            (session_id,)
+        ).fetchone()
+        
+        if not session_row:
+            conn.close()
+            return jsonify({'error': 'Session not found'}), 404
+        
+        # Check for duplicate names (case-insensitive, excluding current session)
+        duplicate_row = conn.execute(
+            "SELECT id FROM sessions WHERE LOWER(note) = LOWER(?) AND id != ?",
+            (name, session_id)
+        ).fetchone()
+        
+        if duplicate_row:
+            conn.close()
+            return jsonify({'error': 'A session with this name already exists'}), 400
+        
+        # Update the note field (which stores the session name)
+        updated_at = datetime.utcnow().isoformat() + 'Z'
+        conn.execute(
+            "UPDATE sessions SET note = ? WHERE id = ?",
+            (name, session_id)
+        )
+        conn.commit()
+        conn.close()
+        
+        logger.info(f"Session {session_id} renamed to: {name}")
+        
+        return jsonify({
+            'id': session_id,
+            'name': name,
+            'updated_at': updated_at
+        })
+    
+    except Exception as e:
+        logger.error(f"Error renaming session {session_id}: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/sessions/<int:session_id>/measurements', methods=['GET'])
 def get_session_measurements(session_id: int):
     """

@@ -26,6 +26,7 @@ interface MeasurementChartProps {
   onHoverChange?: (position: number | null) => void;
   gapThresholdSeconds?: number;
   autoScalingEnabled?: boolean;
+  windowMinutes?: number; // Time window to display
 }
 
 export const MeasurementChart: React.FC<MeasurementChartProps> = ({
@@ -41,6 +42,7 @@ export const MeasurementChart: React.FC<MeasurementChartProps> = ({
   onHoverChange,
   gapThresholdSeconds = 15,
   autoScalingEnabled = true,
+  windowMinutes = 10, // Default to 10 minutes if not specified
 }) => {
   // Get auto-scaled domain and ticks from hook
   const { domain: autoScaleDomain, ticks: autoScaleTicks, preset } = useChartAutoScaling({
@@ -101,24 +103,24 @@ export const MeasurementChart: React.FC<MeasurementChartProps> = ({
   });
 
   // Filter out null/undefined values for this specific metric
-  // Also filter to only show data within the 10-minute window and sort chronologically
+  // Also filter to only show data within the time window and sort chronologically
   const filteredData = chartData
     .filter((d) => d[dataKey] !== null && d[dataKey] !== undefined)
-    .filter((d) => d.minutesAgo >= -10 && d.minutesAgo <= 0)
+    .filter((d) => d.minutesAgo >= -windowMinutes && d.minutesAgo <= 0)
     .sort((a, b) => a.minutesAgo - b.minutesAgo);
 
   // Create dummy data points spanning the entire time range for hover detection
   // This ensures hover works even where there's no actual measurement data
   const dummyDataForHover = React.useMemo(() => {
     const points = [];
-    for (let i = -10; i <= 0; i += 0.5) { // Every 30 seconds
+    for (let i = -windowMinutes; i <= 0; i += 0.5) { // Every 30 seconds
       points.push({
         minutesAgo: i,
         dummyValue: 0, // Will be invisible
       });
     }
     return points;
-  }, []);
+  }, [windowMinutes]);
 
   // Insert explicit null values in measurement data where gaps are too large
   // SMART GAP DETECTION: Use temperature as reference since it always streams in parallel
@@ -258,9 +260,22 @@ export const MeasurementChart: React.FC<MeasurementChartProps> = ({
     return `-${absMinutes}m`;
   };
 
-  // Fixed domain constants to prevent Recharts from auto-adjusting
-  const xDomain: [number, number] = [-10, 0];
-  const xTicks = [-10, -8, -6, -4, -2, 0];
+  // Dynamic domain based on time window
+  const xDomain: [number, number] = [-windowMinutes, 0];
+  
+  // Generate ticks dynamically based on window size
+  const xTicks = React.useMemo(() => {
+    const ticks = [0]; // Always show "now"
+    const step = windowMinutes <= 10 ? 2 : windowMinutes <= 30 ? 5 : windowMinutes <= 60 ? 10 : 20;
+    for (let i = -step; i >= -windowMinutes; i -= step) {
+      ticks.unshift(i);
+    }
+    // Always include the leftmost point
+    if (ticks[0] !== -windowMinutes) {
+      ticks.unshift(-windowMinutes);
+    }
+    return ticks;
+  }, [windowMinutes]);
 
   // Find data point closest to shared hover position
   const hoverPoint = React.useMemo(() => {

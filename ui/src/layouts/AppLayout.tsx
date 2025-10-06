@@ -57,12 +57,12 @@ export function AppLayout({ onToggleTheme, isDarkMode = false }: AppLayoutProps)
   const isLiveMode = mode === 'live';
   const modeColor = isLiveMode ? 'success' : 'default';
 
-  // Device info
-  const deviceLabel = liveStatus?.instrument
+  // Device info - only show device in Live mode
+  const deviceLabel = isLiveMode && liveStatus?.instrument
     ? `${liveStatus.instrument.model} · ${liveStatus.instrument.serial}`
-    : 'No Device Connected';
+    : 'No Device';
   
-  const deviceConnected = liveStatus?.device_connected ?? false;
+  const deviceConnected = isLiveMode && (liveStatus?.device_connected ?? false);
   const deviceColor = deviceConnected ? 'success' : 'default';
 
   // Service Health Aggregation
@@ -196,9 +196,7 @@ export function AppLayout({ onToggleTheme, isDarkMode = false }: AppLayoutProps)
           {/* Device Status */}
           <Tooltip title={deviceConnected ? `Device connected: ${deviceLabel}` : "No device connected"}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              {deviceConnected && (
-                <FiberManualRecordIcon color={deviceColor} sx={{ fontSize: 12 }} />
-              )}
+              <FiberManualRecordIcon color={deviceColor} sx={{ fontSize: 12 }} />
               <Typography variant="body2" color="text.secondary">
                 {deviceLabel}
               </Typography>
