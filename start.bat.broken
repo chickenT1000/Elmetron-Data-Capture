@@ -1,0 +1,242 @@
+@echo off
+setlocal ENABLEEXTENSIONS ENABLEDELAYEDEXPANSION
+
+cd /d "%~dp0"
+if errorlevel 1 (
+    echo [ERROR] Failed to change directory to script location
+    echo Current location: %CD%
+    echo Script location: %~dp0
+    echo.
+    pause
+    exit /b 1
+)
+
+echo.
+echo ==================================================
+echo     Elmetron Launch Monitor - Startup Script
+echo ==================================================
+echo.
+echo [DEBUG] Script is running...
+echo [DEBUG] If you see this message, the script started successfully
+echo.
+echo Press Ctrl+C at any time to cancel
+echo.
+
+:: Check Node.js and npm (optional - only for UI development)
+echo [INFO] Checking Node.js and npm...
+where node >nul 2>nul
+if errorlevel 1 (
+    echo [WARN] Node.js not found - UI development mode will be skipped
+    set "NODE_AVAILABLE=0"
+) else (
+    for /f "tokens=*" %%v in ('node --version 2^>^&1') do (
+        echo [OK] Node.js %%v found
+        set "NODE_AVAILABLE=1"
+        goto :after_node_version
+    )
+    :after_node_version
+)
+
+if "%NODE_AVAILABLE%"=="1" (
+    where npm >nul 2>nul
+    if errorlevel 1 (
+        echo [WARN] npm not found - UI will not start
+        set "NODE_AVAILABLE=0"
+    ) else (
+        for /f "tokens=*" %%v in ('npm --version 2^>^&1') do (
+            echo [OK] npm %%v found
+            goto :after_npm_version
+        )
+        :after_npm_version
+    )
+)
+
+:: ----------------------------------------------------------------------------
+:: Resolve Python interpreter (prefer py launcher, fallback to python.exe)
+:: ----------------------------------------------------------------------------
+set "PYTHON_CMD="
+where py >nul 2>nul && set "PYTHON_CMD=py -3"
+
+if not defined PYTHON_CMD (
+    where python >nul 2>nul && set "PYTHON_CMD=python"
+)
+
+if not defined PYTHON_CMD (
+    echo.
+    echo ==================================================
+    echo [ERROR] Python 3 not found in PATH!
+    echo ==================================================
+    echo         Please install Python 3.9+ from https://www.python.org/
+    echo         Make sure to check "Add Python to PATH" during installation
+    echo.
+    pause
+    goto :fail
+)
+
+for /f "tokens=2 delims= " %%v in ('%PYTHON_CMD% --version 2^>^&1') do (
+    set "PYTHON_VERSION=%%v"
+    goto :after_py_version
+)
+:after_py_version
+if defined PYTHON_VERSION (
+    echo [OK] Python %PYTHON_VERSION% found
+) else (
+    echo [WARN] Could not determine Python version, but Python appears available
+)
+echo.
+echo Verifying Python availability...
+"%PYTHON_CMD%" --version
+if errorlevel 1 (
+    echo [ERROR] Python version check failed!
+    goto :fail
+)
+echo [OK] Python is working
+
+:: Create/refresh virtual environment
+:: ----------------------------------------------------------------------------
+set "VENV_DIR=.venv"
+set "VENV_PY=%VENV_DIR%\Scripts\python.exe"
+set "VENV_PIP=%VENV_DIR%\Scripts\pip.exe"
+
+if not exist "%VENV_PY%" (
+    echo [INFO] Creating virtual environment in %VENV_DIR%...
+    %PYTHON_CMD% -m venv "%VENV_DIR%"
+    if errorlevel 1 (
+        echo [ERROR] Failed to create virtual environment
+        echo         This usually means Python installation is incomplete
+        goto :fail
+    )
+) else (
+    echo [INFO] Virtual environment already exists
+)
+
+echo [INFO] Upgrading pip...
+"%VENV_PY%" -m pip install --upgrade pip >"captures\setup_pip.log" 2>&1
+if errorlevel 1 (
+    echo [ERROR] Failed to upgrade pip. See captures\setup_pip.log
+    goto :fail
+)
+echo [OK] pip ready
+
+:: ----------------------------------------------------------------------------
+:: Install Python dependencies (if requirements.txt exists)
+:: ----------------------------------------------------------------------------
+if exist "requirements.txt" (
+    echo [INFO] Installing Python dependencies from requirements.txt...
+    "%VENV_PIP%" install -r requirements.txt >"captures\setup_python.log" 2>&1
+    if errorlevel 1 (
+        echo [ERROR] Failed to install Python packages. See captures\setup_python.log
+        goto :fail
+    )
+    echo [OK] Python packages ready.
+) else (
+    echo [WARN] No requirements.txt found - skipping Python package installation.
+)
+
+:: ----------------------------------------------------------------------------
+:: Check for FTDI D2XX drivers (optional - for hardware support)
+:: ----------------------------------------------------------------------------
+echo [INFO] Checking FTDI D2XX drivers...
+set "FTDI_FOUND=0"
+
+:: Check in System32
+if exist "%SystemRoot%\System32\ftd2xx.dll" (
+    echo [OK] ftd2xx.dll found in System32
+    set "FTDI_FOUND=1"
+)
+
+:: Check in application directory
+if exist "ftd2xx.dll" (
+    echo [OK] ftd2xx.dll found in application directory
+    set "FTDI_FOUND=1"
+)
+
+if "%FTDI_FOUND%"=="0" (
+    echo [WARN] ftd2xx.dll not found - live hardware capture will be unavailable
+    echo        Download FTDI D2XX drivers from https://ftdichip.com/drivers/d2xx-drivers/
+    echo        You can still use archive mode to read historical data.
+)
+
+:: ----------------------------------------------------------------------------
+:: Install UI dependencies (npm) if available
+:: ----------------------------------------------------------------------------
+if exist "ui\package.json" (
+    if "%NODE_AVAILABLE%"=="1" (
+        if not exist "ui\node_modules" (
+            echo [INFO] Installing UI dependencies (npm install)...
+            pushd "ui"
+            if exist "package-lock.json" (
+                npm ci >"..captures\setup_ui.log" 2>&1
+            ) else (
+                npm install >"..captures\setup_ui.log" 2>&1
+            )
+            set "NPM_EXIT=!ERRORLEVEL!"
+            popd
+            if not "!NPM_EXIT!"=="0" (
+                echo [WARN] Failed to install UI packages - UI will not be available
+                echo        See captures\setup_ui.log for details
+                set "NODE_AVAILABLE=0"
+            ) else (
+                echo [OK] UI packages installed
+            )
+        ) else (
+            echo [INFO] UI node_modules already exists - skipping
+        )
+    ) else (
+        echo [WARN] Node.js/npm not available - UI will not be available
+    )
+) else (
+    echo [INFO] UI directory not found - skipping npm installation
+)
+
+:: ----------------------------------------------------------------------------
+:: Start launcher
+:: ----------------------------------------------------------------------------
+echo.
+echo [INFO] Starting Elmetron Launch Monitor...
+echo.
+echo DEBUG: About to launch launcher.py from: "%VENV_PY%"
+echo DEBUG: Current directory: %CD%
+echo DEBUG: launcher.py exists?
+if exist "launcher.py" (
+    echo DEBUG: launcher.py found
+) else (
+    echo DEBUG: ERROR - launcher.py NOT FOUND in current directory!
+)
+echo.
+
+"%VENV_PY%" launcher.py
+set "EXITCODE=%ERRORLEVEL%"
+
+if "%EXITCODE%"=="0" (
+    echo [OK] Launcher exited cleanly
+) else (
+    echo [ERROR] Launcher exited with code %EXITCODE%
+)
+
+goto :end
+
+:fail
+echo.
+echo ==================================================
+echo [FAIL] Environment setup failed!
+echo ==================================================
+echo Please check the messages above and logs in the captures folder.
+echo For debugging:
+echo   - Check Python is installed and available
+echo   - Check requirements.txt exists and has correct packages
+echo   - See captures/setup_*.log for detailed error messages
+echo.
+echo Press any key to close...
+pause
+set "EXITCODE=1"
+goto :end
+
+:end
+echo.
+echo ==================================================
+echo.
+echo Script execution complete. Press any key to exit...
+echo.
+pause
+endlocal & exit /b %EXITCODE%

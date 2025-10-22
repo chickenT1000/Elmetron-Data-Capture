@@ -1,0 +1,19 @@
+# Requirements for Elmetron Data Acquisition and Analysis Suite
+# Complete dependency list for launcher, capture service, and data API
+
+# Flask backend for Data API service
+flask>=3.0.0
+flask-cors>=4.0.0
+
+# Standard library dependencies are included with Python, but listing them for documentation:
+# - tkinter (GUI for launcher) - included with most Python installations
+# - sqlite3 (database) - included with Python
+# - ctypes (Windows API access) - included with Python
+
+# Note: FTDI D2XX drivers should be installed from:
+# https://ftdichip.com/drivers/d2xx-drivers/
+# The ftd2xx.dll must be present in Windows System32 or the application directory
+# While the app can run in Archive Mode without drivers, they are REQUIRED for:
+# - Hardware access (CX-505 device)
+# - Full functionality testing
+# - Development and debugging

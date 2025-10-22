@@ -21,11 +21,13 @@ class FrameIngestor:
         analytics: Optional[AnalyticsEngine] = None,
         *,
         decode_error_callback: Optional[Callable[[bytes, Exception], None]] = None,
+        session_buffer: Optional[object] = None,
     ) -> None:
         self._config = config
         self._session = session
         self._analytics = analytics
         self._decode_error_callback = decode_error_callback
+        self._session_buffer = session_buffer
         self._frames = 0
         self._analytics_profile: Optional[Dict[str, object]] = None
 
@@ -107,6 +109,18 @@ class FrameIngestor:
         )
         decoded.setdefault('storage', {})
         decoded['storage']['frame_id'] = storage_result.frame_id
+
+        # Write to crash-resistant buffer
+        if self._session_buffer is not None:
+            try:
+                self._session_buffer.append_measurement(
+                    captured_at=captured_at,
+                    raw_frame=frame.hex(),
+                    decoded=decoded,
+                    derived_metrics=analytics_payload,
+                )
+            except Exception:  # pragma: no cover - defensive
+                pass  # Don't fail capture if buffer write fails
         decoded['storage']['measurement_id'] = storage_result.measurement_id
         decoded['storage']['session_id'] = self._session.id
         decoded['storage']['captured_at'] = captured_at.isoformat(timespec='milliseconds') + 'Z'

@@ -1,116 +1,74 @@
-﻿import { Stack, Typography } from '@mui/material';
+﻿import { useState } from 'react';
+import { Stack, Typography } from '@mui/material';
+import { useOutletContext } from 'react-router-dom';
 import { useHealthStatus } from '../hooks/useHealthStatus';
 import { useHealthLogEvents, type HealthLogConnectionState } from '../hooks/useHealthLogEvents';
 import { useLiveStatus } from '../hooks/useLiveStatus';
 import { MeasurementPanel } from '../components/MeasurementPanel';
-import { CommandHistory } from '../components/CommandHistory';
-import { LogFeed } from '../components/LogFeed';
+import { RollingChartsPanel } from '../components/RollingChartsPanel';
 import type {
-  CommandHistoryEntryState,
-  DiagnosticLogRowState,
   MeasurementPanelState,
-  MetricIndicatorState,
 } from '../components/contracts';
+
+interface OutletContext {
+  recordingEnabled: boolean;
+  onRecordingToggle: () => void;
+}
+
+// Time range options in minutes
+const TIME_RANGE_OPTIONS = [1, 5, 10, 20, 30, 60, 120];
 
 const formatNumber = (value?: number | null, digits = 2): string => {
   if (value === undefined || value === null || Number.isNaN(value)) {
-    return 'â€”';
+    return '-';
   }
   return value.toLocaleString(undefined, { maximumFractionDigits: digits });
 };
 
+
 const formatDurationMs = (value?: number | null): string => {
-  if (!value && value !== 0) return 'â€”';
+  if (!value && value !== 0) return '-';
   if (value >= 1000) {
     return `${(value / 1000).toFixed(2)} s`;
   }
   return `${value.toFixed(1)} ms`;
 };
 
-const normaliseLogStream = (state: HealthLogConnectionState): MeasurementPanelState['logStream'] => {
+const normaliseLogStream = (state: HealthLogConnectionState): 'streaming' | 'polling' | 'idle' => {
   if (state === 'streaming' || state === 'polling') {
     return state;
   }
   return 'idle';
 };
 
-const normaliseLogLevel = (level?: string | null): DiagnosticLogRowState['level'] => {
-  switch ((level ?? 'info').toLowerCase()) {
-    case 'success':
-      return 'success';
-    case 'warning':
-      return 'warning';
-    case 'error':
-      return 'error';
-    default:
-      return 'info';
-  }
-};
+
 
 export default function DashboardPage() {
+  const { recordingEnabled, onRecordingToggle } = useOutletContext<OutletContext>();
   const { data: liveStatus } = useLiveStatus();
   const isArchiveMode = liveStatus?.mode === 'archive';
+  const isLiveMode = liveStatus?.mode === 'live';
+
+  // Chart time range state (index into TIME_RANGE_OPTIONS array)
+  const [chartTimeRangeIndex, setChartTimeRangeIndex] = useState(2); // Default to 10 min (index 2)
+  const chartTimeRangeMinutes = TIME_RANGE_OPTIONS[chartTimeRangeIndex];
 
   const {
     data: health,
     isLoading: healthLoading,
     isError: healthError,
-    commandHistory,
-    analyticsProfile,
-    responseTimes,
   } = useHealthStatus(2000);
 
-  const logLimit = 25;
   const {
-    data: logEvents,
     connectionState,
-    isLoading: logsLoading,
-    isError: logsError,
-    error: logsErrorObj,
-  } = useHealthLogEvents({ limit: logLimit, fallbackMs: 5000 });
+  } = useHealthLogEvents({ limit: 25, fallbackMs: 5000 });
 
   const logStream = normaliseLogStream(connectionState);
-
-  const metricCards: MetricIndicatorState[] = [
-    {
-      id: 'frames',
-      label: 'Frames Processed',
-      value: formatNumber(health?.frames, 0),
-      helperText: `Bytes read ${formatNumber(health?.bytes_read, 0)}`,
-      iconToken: 'frames',
-    },
-    {
-      id: 'queue',
-      label: 'Command queue depth',
-      value: formatNumber(health?.command_metrics?.queue_depth, 0),
-      helperText: `Inflight ${formatNumber(health?.command_metrics?.inflight, 0)}`,
-      iconToken: 'queue',
-    },
-    {
-      id: 'processing',
-      label: 'Avg processing time',
-      value: formatDurationMs(analyticsProfile?.average_processing_time_ms),
-      helperText: `Max ${formatDurationMs(analyticsProfile?.max_processing_time_ms)} â€˘ throttled ${formatNumber(
-        analyticsProfile?.throttled_frames,
-        0,
-      )}`,
-      iconToken: 'processing-time',
-    },
-    {
-      id: 'latency',
-      label: 'Health response latency',
-      value: formatDurationMs(responseTimes?.average_ms),
-      helperText: `Last ${formatDurationMs(responseTimes?.last_ms)} â€˘ Max ${formatDurationMs(
-        responseTimes?.max_ms,
-      )}`,
-      iconToken: 'latency',
-    },
-  ];
 
   const measurementState: MeasurementPanelState = (() => {
     // In archive mode, skip loading states and show static message
     if (isArchiveMode) {
-      return { status: 'empty', message: 'CX-505 not connected. Browse historical sessions in the Sessions tab.' };
+      return { status: 'empty', message: 'Device not connected. Browse historical sessions in the Sessions tab.' };
     }
 
     if (healthLoading) {
@@ -154,44 +112,20 @@ export default function DashboardPage() {
     };
   })();
 
-  const commandHistoryEntries: CommandHistoryEntryState[] = commandHistory.map((entry) => ({
-    timestampIso: entry.timestamp_iso,
-    queueDepth: entry.queue_depth ?? null,
-    inflight: entry.inflight ?? null,
-    backlog: entry.result_backlog ?? null,
-  }));
 
-  const logEntries: DiagnosticLogRowState[] = logEvents.map((event) => ({
-    id: String(event.id ?? event.created_at ?? Date.now()),
-    level: normaliseLogLevel(event.level),
-    category: event.category ?? 'log',
-    message: event.message ?? '',
-    createdAtIso: event.created_at ?? new Date().toISOString(),
-  }));
-
-  const logEmptyMessage = logEntries.length
-    ? undefined
-    : logStream === 'idle'
-    ? 'No recent frames detected from the instrument.'
-    : 'No recent log events.';
 
   return (
-    <Stack spacing={3} sx={{ py: 3 }}>
-      <Typography variant="h4" component="h1" fontWeight={600}>
-        Service Health Dashboard
-      </Typography>
-      <MeasurementPanel state={measurementState} metrics={metricCards} />
-      {!isArchiveMode && (
-        <>
-          <CommandHistory entries={commandHistoryEntries} loading={healthLoading} />
-          <LogFeed
-            entries={logEntries}
-            loading={logsLoading}
-            errorMessage={logsError ? logsErrorObj?.message ?? 'Failed to load log stream' : null}
-            emptyMessage={logEmptyMessage}
-          />
-        </>
-      )}
+    <Stack spacing={3} sx={{ pb: 3 }}>
+      <MeasurementPanel 
+        state={measurementState} 
+        recordingEnabled={recordingEnabled}
+        onRecordingToggle={onRecordingToggle}
+        isLiveMode={isLiveMode}
+        chartTimeRangeIndex={chartTimeRangeIndex}
+        onChartTimeRangeChange={setChartTimeRangeIndex}
+        timeRangeOptions={TIME_RANGE_OPTIONS}
+      />
+      <RollingChartsPanel windowMinutes={chartTimeRangeMinutes} />
     </Stack>
   );
 }

@@ -1,0 +1,62 @@
+================================================================================
+ELMETRON DATA CAPTURE - HOW TO RUN
+================================================================================
+
+SIMPLE METHOD (RECOMMENDED):
+---------------------------
+1. Double-click: run.bat
+   - This is the main launcher script
+   - The window will stay open so you can see any errors
+   - Press any key to close when finished
+
+
+ADVANCED METHOD:
+----------------
+1. Double-click: start.bat (older method, also works)
+   - This is the core startup script
+   - Window will also stay open and wait for you to press a key
+
+
+TROUBLESHOOTING:
+----------------
+
+If the window closes immediately:
+  1. The window might be opening too quickly to see. Try opening a Command 
+     Prompt and running the batch file from there:
+     
+     cd C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture
+     run.bat
+     
+  2. Look for error messages about Python not being found. If you see that:
+     - Download Python 3.9+ from https://www.python.org/
+     - During installation, CHECK: "Add Python to PATH"
+     - Then try run.bat again
+
+If you see errors about missing packages:
+  - Check that requirements.txt exists in this folder
+  - The script will automatically try to install dependencies
+  - Wait for the installation to complete
+
+
+WHAT THE SCRIPT DOES:
+---------------------
+1. Checks for Python (REQUIRED)
+2. Creates virtual environment (.venv folder)
+3. Installs Python packages from requirements.txt
+4. Checks for Node.js/npm (OPTIONAL - for UI only)
+5. Installs UI dependencies if npm is available
+6. Starts the Elmetron Launch Monitor GUI application
+
+The window will pause at the end and say:
+"Script execution complete. Press any key to exit..."
+
+
+NORMAL WORKFLOW:
+----------------
+1. Run: run.bat
+2. Wait for "Elmetron Launch Monitor" window to appear
+3. When setup is done, you'll see the GUI with Start/Stop buttons
+4. Use the GUI buttons to control the application
+5. When done, close the GUI - the console window will also close
+
+================================================================================

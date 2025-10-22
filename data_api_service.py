@@ -1,4 +1,4 @@
-﻿"""
+"""
 Elmetron Data API Service
 
 Standalone REST API server that provides access to captured session data.
@@ -94,11 +94,42 @@ def live_status():
             "live_capture_active": true/false,
             "device_connected": true/false,
             "current_session_id": 123 or null,
+            "instrument": {"model": "CX-505", "serial": "00308/25"} or null,
             "last_update": "2025-09-30T12:34:56Z"
         }
     """
     import urllib.request
     import urllib.error
+    
+    # Get current session and instrument info from database
+    session_id = None
+    instrument_info = None
+    try:
+        conn = sqlite3.connect(str(db.path))
+        conn.row_factory = sqlite3.Row
+        
+        # Get most recent active session
+        session_row = conn.execute("""
+            SELECT s.id, i.serial, i.model, i.description
+            FROM sessions s
+            LEFT JOIN instruments i ON s.instrument_id = i.id
+            WHERE s.ended_at IS NULL
+            ORDER BY s.started_at DESC
+            LIMIT 1
+        """).fetchone()
+        
+        if session_row:
+            session_id = session_row['id']
+            if session_row['serial']:
+                instrument_info = {
+                    'model': session_row['model'],
+                    'serial': session_row['serial'],
+                    'description': session_row['description']
+                }
+        
+        conn.close()
+    except Exception as e:
+        logger.error(f"Error fetching session info: {e}")
     
     # Try to poll the capture service health endpoint (port 8051)
     try:
@@ -116,7 +147,8 @@ def live_status():
             return jsonify({
                 'live_capture_active': device_connected,
                 'device_connected': device_connected,
-                'current_session_id': None,  # TODO: Get from latest session in DB
+                'current_session_id': session_id,
+                'instrument': instrument_info,
                 'last_update': last_frame,
                 'mode': 'live' if device_connected else 'archive',
                 'frames_captured': capture_health.get('frames', 0)
@@ -291,6 +323,87 @@ def get_session_details(session_id: int):
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/sessions/<int:session_id>/rename', methods=['PATCH'])
+def rename_session(session_id: int):
+    """
+    Rename a session by updating its note field.
+    
+    Request body:
+        {
+            "name": "New session name"
+        }
+    
+    Returns:
+        {
+            "id": 1,
+            "name": "New session name",
+            "updated_at": "2025-10-04T12:34:56Z"
+        }
+    """
+    try:
+        data = request.get_json()
+        if not data or 'name' not in data:
+            return jsonify({'error': 'Missing "name" in request body'}), 400
+        
+        name = data['name']
+        
+        # Validation
+        if not isinstance(name, str):
+            return jsonify({'error': 'Name must be a string'}), 400
+        
+        # Sanitize and validate
+        name = name.strip()
+        if len(name) == 0:
+            return jsonify({'error': 'Session name cannot be empty'}), 400
+        
+        if len(name) > 50:
+            return jsonify({'error': 'Session name must be 50 characters or less'}), 400
+        
+        # Check if session exists and validate uniqueness
+        conn = sqlite3.connect(str(db.path))
+        conn.row_factory = sqlite3.Row
+        
+        session_row = conn.execute(
+            "SELECT id FROM sessions WHERE id = ?",
+            (session_id,)
+        ).fetchone()
+        
+        if not session_row:
+            conn.close()
+            return jsonify({'error': 'Session not found'}), 404
+        
+        # Check for duplicate names (case-insensitive, excluding current session)
+        duplicate_row = conn.execute(
+            "SELECT id FROM sessions WHERE LOWER(note) = LOWER(?) AND id != ?",
+            (name, session_id)
+        ).fetchone()
+        
+        if duplicate_row:
+            conn.close()
+            return jsonify({'error': 'A session with this name already exists'}), 400
+        
+        # Update the note field (which stores the session name)
+        updated_at = datetime.utcnow().isoformat() + 'Z'
+        conn.execute(
+            "UPDATE sessions SET note = ? WHERE id = ?",
+            (name, session_id)
+        )
+        conn.commit()
+        conn.close()
+        
+        logger.info(f"Session {session_id} renamed to: {name}")
+        
+        return jsonify({
+            'id': session_id,
+            'name': name,
+            'updated_at': updated_at
+        })
+    
+    except Exception as e:
+        logger.error(f"Error renaming session {session_id}: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/sessions/<int:session_id>/measurements', methods=['GET'])
 def get_session_measurements(session_id: int):
     """
@@ -311,7 +424,7 @@ def get_session_measurements(session_id: int):
                     "value": -83.5,
                     "unit": "mV",
                     "temperature": 25.3,
-                    "temperature_unit": "°C",
+                    "temperature_unit": "C",
                     "payload": {...}
                 },
                 ...
@@ -384,6 +497,162 @@ def get_session_measurements(session_id: int):
     
     except Exception as e:
         logger.error(f"Error fetching measurements for session {session_id}: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/measurements/recent', methods=['GET'])
+def get_recent_measurements():
+    """
+    Get recent measurements from the most recent session for rolling charts.
+    
+    Query params:
+        minutes: Number of minutes of history to return (default: 10, max: 60)
+        session_id: Specific session ID (optional, defaults to most recent)
+    
+    Returns:
+        {
+            "session_id": 1,
+            "start_time": "2025-10-02T10:00:00Z",
+            "end_time": "2025-10-02T10:10:00Z",
+            "measurements": [
+                {
+                    "timestamp": "2025-10-02T10:00:01Z",
+                    "ph": 7.12,
+                    "redox": -110.5,
+                    "conductivity": 1450.2,
+                    "temperature": 22.5
+                },
+                ...
+            ],
+            "count": 150
+        }
+    """
+    try:
+        minutes = request.args.get('minutes', 10, type=int)
+        session_id = request.args.get('session_id', type=int)
+        
+        minutes = max(1, min(minutes, 60))  # Clamp between 1-60 minutes
+        
+        conn = sqlite3.connect(str(db.path))
+        conn.row_factory = sqlite3.Row
+        
+        # If no session_id provided, get the most recent active session
+        if session_id is None:
+            session_row = conn.execute("""
+                SELECT id FROM sessions 
+                WHERE ended_at IS NULL
+                ORDER BY started_at DESC
+                LIMIT 1
+            """).fetchone()
+            
+            if not session_row:
+                # No active session, get most recent closed session
+                session_row = conn.execute("""
+                    SELECT id FROM sessions 
+                    ORDER BY started_at DESC
+                    LIMIT 1
+                """).fetchone()
+            
+            if not session_row:
+                conn.close()
+                return jsonify({
+                    'session_id': None,
+                    'measurements': [],
+                    'count': 0,
+                    'message': 'No sessions found'
+                })
+            
+            session_id = session_row['id']
+        
+        # Get measurements from the last N minutes
+        rows = conn.execute("""
+            SELECT 
+                datetime(created_at, 'localtime') as timestamp,
+                value,
+                unit,
+                temperature,
+                temperature_unit,
+                payload_json
+            FROM measurements
+            WHERE session_id = ?
+            AND created_at >= datetime('now', ? || ' minutes')
+            AND value IS NOT NULL
+            ORDER BY created_at ASC
+        """, (session_id, -minutes)).fetchall()
+        
+        conn.close()
+        
+        # Extract measurement values 
+        measurements = []
+        for row in rows:
+            try:
+                # Measurements are stored in table columns: value, unit, temperature, temperature_unit
+                # Use these directly to determine the metric type
+                temperature = row['temperature']
+                value = row['value']
+                unit = row['unit']
+                
+                # Quality filter: Skip frames with zero/invalid temperature (device initialization)
+                if temperature is not None and temperature <= 0:
+                    logger.debug(f"Skipping measurement with invalid temperature: {temperature}")
+                    continue
+                
+                measurement = {
+                    'timestamp': row['timestamp'],
+                    'ph': None,
+                    'redox': None,
+                    'conductivity': None,
+                    'temperature': temperature
+                }
+                
+                # Map the value to the correct metric based on unit with range validation
+                if unit and value is not None:
+                    unit_lower = unit.lower()
+                    
+                    # pH measurement (valid range: -2 to 16)
+                    if 'ph' in unit_lower:
+                        if -2 <= value <= 16:
+                            measurement['ph'] = value
+                        else:
+                            logger.debug(f"Skipping invalid pH: {value}")
+                            continue
+                    
+                    # Redox/ORP measurement (valid range: -2000 to +2000 mV)
+                    # Filters out extreme spikes when switching from pH mode
+                    elif 'mv' in unit_lower or 'orp' in unit_lower:
+                        if -2000 <= value <= 2000:
+                            measurement['redox'] = value
+                        else:
+                            logger.debug(f"Skipping invalid redox: {value} mV")
+                            continue
+                    
+                    # Conductivity (valid range: 0 to 500,000 µS/cm)
+                    elif 'us' in unit_lower or 'ms' in unit_lower or 's/cm' in unit_lower or 'siemens' in unit_lower:
+                        if 0 <= value <= 500000:
+                            measurement['conductivity'] = value
+                        else:
+                            logger.debug(f"Skipping invalid conductivity: {value}")
+                            continue
+                
+                measurements.append(measurement)
+            except (json.JSONDecodeError, KeyError, TypeError) as e:
+                logger.warning(f"Failed to parse measurement payload: {e}")
+                continue
+        
+        # Get time range
+        start_time = measurements[0]['timestamp'] if measurements else None
+        end_time = measurements[-1]['timestamp'] if measurements else None
+        
+        return jsonify({
+            'session_id': session_id,
+            'start_time': start_time,
+            'end_time': end_time,
+            'measurements': measurements,
+            'count': len(measurements)
+        })
+    
+    except Exception as e:
+        logger.error(f"Error fetching recent measurements: {e}", exc_info=True)
         return jsonify({'error': str(e)}), 500
 
 

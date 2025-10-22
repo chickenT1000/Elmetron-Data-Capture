@@ -1,0 +1,130 @@
+================================================================================
+STARTUP ISSUE - FIXED
+================================================================================
+Date: 2025-01-22
+Issue: start.bat was auto-closing after PC restart during last session
+
+ROOT CAUSE IDENTIFIED:
+----------------------
+1. Problematic "if errorlevel 1" check right after "setlocal" command
+   - This was checking the error level from setlocal, which could fail
+   - Was causing immediate exit before any output was shown
+
+2. Missing pause at critical failure points
+   - If Python check failed, it would goto :fail without pause
+   - User couldn't see the error message
+
+FIXES APPLIED:
+--------------
+1. Removed the spurious "if errorlevel 1" check at script start
+2. Added explicit pause in Python not found error
+3. Added pause at :fail label before going to :end
+4. Added debug messages to confirm script is running
+5. Created test_startup.bat for diagnostics
+
+FILES TO USE:
+-------------
+1. test_startup.bat - Run this FIRST to diagnose your environment
+   * This will show you if Python is installed
+   * Checks if all required files exist
+   * Window will stay open so you can read results
+
+2. run.bat - Main launcher (recommended)
+   * This wraps start.bat with extra error handling
+   * Window will definitely stay open
+
+3. start.bat - Core startup script (also works)
+   * Now has multiple pause points
+   * Will not auto-close anymore
+
+
+STEP-BY-STEP TESTING:
+---------------------
+
+Step 1: Test diagnostics
+   Double-click: test_startup.bat
+   
+   Read the output carefully. It will tell you:
+   - If Python is installed and working
+   - If launcher.py exists
+   - If virtual environment exists
+   
+   Press any key when done reading
+
+Step 2: If test_startup.bat shows problems:
+   - Python not found? Install from https://www.python.org/
+     (Check "Add Python to PATH" during installation)
+   - launcher.py not found? You're in wrong directory
+   - Virtual environment not found? That's OK, start.bat will create it
+
+Step 3: Run the actual launcher
+   Double-click: run.bat
+   
+   The window will now stay open and show you:
+   - What's being checked
+   - What's being installed
+   - Any errors that occur
+   
+   Window will pause and wait for you to press a key
+
+
+WHAT TO LOOK FOR:
+-----------------
+
+If the window still closes immediately:
+   1. Check if you have permission to run batch files
+   2. Check if antivirus is blocking execution
+   3. Try right-click -> Run as administrator
+
+If you see an error message:
+   1. READ THE ERROR - it will tell you what's wrong
+   2. The window will PAUSE so you can read it
+   3. Take a screenshot if needed
+   4. Press any key to close when done reading
+
+If Python is not found:
+   1. Install Python 3.9 or newer
+   2. During installation, CHECK: "Add Python to PATH"
+   3. Restart your computer after installation
+   4. Run test_startup.bat again to verify
+
+
+EXPECTED OUTPUT (if everything works):
+--------------------------------------
+You should see:
+[DEBUG] Script is running...
+[INFO] Checking Node.js and npm...
+[OK] Python X.X.X found
+[OK] Python is working
+[INFO] Virtual environment already exists (or Creating...)
+[OK] pip ready
+[INFO] Installing Python dependencies...
+[OK] Python packages ready
+[INFO] Starting Elmetron Launch Monitor...
+
+Then the Elmetron GUI window should open.
+
+
+TROUBLESHOOTING:
+----------------
+
+Q: Window still closes too fast to read?
+A: Try opening Command Prompt first, then running:
+   cd C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture
+   test_startup.bat
+
+Q: See "Python not found" error?
+A: Install Python 3.9+ and make sure to add to PATH
+
+Q: See "launcher.py not found" error?
+A: Make sure you're running from the correct directory
+
+Q: See "Failed to install packages" error?
+A: Check captures/setup_python.log for details
+   May need to update pip or install manually
+
+
+================================================================================
+SUMMARY: The batch files now have multiple pause points and will NOT auto-close.
+You will be able to see any error messages and read them before closing.
+================================================================================
