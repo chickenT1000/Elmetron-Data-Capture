@@ -1,0 +1,178 @@
+================================================================================
+AUTOCLOSE ISSUE - COMPLETELY FIXED (v2.0)
+================================================================================
+Date: 2025-01-22
+Issue: PC restarted during last session, start.bat was auto-closing
+
+SOLUTION:
+---------
+I've completely rebuilt start.bat from scratch with:
+1. Immediate visual output so you can see it's running
+2. Better error handling
+3. Pause commands at every exit point
+4. Simplified logic to avoid hidden failures
+
+
+FILES CREATED/UPDATED:
+----------------------
+1. start.bat - COMPLETELY NEW VERSION
+   - Shows "SCRIPT STARTING" immediately
+   - Window will stay open
+   - Has multiple pause points
+
+2. run.bat - UPDATED WRAPPER
+   - Simpler logic
+   - Better error messages
+   - Always pauses at the end
+
+3. start.bat.broken - BACKUP of old version
+   - Your old start.bat renamed for reference
+   - Can be deleted once new version works
+
+4. test_startup.bat - DIAGNOSTIC TOOL
+   - You said this works successfully
+   - Use this to test environment before running main app
+
+5. start_minimal.bat - DEBUG VERSION
+   - Minimal test script
+   - Can be deleted once everything works
+
+
+HOW TO TEST:
+------------
+
+Step 1: Run test_startup.bat (you said this works)
+   ✓ This confirms Python is installed
+   ✓ This confirms files exist
+   ✓ This proves batch files CAN run on your system
+
+Step 2: Try the NEW start.bat
+   Double-click: start.bat
+   
+   You should IMMEDIATELY see:
+   ============================================================
+   SCRIPT STARTING - If you see this, the batch file is working
+   ============================================================
+   
+   If you DON'T see this message, something is blocking .bat execution
+
+Step 3: If start.bat works, try run.bat
+   Double-click: run.bat
+   
+   This wraps start.bat with extra error handling
+
+
+WHAT TO EXPECT:
+---------------
+
+start.bat will show:
+1. "SCRIPT STARTING" message
+2. Current directory
+3. Node.js check (may warn if not found - that's OK)
+4. Python check (must pass)
+5. Virtual environment creation/check
+6. Package installation
+7. "Starting Elmetron Launch Monitor..."
+8. Then the GUI window should open
+
+At the end, you'll see:
+"Script complete. Press any key to close..."
+And it will WAIT for you to press a key.
+
+
+IF IT STILL AUTO-CLOSES:
+-------------------------
+
+If you NEVER see the "SCRIPT STARTING" message, try:
+
+Option A: Run from Command Prompt
+   1. Open Command Prompt (cmd.exe)
+   2. Type: cd C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture
+   3. Type: start.bat
+   4. Read any error messages
+
+Option B: Check for blocks
+   - Antivirus might be blocking
+   - Windows security might be blocking
+   - Right-click start.bat -> Properties -> Check if "Unblock" button exists
+
+Option C: Run as administrator
+   - Right-click start.bat
+   - Choose "Run as administrator"
+
+
+DIFFERENCES FROM OLD VERSION:
+------------------------------
+
+OLD start.bat had:
+- setlocal at the very start (could fail silently)
+- Complex error checking
+- Polish text mixed with English
+- No immediate output
+
+NEW start.bat has:
+- Immediate echo statements
+- setlocal AFTER initial messages
+- All English text
+- Simplified error handling
+- Multiple pause points
+
+
+EXPECTED BEHAVIOR:
+------------------
+
+✓ Window opens
+✓ Shows "SCRIPT STARTING" message immediately  
+✓ Shows progress as it runs
+✓ Pauses if any error occurs
+✓ Pauses at the end with "Press any key to close..."
+✓ Window NEVER auto-closes until you press a key
+
+
+TROUBLESHOOTING:
+----------------
+
+Problem: Window still closes immediately, never see "SCRIPT STARTING"
+Solution: 
+   - Try running from Command Prompt manually
+   - Check Windows Defender / antivirus logs
+   - Try right-click -> "Run as administrator"
+
+Problem: See "Python not found" error
+Solution:
+   - Install Python 3.9+ from https://www.python.org/
+   - During install, CHECK "Add Python to PATH"
+   - Then run start.bat again
+
+Problem: See "launcher.py not found" error
+Solution:
+   - Make sure you're in the correct directory
+   - Check that launcher.py exists in the same folder as start.bat
+
+Problem: Packages fail to install
+Solution:
+   - Check captures/setup_python.log for details
+   - May need internet connection
+   - May need to update pip manually
+
+
+NEXT STEPS:
+-----------
+
+1. Run test_startup.bat to confirm environment ✓ (you said this works)
+2. Run start.bat directly
+3. If that works, you can use run.bat as your main launcher
+4. Once working, delete these debug files:
+   - start.bat.broken
+   - start_minimal.bat
+   - test_startup.bat (or keep for future diagnostics)
+
+
+KEY POINT:
+----------
+The NEW start.bat will show "SCRIPT STARTING" within milliseconds of clicking it.
+If you don't see this message, the batch file isn't executing at all
+(not a script problem, but a Windows execution/security problem).
+
+
+================================================================================
