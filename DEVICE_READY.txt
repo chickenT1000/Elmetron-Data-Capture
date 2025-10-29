@@ -1,0 +1,102 @@
+================================================================================
+CX-505 DEVICE IS READY!
+================================================================================
+
+DIAGNOSTIC RESULTS:
+-------------------
+✓ FTDI D2XX DLL: Loaded successfully
+✓ Devices Found: 2 FTDI devices detected
+✓ Device Open: SUCCESS - Device can be opened and closed
+✓ Device Handle: Working correctly
+
+STATUS: Device is ready to use!
+
+
+NEXT STEPS TO GET IT WORKING:
+------------------------------
+
+1. In the Launcher GUI window, click the "Reset" button
+   - This will stop all services
+   - Then automatically restart them
+   - The device will be detected on restart
+
+2. Wait about 30 seconds for services to restart
+
+3. Check the launcher status indicators:
+   - Hardware should show: "CX-505 in use by capture service"
+   - Capture Service should show: "Live capture service online"
+   - UI should show: "Service Health UI online"
+   - Browser should show: "Dashboard opened"
+
+4. In the browser, you should now see:
+   - Live data streaming
+   - Charts updating
+   - Device detected
+
+
+IF THE LAUNCHER IS ALREADY CLOSED:
+-----------------------------------
+1. Double-click: run.bat or start.bat
+2. Click "Start" button in the launcher
+3. Wait for services to start (about 30 seconds)
+4. Device should be detected automatically
+
+
+WHAT THE RESET BUTTON DOES:
+----------------------------
+- Stops all running services gracefully
+- Closes database connections properly
+- Releases the CX-505 device
+- Waits for ports to be freed
+- Restarts all services fresh
+- Re-detects and connects to CX-505
+
+
+TROUBLESHOOTING (if device still not detected after reset):
+------------------------------------------------------------
+
+1. Check the launcher log window for errors
+
+2. Check captures/live_ui_dev.log for messages like:
+   - "Session XX started for device CX505" = GOOD
+   - "No FTDI D2XX devices detected" = BAD (shouldn't happen now)
+   - "Frames: XX, Bytes: XXXX" = GOOD (device is sending data)
+
+3. If you still see "No FTDI D2XX devices detected":
+   - Close launcher completely
+   - Check Task Manager - kill ALL python.exe processes
+   - Run diagnose_device.bat again to verify device
+   - Restart launcher
+
+4. If you see "FT_STATUS=3" errors:
+   - Another program is using the device
+   - Close other FTDI/serial programs
+   - Check Task Manager for duplicate python.exe processes
+
+
+BROWSER 404 ERROR (/logs/stream):
+----------------------------------
+You may still see this error:
+"GET http://127.0.0.1:8051/logs/stream 404"
+
+This is NORMAL and doesn't affect device detection.
+The UI is looking for a logging endpoint that doesn't exist in this version.
+The device will work fine despite this error.
+
+
+EXPECTED BEHAVIOR:
+------------------
+After clicking Reset:
+
+Minute 0:00 - Services stopping
+Minute 0:10 - Services starting
+Minute 0:20 - Device detected: "Session XX started"
+Minute 0:25 - Data flowing: "Frames: XX, Bytes: XXXX"
+Minute 0:30 - Browser shows live data
+
+If you see "Frames: XX, Bytes: XXXX" in the log, the device IS working!
+
+
+================================================================================
+The device replug worked! Click Reset in the launcher now.
+================================================================================

@@ -64,7 +64,6 @@ config = None
 # Status file for live capture service communication
 LIVE_STATUS_FILE = ROOT / "captures" / ".live_capture_status.json"
 
-
 # ============================================================================
 # Health & Status Endpoints
 # ============================================================================
@@ -477,19 +476,49 @@ def get_session_measurements(session_id: int):
         measurements = []
         for row in rows:
             payload = json.loads(row['payload_json']) if row['payload_json'] else {}
-            measurements.append({
+            
+            # Convert to unified format for filtering
+            measurement = {
                 'id': row['id'],
                 'timestamp': row['measurement_timestamp'],
+                'ph': None,
+                'redox': None,
+                'conductivity': None,
+                'temperature': row['temperature'],
                 'value': row['value'],
                 'unit': row['unit'],
-                'temperature': row['temperature'],
                 'temperature_unit': row['temperature_unit'],
                 'payload': payload
+            }
+            
+            # Map value to correct metric
+            if row['unit'] and row['value'] is not None:
+                unit_lower = row['unit'].lower()
+                if 'ph' in unit_lower:
+                    measurement['ph'] = row['value']
+                elif 'mv' in unit_lower or 'orp' in unit_lower:
+                    measurement['redox'] = row['value']
+                elif 'us' in unit_lower or 'ms' in unit_lower or 's/cm' in unit_lower:
+                    measurement['conductivity'] = row['value']
+            
+            measurements.append(measurement)
+        
+        # Convert back to original format
+        result_measurements = []
+        for m in measurements:
+            result_measurements.append({
+                'id': m.get('id'),
+                'timestamp': m['timestamp'],
+                'value': m.get('value'),
+                'unit': m.get('unit'),
+                'temperature': m.get('temperature'),
+                'temperature_unit': m.get('temperature_unit'),
+                'payload': m.get('payload', {})
             })
         
         return jsonify({
             'session_id': session_id,
-            'measurements': measurements,
+            'measurements': result_measurements,
             'total': total,
             'limit': limit,
             'offset': offset

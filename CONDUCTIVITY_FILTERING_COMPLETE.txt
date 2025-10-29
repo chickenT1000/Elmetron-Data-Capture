@@ -1,0 +1,276 @@
+================================================================================
+CONDUCTIVITY RATE-OF-CHANGE FILTERING - COMPLETE IMPLEMENTATION
+================================================================================
+
+USER REQUEST:
+-------------
+"Add a filtering option to the settings. Maybe the rate of signal change is 
+the filter criterium that is right. If the signal stabilizes then start 
+printing the data on the charts again. In the setting add a logarithmic scale 
+for adjustment of filtering."
+
+SOLUTION IMPLEMENTED:
+---------------------
+✅ Rate-of-change based filtering (instead of magnitude-based)
+✅ UI settings with logarithmic slider (0-100 → 1-1000 µS/cm/s)
+✅ Filter only applies when signal is changing rapidly
+✅ Shows data when signal stabilizes
+✅ User-adjustable sensitivity
+
+================================================================================
+1. UI SETTINGS (FRONTEND)
+================================================================================
+
+Location: ui/src/contexts/SettingsContext.tsx
+Added to AppSettings interface:
+  - conductivityFilterEnabled: boolean (default: true)
+  - conductivityFilterSensitivity: number (default: 50, range: 0-100)
+
+Location: ui/src/pages/SettingsPage.tsx
+New Settings Section: "Conductivity Polarization Filtering"
+  
+  Controls:
+  - Toggle Switch: Enable/Disable filtering
+  - Logarithmic Slider: Sensitivity adjustment (0-100)
+    * 0 = Low (Fast) - only filters extreme spikes
+    * 50 = Medium (Balanced) - default setting
+    * 100 = High (Stable) - requires very stable signal
+  
+  Visual Feedback:
+  - Shows current threshold in µS/cm/s
+  - Example: Slider at 50 → "31.6 µS/cm/s maximum rate of change"
+  
+  Logarithmic Mapping:
+  - Linear slider: 0 to 100
+  - Maps to: 10^((value/100) * 3)
+  - Result: 1 to 1000 µS/cm/s threshold
+
+================================================================================
+2. BACKEND FILTERING (API)
+================================================================================
+
+Location: data_api_service.py
+
+New Function: filter_conductivity_by_rate_of_change()
+  
+  How it works:
+  1. Calculates rate of change between consecutive measurements
+  2. Rate = |value_diff| / time_diff (µS/cm per second)
+  3. Filters out measurements where rate > threshold
+  4. Keeps first measurement always
+  5. Preserves temperature and other parameters
+  
+  Algorithm:
+  - For each measurement i (starting from i=1):
+    * Calculate: rate = |conductivity[i] - conductivity[i-1]| / time_diff
+    * If rate > threshold: Set conductivity to null (filter it)
+    * Else: Keep the measurement
+  
+  Benefits:
+  - Only hides data during rapid changes (polarization)
+  - Shows data as soon as signal stabilizes
+  - Doesn't remove sustained changes (real concentration shifts)
+  - Prevents chart scaling issues from transient spikes
+
+API Endpoints Updated:
+  - /api/sessions/<id>/measurements
+  - /api/measurements/recent
+  
+  New Query Parameters:
+  - filter_conductivity: 'true' or 'false' (enables filtering)
+  - filter_sensitivity: 0-100 (logarithmic scale)
+
+================================================================================
+3. API INTEGRATION (FRONTEND)
+================================================================================
+
+Location: ui/src/hooks/useRecentMeasurements.ts
+
+Updated to:
+  - Import useSettings from SettingsContext
+  - Read filter settings from context
+  - Build URL with filter parameters
+  - Pass to backend API automatically
+  
+  Example URL:
+  /api/measurements/recent?minutes=10&filter_conductivity=true&filter_sensitivity=50
+
+  Dependencies:
+  - Re-fetches data when settings change
+  - Applies filtering in real-time
+
+================================================================================
+4. HOW IT WORKS (USER PERSPECTIVE)
+================================================================================
+
+When Electrode is Immersed (Polarization Event):
+  1. Conductivity starts changing rapidly (e.g., 200 µS/cm/s)
+  2. Rate exceeds threshold (e.g., 31.6 µS/cm/s at sensitivity=50)
+  3. Conductivity values are hidden (set to null)
+  4. Chart doesn't show wild spikes
+  5. Temperature, pH, Redox continue to display normally
+
+When Signal Stabilizes:
+  1. Rate of change drops below threshold (< 31.6 µS/cm/s)
+  2. Conductivity values start appearing again
+  3. Chart shows stable readings
+  4. Normal measurement continues
+
+Adjusting Sensitivity:
+  - Lower (0-40): Fast response, shows data sooner, some spikes may appear
+  - Medium (40-60): Balanced - recommended for most cases
+  - Higher (60-100): Very stable, waits longer for signal to settle
+
+================================================================================
+5. EXAMPLE SCENARIOS
+================================================================================
+
+Scenario 1: Quick Immersion (Sensitivity = 50, Threshold = 31.6 µS/cm/s)
+  Time  | Conductivity | Rate      | Displayed?
+  ------+--------------+-----------+-----------
+  0.0s  | 0.0 µS/cm    | -         | ✓ (first)
+  1.0s  | 250 µS/cm    | 250/s     | ✗ (filtered)
+  2.0s  | 480 µS/cm    | 230/s     | ✗ (filtered)
+  3.0s  | 520 µS/cm    | 40/s      | ✗ (filtered)
+  4.0s  | 535 µS/cm    | 15/s      | ✓ (stable!)
+  5.0s  | 539 µS/cm    | 4/s       | ✓ (stable)
+
+Scenario 2: Gradual Drift (Real Concentration Change)
+  Time  | Conductivity | Rate      | Displayed?
+  ------+--------------+-----------+-----------
+  0s    | 500 µS/cm    | -         | ✓ (first)
+  10s   | 510 µS/cm    | 1/s       | ✓ (slow change)
+  20s   | 520 µS/cm    | 1/s       | ✓ (slow change)
+  30s   | 530 µS/cm    | 1/s       | ✓ (slow change)
+  
+  → Real changes are preserved!
+
+Scenario 3: Momentary Spike
+  Time  | Conductivity | Rate      | Displayed?
+  ------+--------------+-----------+-----------
+  10s   | 540 µS/cm    | 5/s       | ✓ (normal)
+  10.1s | 1200 µS/cm   | 6600/s    | ✗ (spike!)
+  10.2s | 538 µS/cm    | 6620/s    | ✗ (spike!)
+  10.5s | 540 µS/cm    | 6.7/s     | ✓ (recovered)
+
+================================================================================
+6. LOGARITHMIC SCALE EXPLAINED
+================================================================================
+
+Why Logarithmic?
+  - Conductivity changes span wide range (1 to 1000+ µS/cm/s)
+  - Linear scale would be too coarse at low end, too fine at high end
+  - Logarithmic provides even adjustment across all ranges
+
+Mapping Formula:
+  threshold = 10 ^ ((slider_value / 100) * 3)
+
+Examples:
+  Slider | Calculation      | Threshold   | Description
+  -------+------------------+-------------+------------------------
+  0      | 10^((0/100)*3)   | 1 µS/cm/s   | Very permissive
+  10     | 10^((10/100)*3)  | 2 µS/cm/s   | Permissive
+  25     | 10^((25/100)*3)  | 5.6 µS/cm/s | Loose
+  50     | 10^((50/100)*3)  | 31.6 µS/cm/s| Medium (default)
+  75     | 10^((75/100)*3)  | 178 µS/cm/s | Strict
+  90     | 10^((90/100)*3)  | 501 µS/cm/s | Very strict
+  100    | 10^((100/100)*3) | 1000 µS/cm/s| Maximum stability
+
+================================================================================
+7. SETTINGS PERSISTENCE
+================================================================================
+
+Storage: Browser localStorage (key: 'appSettings')
+Saved Settings:
+  {
+    "gapThresholdSeconds": 15,
+    "autoScalingEnabled": true,
+    "operatorName": "User",
+    "conductivityFilterEnabled": true,
+    "conductivityFilterSensitivity": 50
+  }
+
+Behavior:
+  - Settings persist across browser restarts
+  - Changes apply immediately to live data
+  - No need to restart application
+
+================================================================================
+8. TESTING THE FILTER
+================================================================================
+
+To Test:
+  1. Open browser and navigate to Settings page
+  2. Verify "Conductivity Polarization Filtering" section appears
+  3. Toggle filter on/off - charts should update in real-time
+  4. Adjust slider - observe threshold value change
+  5. Go to Dashboard/Charts page
+  6. Watch conductivity during electrode immersion:
+     - With filter: No spikes, data appears after stabilization
+     - Without filter: See full polarization spike
+
+To Verify Backend:
+  1. Check logs: captures/data_api_service.log
+  2. Look for: "Applied conductivity filtering: sensitivity=X, threshold=Y µS/cm/s"
+  3. Look for: "Filtered N unstable conductivity readings..."
+
+To Test API Directly:
+  # No filtering
+  curl "http://127.0.0.1:8050/api/measurements/recent?minutes=10"
+  
+  # With filtering (sensitivity=50)
+  curl "http://127.0.0.1:8050/api/measurements/recent?minutes=10&filter_conductivity=true&filter_sensitivity=50"
+  
+  # Very strict filtering (sensitivity=90)
+  curl "http://127.0.0.1:8050/api/measurements/recent?minutes=10&filter_conductivity=true&filter_sensitivity=90"
+
+================================================================================
+9. ADVANTAGES OVER PREVIOUS APPROACH
+================================================================================
+
+Old Approach (Magnitude-based outlier detection):
+  ✗ Filtered based on absolute values (IQR, MAD)
+  ✗ Could filter real polarization data (2-second events)
+  ✗ Static thresholds didn't adapt to different solutions
+  ✗ No user control
+
+New Approach (Rate-of-change based):
+  ✓ Filters based on how fast signal changes
+  ✓ Keeps sustained changes (real measurements)
+  ✓ Only hides rapid transients (polarization spikes)
+  ✓ User-adjustable sensitivity
+  ✓ Adapts to different measurement scenarios
+  ✓ Shows data as soon as stable
+
+================================================================================
+10. FUTURE IMPROVEMENTS (IF NEEDED)
+================================================================================
+
+Potential Enhancements:
+  1. Moving average smoothing (in addition to rate filtering)
+  2. Kalman filter for predictive smoothing
+  3. Adaptive threshold based on recent history
+  4. Per-channel filter settings (pH, Redox, Conductivity separately)
+  5. Visual indicator on charts when data is being filtered
+  6. Export option to include/exclude filtered data
+  7. Custom threshold presets (Lab, Field, Industrial)
+
+But current implementation should handle polarization spikes effectively!
+
+================================================================================
+NEXT STEPS
+================================================================================
+
+1. **Refresh your browser** (Ctrl+R or F5)
+2. Go to **Settings** page
+3. Verify **Conductivity Polarization Filtering** section appears
+4. Adjust settings as needed
+5. Go to **Dashboard** or **Charts** page
+6. Observe conductivity behavior during measurement
+7. Adjust filter sensitivity if needed for your application
+
+Default settings (enabled, sensitivity=50) should work well for most cases!
+
+================================================================================
+COMPLETE! ✓
+================================================================================

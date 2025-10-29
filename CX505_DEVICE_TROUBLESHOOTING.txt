@@ -1,0 +1,218 @@
+================================================================================
+CX-505 DEVICE NOT DETECTED - TROUBLESHOOTING GUIDE
+================================================================================
+
+PROBLEM SUMMARY:
+----------------
+The launcher shows "all green flags" but the browser reports:
+- "GET http://127.0.0.1:8051/logs/stream 404 (Endpoint not found)"
+- Device keeps connecting/disconnecting
+- Logs show: "No FTDI D2XX devices detected" and "FT_STATUS=3" errors
+
+ANALYSIS FROM LOGS:
+-------------------
+✓ Services ARE running (ports 8050 and 8051)
+✓ Device WAS detected briefly (Session 22 captured 199 frames)
+✗ Device keeps failing with "FT_Open failed with FT_STATUS=3"
+✗ FT_STATUS=3 = Device opened by another process OR device in use
+
+
+ROOT CAUSES:
+------------
+1. Multiple processes trying to access the device
+2. USB connection instability (bad cable, power issue)
+3. FTDI driver issue
+4. Device being grabbed by Windows/another program
+
+
+QUICK FIX - TRY FIRST:
+----------------------
+
+Step 1: Close the launcher completely
+  - Close the GUI window
+  - Check Task Manager for ANY python.exe processes and kill them
+
+Step 2: Unplug and replug the CX-505 USB cable
+  - Wait 5 seconds
+  - Plug it back in (try USB 2.0 port if available)
+
+Step 3: Run the diagnostic tool
+  Double-click: .venv\Scripts\python.exe diagnose_cx505.py
+  
+  OR from command prompt:
+  cd C:\Users\EKO\Desktop\GitHub\Elmetron-Data-Capture
+  .venv\Scripts\python.exe diagnose_cx505.py
+
+Step 4: Follow diagnostic tool results
+  - If it says "Device is working", close diagnostic and restart launcher
+  - If it says "Device cannot be opened", follow the troubleshooting steps below
+
+
+DETAILED TROUBLESHOOTING:
+--------------------------
+
+Problem: FT_STATUS=3 (Device not opened / In use)
+Solution:
+  1. Open Task Manager (Ctrl+Shift+Esc)
+  2. Look for ALL python.exe processes
+  3. End ALL of them
+  4. Restart the launcher
+
+Problem: Device keeps disconnecting
+Solution:
+  1. Try different USB port (USB 2.0 ports work better than USB 3.0)
+  2. Try different USB cable
+  3. Check cable connections are secure
+  4. Check if device has external power and it's plugged in
+
+Problem: FT_STATUS=2 (Device not found)
+Solution:
+  1. Check USB cable is connected
+  2. Check device is powered on
+  3. Check Device Manager:
+     - Open Device Manager
+     - Look for "Universal Serial Bus controllers"
+     - Look for FTDI device (should NOT have yellow exclamation)
+  4. Reinstall FTDI drivers if needed
+
+Problem: FT_STATUS=4 (IO Error)
+Solution:
+  1. Bad USB connection - try different port
+  2. Bad USB cable - replace cable
+  3. USB port power issue - try powered USB hub
+  4. Device firmware issue - contact manufacturer
+
+
+CHECKING DEVICE MANAGER:
+-------------------------
+1. Press Win+X, select "Device Manager"
+2. Expand "Universal Serial Bus controllers"
+3. Look for "USB Serial Converter" or "FTDI"
+4. Right-click → Properties → Driver tab
+5. Check driver version and date
+
+If you see:
+  ✓ "USB Serial Converter" with no warnings = Good
+  ✗ Yellow exclamation mark = Driver problem
+  ✗ "Unknown device" = Driver not installed
+  ✗ Not listed at all = Device not detected by Windows
+
+
+REINSTALLING FTDI DRIVERS:
+---------------------------
+If drivers are missing or corrupted:
+
+1. Download from: https://ftdichip.com/drivers/d2xx-drivers/
+2. Choose "Windows" → "setup executable"
+3. Run installer as administrator
+4. Restart computer
+5. Reconnect device
+6. Run diagnostic tool again
+
+
+CHECKING FOR MULTIPLE INSTANCES:
+---------------------------------
+Task Manager method:
+1. Press Ctrl+Shift+Esc
+2. Go to "Details" tab
+3. Sort by "Name"
+4. Look for python.exe - should see ONLY:
+   - One for data_api_service.py (PID in netstat 14716)
+   - One for cx505_capture_service.py (PID in netstat 19452)
+   - One for UI server
+   - One for launcher
+   
+5. If you see MORE than 4 python.exe, end the extra ones
+
+
+USING THE DIAGNOSTIC TOOL:
+---------------------------
+The diagnose_cx505.py tool will:
+✓ Check if FTDI DLL is loaded
+✓ Count how many FTDI devices are found
+✓ Try to open the device
+✓ Monitor connection stability
+✓ Show detailed error messages with solutions
+
+Run it BEFORE starting the launcher to verify the device works.
+
+
+COMMON SCENARIOS:
+-----------------
+
+Scenario 1: "Device is already opened by another program"
+  - Close ALL Python processes
+  - Close any other FTDI/Serial programs
+  - Unplug and replug device
+  - Run diagnostic tool
+
+Scenario 2: "No FTDI D2XX devices detected"
+  - Check USB cable
+  - Check Device Manager
+  - Try different USB port
+  - Reinstall FTDI drivers
+
+Scenario 3: Device connects then disconnects
+  - Bad USB cable (MOST COMMON)
+  - USB port power issue
+  - Try USB 2.0 port instead of USB 3.0
+  - Try powered USB hub
+
+Scenario 4: Works in diagnostic but not in launcher
+  - Diagnostic holds the device open
+  - Need to close diagnostic FIRST
+  - Then start launcher
+
+
+THE 404 ERROR (/logs/stream):
+------------------------------
+This is a SEPARATE issue from device detection.
+The UI is trying to access an endpoint that doesn't exist.
+
+This is normal if:
+- The capture service version doesn't have that endpoint
+- The UI is newer than the backend
+
+It won't prevent the device from working - it's just a UI feature.
+You can ignore this error for now.
+
+
+FINAL CHECKLIST:
+----------------
+Before starting the launcher:
+
+□ Close ALL Python processes in Task Manager
+□ CX-505 USB cable firmly connected
+□ Device powered on (if external power)
+□ FTDI drivers installed
+□ Run diagnose_cx505.py - shows device works
+□ No other programs using serial/FTDI devices
+□ Using USB 2.0 port (if available)
+
+If ALL checked, then:
+1. Start run.bat or start.bat
+2. Click "Start" in launcher
+3. Device should be detected within 30 seconds
+
+
+STILL NOT WORKING?
+------------------
+If none of the above helps:
+
+1. Collect diagnostic info:
+   - Run diagnose_cx505.py and save output
+   - Check captures/live_ui_dev.log
+   - Check Device Manager screenshot
+
+2. Check:
+   - Is the CX-505 working on another computer?
+   - Do other USB devices work on this port?
+   - Is Windows up to date?
+
+3. Contact support with:
+   - Diagnostic tool output
+   - Device Manager screenshot
+   - Log files from captures/ folder
+
+
+================================================================================

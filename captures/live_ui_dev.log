@@ -3757,3 +3757,314 @@ Warning: device open failed: Failed to open FTDI device after 5 attempts: No FTD
 Warning: device open failed: Failed to open FTDI device after 5 attempts: No FTDI D2XX devices detected. Retrying in 30.0s (attempt 381)
 Warning: device open failed: Failed to open FTDI device after 5 attempts: No FTDI D2XX devices detected. Retrying in 30.0s (attempt 382)
 Warning: device open failed: Failed to open FTDI device after 5 attempts: No FTDI D2XX devices detected. Retrying in 30.0s (attempt 383)
+Checking for orphaned session buffers...
+[OK] Recovered 0 measurements from 2 crashed session(s)
+[WARNING] Buffer recovery failed: 'session_ids'
+   Continuing with normal startup...
+Connected hardware:
+  [0] CX505 (S/N EL680921)
+Health API listening on http://127.0.0.1:8051/health
+[DEBUG] Sending initial handshake: 01 23 30 23 30 23 30 23 03
+[DEBUG] Handshake sent successfully
+Session 82 started for device CX505
+Frames: 28, Bytes: 2800, Session: 82
+Frames: 55, Bytes: 5500, Session: 82
+Frames: 82, Bytes: 8200, Session: 82
+Frames: 109, Bytes: 10900, Session: 82
+Warning: capture window failed: FT_Read failed with FT_STATUS=4. Retrying after 2.0s
+Warning: device open failed: Failed to open FTDI device after 5 attempts: No FTDI D2XX devices detected. Retrying in 2.0s (attempt 1)
+[DEBUG] Sending initial handshake: 01 23 30 23 30 23 30 23 03
+[DEBUG] Handshake sent successfully
+Session 83 started for device CX505
+Frames: 10, Bytes: 13700, Session: 83
+Frames: 37, Bytes: 16400, Session: 83
+Frames: 64, Bytes: 19100, Session: 83
+Frames: 91, Bytes: 21800, Session: 83
+Frames: 118, Bytes: 24500, Session: 83
+Frames: 145, Bytes: 27200, Session: 83
+Frames: 172, Bytes: 29900, Session: 83
+Frames: 199, Bytes: 32600, Session: 83
+Frames: 226, Bytes: 35300, Session: 83
+Frames: 253, Bytes: 38000, Session: 83
+Frames: 280, Bytes: 40700, Session: 83
+Frames: 307, Bytes: 43400, Session: 83
+Frames: 334, Bytes: 46100, Session: 83
+Frames: 361, Bytes: 48800, Session: 83
+Frames: 388, Bytes: 51500, Session: 83
+Frames: 415, Bytes: 54200, Session: 83
+Frames: 442, Bytes: 56900, Session: 83
+Frames: 469, Bytes: 59600, Session: 83
+Frames: 496, Bytes: 62300, Session: 83
+Frames: 523, Bytes: 65000, Session: 83
+Frames: 550, Bytes: 67700, Session: 83
+Frames: 577, Bytes: 70400, Session: 83
+Frames: 604, Bytes: 73100, Session: 83
+Frames: 631, Bytes: 75800, Session: 83
+Frames: 658, Bytes: 78500, Session: 83
+Frames: 685, Bytes: 81200, Session: 83
+Frames: 712, Bytes: 83900, Session: 83
+Frames: 739, Bytes: 86600, Session: 83
+Frames: 766, Bytes: 89300, Session: 83
+Frames: 793, Bytes: 92000, Session: 83
+Frames: 820, Bytes: 94700, Session: 83
+Frames: 847, Bytes: 97400, Session: 83
+Frames: 874, Bytes: 100100, Session: 83
+Frames: 901, Bytes: 102800, Session: 83
+Frames: 928, Bytes: 105500, Session: 83
+Frames: 955, Bytes: 108200, Session: 83
+Frames: 982, Bytes: 110900, Session: 83
+Frames: 1009, Bytes: 113600, Session: 83
+Frames: 1036, Bytes: 116300, Session: 83
+Frames: 1063, Bytes: 119000, Session: 83
+Frames: 1090, Bytes: 121700, Session: 83
+Frames: 1117, Bytes: 124400, Session: 83
+Frames: 1144, Bytes: 127100, Session: 83
+Frames: 1171, Bytes: 129800, Session: 83
+Frames: 1198, Bytes: 132500, Session: 83
+Frames: 1225, Bytes: 135200, Session: 83
+Frames: 1252, Bytes: 137900, Session: 83
+Frames: 1279, Bytes: 140600, Session: 83
+Frames: 1306, Bytes: 143300, Session: 83
+Frames: 1333, Bytes: 146000, Session: 83
+Frames: 1360, Bytes: 148700, Session: 83
+Frames: 1387, Bytes: 151400, Session: 83
+Frames: 1414, Bytes: 154100, Session: 83
+Frames: 1441, Bytes: 156800, Session: 83
+Frames: 1468, Bytes: 159500, Session: 83
+Frames: 1495, Bytes: 162200, Session: 83
+Frames: 1522, Bytes: 164900, Session: 83
+Frames: 1549, Bytes: 167600, Session: 83
+Frames: 1576, Bytes: 170300, Session: 83
+Frames: 1603, Bytes: 173000, Session: 83
+Frames: 1630, Bytes: 175700, Session: 83
+Frames: 1657, Bytes: 178400, Session: 83
+Frames: 1684, Bytes: 181100, Session: 83
+Frames: 1711, Bytes: 183800, Session: 83
+Frames: 1738, Bytes: 186500, Session: 83
+Frames: 1765, Bytes: 189200, Session: 83
+Frames: 1792, Bytes: 191900, Session: 83
+Frames: 1819, Bytes: 194600, Session: 83
+Frames: 1846, Bytes: 197300, Session: 83
+Frames: 1873, Bytes: 200000, Session: 83
+Frames: 1900, Bytes: 202700, Session: 83
+Frames: 1927, Bytes: 205400, Session: 83
+Frames: 1954, Bytes: 208100, Session: 83
+Frames: 1981, Bytes: 210800, Session: 83
+Frames: 2008, Bytes: 213500, Session: 83
+Frames: 2035, Bytes: 216200, Session: 83
+Frames: 2062, Bytes: 218900, Session: 83
+Frames: 2089, Bytes: 221600, Session: 83
+Frames: 2116, Bytes: 224300, Session: 83
+Frames: 2143, Bytes: 227000, Session: 83
+Frames: 2170, Bytes: 229700, Session: 83
+Frames: 2197, Bytes: 232400, Session: 83
+Frames: 2224, Bytes: 235100, Session: 83
+Frames: 2251, Bytes: 237800, Session: 83
+Frames: 2278, Bytes: 240500, Session: 83
+Frames: 2305, Bytes: 243200, Session: 83
+Frames: 2332, Bytes: 245900, Session: 83
+Frames: 2359, Bytes: 248600, Session: 83
+Frames: 2386, Bytes: 251300, Session: 83
+Frames: 2413, Bytes: 254000, Session: 83
+Frames: 2440, Bytes: 256700, Session: 83
+Frames: 2467, Bytes: 259400, Session: 83
+Frames: 2494, Bytes: 262100, Session: 83
+Frames: 2521, Bytes: 264800, Session: 83
+Frames: 2548, Bytes: 267500, Session: 83
+Frames: 2575, Bytes: 270200, Session: 83
+Frames: 2602, Bytes: 272900, Session: 83
+Frames: 2629, Bytes: 275600, Session: 83
+Frames: 2656, Bytes: 278300, Session: 83
+Frames: 2683, Bytes: 281000, Session: 83
+Frames: 2710, Bytes: 283700, Session: 83
+Frames: 2737, Bytes: 286400, Session: 83
+Frames: 2764, Bytes: 289100, Session: 83
+Frames: 2791, Bytes: 291800, Session: 83
+Frames: 2818, Bytes: 294500, Session: 83
+Frames: 2845, Bytes: 297200, Session: 83
+Frames: 2872, Bytes: 299900, Session: 83
+Frames: 2899, Bytes: 302600, Session: 83
+Frames: 2926, Bytes: 305300, Session: 83
+Frames: 2953, Bytes: 308000, Session: 83
+Frames: 2980, Bytes: 310700, Session: 83
+Frames: 3007, Bytes: 313400, Session: 83
+Frames: 3034, Bytes: 316100, Session: 83
+Frames: 3061, Bytes: 318800, Session: 83
+Frames: 3088, Bytes: 321500, Session: 83
+Frames: 3115, Bytes: 324200, Session: 83
+Frames: 3142, Bytes: 326900, Session: 83
+Frames: 3169, Bytes: 329600, Session: 83
+Frames: 3196, Bytes: 332300, Session: 83
+Frames: 3223, Bytes: 335000, Session: 83
+Frames: 3250, Bytes: 337700, Session: 83
+Frames: 3277, Bytes: 340400, Session: 83
+Frames: 3304, Bytes: 343100, Session: 83
+Frames: 3331, Bytes: 345800, Session: 83
+Frames: 3358, Bytes: 348500, Session: 83
+Frames: 3385, Bytes: 351200, Session: 83
+Frames: 3412, Bytes: 353900, Session: 83
+Frames: 3439, Bytes: 356600, Session: 83
+Frames: 3466, Bytes: 359300, Session: 83
+Frames: 3493, Bytes: 362000, Session: 83
+Frames: 3520, Bytes: 364700, Session: 83
+Frames: 3547, Bytes: 367400, Session: 83
+Frames: 3574, Bytes: 370100, Session: 83
+Frames: 3601, Bytes: 372800, Session: 83
+Frames: 3628, Bytes: 375500, Session: 83
+Frames: 3655, Bytes: 378200, Session: 83
+Frames: 3682, Bytes: 380900, Session: 83
+Frames: 3709, Bytes: 383600, Session: 83
+Frames: 3736, Bytes: 386300, Session: 83
+Frames: 3763, Bytes: 389000, Session: 83
+Frames: 3790, Bytes: 391700, Session: 83
+Frames: 3817, Bytes: 394400, Session: 83
+Frames: 3844, Bytes: 397100, Session: 83
+Frames: 3871, Bytes: 399800, Session: 83
+Frames: 3898, Bytes: 402500, Session: 83
+Frames: 3925, Bytes: 405200, Session: 83
+Frames: 3952, Bytes: 407900, Session: 83
+Frames: 3979, Bytes: 410600, Session: 83
+Frames: 4006, Bytes: 413300, Session: 83
+Frames: 4033, Bytes: 416000, Session: 83
+Frames: 4060, Bytes: 418700, Session: 83
+Frames: 4087, Bytes: 421400, Session: 83
+Frames: 4114, Bytes: 424100, Session: 83
+Frames: 4141, Bytes: 426800, Session: 83
+Frames: 4168, Bytes: 429500, Session: 83
+Frames: 4195, Bytes: 432200, Session: 83
+Frames: 4222, Bytes: 434900, Session: 83
+Frames: 4249, Bytes: 437600, Session: 83
+Frames: 4276, Bytes: 440300, Session: 83
+Frames: 4303, Bytes: 443000, Session: 83
+Frames: 4330, Bytes: 445700, Session: 83
+Frames: 4357, Bytes: 448400, Session: 83
+Frames: 4384, Bytes: 451100, Session: 83
+Frames: 4411, Bytes: 453800, Session: 83
+Frames: 4438, Bytes: 456500, Session: 83
+Frames: 4465, Bytes: 459200, Session: 83
+Frames: 4492, Bytes: 461900, Session: 83
+Frames: 4519, Bytes: 464600, Session: 83
+Frames: 4546, Bytes: 467300, Session: 83
+Frames: 4573, Bytes: 470000, Session: 83
+Frames: 4600, Bytes: 472700, Session: 83
+Frames: 4627, Bytes: 475400, Session: 83
+Frames: 4654, Bytes: 478100, Session: 83
+Frames: 4681, Bytes: 480800, Session: 83
+Frames: 4708, Bytes: 483500, Session: 83
+Frames: 4735, Bytes: 486200, Session: 83
+Frames: 4762, Bytes: 488900, Session: 83
+Frames: 4789, Bytes: 491600, Session: 83
+Frames: 4816, Bytes: 494300, Session: 83
+Frames: 4843, Bytes: 497000, Session: 83
+Frames: 4870, Bytes: 499700, Session: 83
+Frames: 4897, Bytes: 502400, Session: 83
+Frames: 4924, Bytes: 505100, Session: 83
+Frames: 4951, Bytes: 507800, Session: 83
+Frames: 4978, Bytes: 510500, Session: 83
+Frames: 5005, Bytes: 513200, Session: 83
+Frames: 5032, Bytes: 515900, Session: 83
+Frames: 5059, Bytes: 518600, Session: 83
+Frames: 5086, Bytes: 521300, Session: 83
+Warning: capture window failed: FT_Read failed with FT_STATUS=4. Retrying after 2.0s
+Warning: device open failed: Failed to open FTDI device after 5 attempts: No FTDI D2XX devices detected. Retrying in 2.0s (attempt 1)
+[DEBUG] Sending initial handshake: 01 23 30 23 30 23 30 23 03
+[DEBUG] Handshake sent successfully
+Session 84 started for device CX505
+Frames: 10, Bytes: 524100, Session: 84
+Frames: 37, Bytes: 526800, Session: 84
+Frames: 64, Bytes: 529500, Session: 84
+Frames: 91, Bytes: 532200, Session: 84
+Checking for orphaned session buffers...
+[OK] Recovered 0 measurements from 1 crashed session(s)
+[WARNING] Buffer recovery failed: 'session_ids'
+   Continuing with normal startup...
+Connected hardware:
+  [0] CX505 (S/N EL680921)
+Health API listening on http://127.0.0.1:8051/health
+[DEBUG] Sending initial handshake: 01 23 30 23 30 23 30 23 03
+[DEBUG] Handshake sent successfully
+Session 85 started for device CX505
+Frames: 27, Bytes: 2738, Session: 85
+Frames: 54, Bytes: 5438, Session: 85
+Frames: 81, Bytes: 8138, Session: 85
+Frames: 108, Bytes: 10838, Session: 85
+Frames: 135, Bytes: 13538, Session: 85
+Frames: 162, Bytes: 16238, Session: 85
+Frames: 189, Bytes: 18938, Session: 85
+Frames: 216, Bytes: 21638, Session: 85
+Frames: 243, Bytes: 24338, Session: 85
+Frames: 270, Bytes: 27038, Session: 85
+Frames: 297, Bytes: 29738, Session: 85
+Frames: 324, Bytes: 32438, Session: 85
+Frames: 351, Bytes: 35138, Session: 85
+Frames: 378, Bytes: 37838, Session: 85
+Frames: 405, Bytes: 40538, Session: 85
+Frames: 432, Bytes: 43238, Session: 85
+Frames: 459, Bytes: 45938, Session: 85
+Frames: 486, Bytes: 48638, Session: 85
+Frames: 513, Bytes: 51338, Session: 85
+Frames: 540, Bytes: 54038, Session: 85
+Frames: 567, Bytes: 56738, Session: 85
+Frames: 594, Bytes: 59438, Session: 85
+Frames: 621, Bytes: 62138, Session: 85
+Frames: 648, Bytes: 64838, Session: 85
+Frames: 675, Bytes: 67538, Session: 85
+Frames: 702, Bytes: 70238, Session: 85
+Frames: 729, Bytes: 72938, Session: 85
+Frames: 756, Bytes: 75638, Session: 85
+Frames: 783, Bytes: 78338, Session: 85
+Frames: 810, Bytes: 81038, Session: 85
+Frames: 837, Bytes: 83738, Session: 85
+Frames: 864, Bytes: 86438, Session: 85
+Frames: 891, Bytes: 89138, Session: 85
+Frames: 918, Bytes: 91838, Session: 85
+Frames: 945, Bytes: 94538, Session: 85
+Frames: 972, Bytes: 97238, Session: 85
+Frames: 999, Bytes: 99938, Session: 85
+Frames: 1026, Bytes: 102638, Session: 85
+Frames: 1053, Bytes: 105338, Session: 85
+Frames: 1080, Bytes: 108038, Session: 85
+Frames: 1107, Bytes: 110738, Session: 85
+Frames: 1134, Bytes: 113438, Session: 85
+Frames: 1161, Bytes: 116138, Session: 85
+Frames: 1188, Bytes: 118838, Session: 85
+Frames: 1215, Bytes: 121538, Session: 85
+Frames: 1242, Bytes: 124238, Session: 85
+Frames: 1269, Bytes: 126938, Session: 85
+Frames: 1296, Bytes: 129638, Session: 85
+Frames: 1323, Bytes: 132338, Session: 85
+Frames: 1350, Bytes: 135038, Session: 85
+Frames: 1377, Bytes: 137738, Session: 85
+Frames: 1404, Bytes: 140438, Session: 85
+Frames: 1431, Bytes: 143138, Session: 85
+Frames: 1458, Bytes: 145838, Session: 85
+Frames: 1485, Bytes: 148538, Session: 85
+Frames: 1512, Bytes: 151238, Session: 85
+Frames: 1539, Bytes: 153938, Session: 85
+Frames: 1566, Bytes: 156638, Session: 85
+Frames: 1593, Bytes: 159338, Session: 85
+Frames: 1620, Bytes: 162038, Session: 85
+Frames: 1647, Bytes: 164738, Session: 85
+Frames: 1674, Bytes: 167438, Session: 85
+Frames: 1701, Bytes: 170138, Session: 85
+Frames: 1728, Bytes: 172838, Session: 85
+Frames: 1755, Bytes: 175538, Session: 85
+Frames: 1782, Bytes: 178238, Session: 85
+Frames: 1809, Bytes: 180938, Session: 85
+Frames: 1836, Bytes: 183638, Session: 85
+Frames: 1863, Bytes: 186338, Session: 85
+Frames: 1890, Bytes: 189038, Session: 85
+Frames: 1917, Bytes: 191738, Session: 85
+Frames: 1944, Bytes: 194438, Session: 85
+Frames: 1971, Bytes: 197138, Session: 85
+Checking for orphaned session buffers...
+[OK] Recovered 0 measurements from 1 crashed session(s)
+[WARNING] Buffer recovery failed: 'session_ids'
+   Continuing with normal startup...
+Connected hardware:
+  [0] CX505 (S/N EL680921)
+Health API listening on http://127.0.0.1:8051/health
+[DEBUG] Sending initial handshake: 01 23 30 23 30 23 30 23 03
+[DEBUG] Handshake sent successfully
+Session 86 started for device CX505
+Frames: 27, Bytes: 2738, Session: 86
