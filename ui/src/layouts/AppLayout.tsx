@@ -1,5 +1,5 @@
-﻿import { useState } from 'react';
-import { Outlet, useLocation, useNavigate } from 'react-router-dom';
+﻿import { useEffect, useState } from 'react';
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   AppBar,
   Toolbar,
@@ -39,7 +39,14 @@ export function AppLayout({ onToggleTheme, isDarkMode = false }: AppLayoutProps)
   const location = useLocation();
   const navigate = useNavigate();
 
-  const { data: liveStatus } = useLiveStatus();
+  // Update document title based on current route
+  useEffect(() => {
+    const route = appRoutes.find(r => r.path === location.pathname);
+    const pageTitle = route ? route.label : 'Live Dashboard';
+    document.title = `Elmetron - ${pageTitle}`;
+  }, [location.pathname]);
+
+  const { data: liveStatus, isError: liveStatusError } = useLiveStatus();
   const { data: health } = useHealthStatus(3000);
   const { connectionState: logConnectionState } = useHealthLogEvents({ limit: 5, fallbackMs: 5000 });
   const { settings } = useSettings();
@@ -52,10 +59,22 @@ export function AppLayout({ onToggleTheme, isDarkMode = false }: AppLayoutProps)
     setRecordingEnabled((prev) => !prev);
   };
 
+  // Determine if backend is completely down
+  const backendDown = liveStatusError || !health;
+  
   // Determine mode
-  const mode = liveStatus?.mode ?? 'archive';
+  const mode = backendDown ? 'offline' : (liveStatus?.mode ?? 'archive');
   const isLiveMode = mode === 'live';
-  const modeColor = isLiveMode ? 'success' : 'default';
+  const isOffline = mode === 'offline';
+  
+  // Mode indicator color
+  const modeColor = isOffline ? 'error' : (isLiveMode ? 'success' : 'warning');
+  const modeLabel = isOffline ? 'Service Offline' : (isLiveMode ? 'Live Mode' : 'Archive Mode');
+  const modeTooltip = isOffline 
+    ? 'Backend service is not running - app is non-functional. Start the launcher to restore functionality.'
+    : (isLiveMode 
+      ? 'Device is connected and streaming data' 
+      : 'No device connected - can browse historical sessions');
 
   // Device info - only show device in Live mode
   const deviceLabel = isLiveMode && liveStatus?.instrument
@@ -68,13 +87,14 @@ export function AppLayout({ onToggleTheme, isDarkMode = false }: AppLayoutProps)
   // Service Health Aggregation
   // Comprehensive health check combining multiple indicators
   const getServiceHealth = (): { status: 'error' | 'warning' | 'success'; tooltip: string } => {
+    // CRITICAL (RED DOT) - Backend is completely down
+    if (backendDown) {
+      return { status: 'error', tooltip: '🔴 Critical: Backend service is offline - app is non-functional' };
+    }
+    
     // CRITICAL (RED DOT) - Service is broken or critical failure
     if (health?.watchdog_alert) {
       return { status: 'error', tooltip: '🔴 Critical: Watchdog alert detected - service may be hung' };
-    }
-    
-    if (!health) {
-      return { status: 'error', tooltip: '🔴 Critical: Cannot reach health API - service may be down' };
     }
 
     // WARNING (YELLOW DOT) - Service is running but has issues
@@ -121,7 +141,20 @@ export function AppLayout({ onToggleTheme, isDarkMode = false }: AppLayoutProps)
 
   const drawer = (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <Box sx={{ px: 2, py: 3 }}>
+      <Box
+        component={Link}
+        to="/"
+        sx={{
+          px: 2,
+          py: 3,
+          textDecoration: 'none',
+          color: 'inherit',
+          cursor: 'pointer',
+          '&:hover': {
+            backgroundColor: 'action.hover',
+          },
+        }}
+      >
         <Typography variant="h6" fontWeight={700} color="primary">
           Elmetron
         </Typography>
@@ -180,14 +213,14 @@ export function AppLayout({ onToggleTheme, isDarkMode = false }: AppLayoutProps)
             </IconButton>
             
             {/* Mode Indicator */}
-            <Tooltip title={isLiveMode ? "Device is connected and streaming data" : "No device connected, viewing historical data"}>
+            <Tooltip title={modeTooltip}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <FiberManualRecordIcon 
                   color={modeColor} 
                   sx={{ fontSize: 12 }} 
                 />
                 <Typography variant="body2" color="text.secondary">
-                  {isLiveMode ? 'Live Mode' : 'Archive Mode'}
+                  {modeLabel}
                 </Typography>
               </Box>
             </Tooltip>
@@ -217,10 +250,10 @@ export function AppLayout({ onToggleTheme, isDarkMode = false }: AppLayoutProps)
           </Tooltip>
 
           {/* Recording Indicator */}
-          <Tooltip title={recordingEnabled ? "Recording ON - Data is being saved to database" : "Recording OFF - Data will NOT be saved"}>
+          <Tooltip title={backendDown ? "Backend offline - recording unavailable" : (recordingEnabled ? "Recording ON - Data is being saved to database" : "Recording OFF - Data will NOT be saved")}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <FiberManualRecordIcon 
-                color={recordingEnabled ? 'success' : 'default'} 
+                color={backendDown ? 'default' : (recordingEnabled ? 'success' : 'default')} 
                 sx={{ fontSize: 12 }} 
               />
               <Typography variant="body2" color="text.secondary">
