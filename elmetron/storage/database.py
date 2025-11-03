@@ -447,8 +447,16 @@ class Database:
         *,
         limit: int = 20,
         since_id: Optional[int] = None,
+        level: Optional[str] = None,
     ) -> list[Dict[str, Any]]:
-        """Return the most recent audit events for dashboards/diagnostics."""
+        """Return the most recent audit events for dashboards/diagnostics.
+        
+        Args:
+            limit: Maximum number of events to return
+            since_id: Only return events with id > since_id
+            level: Filter by minimum log level (INFO, WARNING, ERROR, etc.)
+                   If provided, filters out levels below it (e.g., INFO filters out DEBUG)
+        """
 
         try:
             limit_value = int(limit)
@@ -457,8 +465,25 @@ class Database:
         limit_value = max(1, min(limit_value, 500))
 
         query = ["SELECT id, session_id, level, category, message, payload_json, created_at FROM audit_events"]
+        where_clauses: list[str] = []
         params: list[Any] = []
-        where_clauses = []
+        
+        # Filter by minimum level (exclude DEBUG if level is INFO or higher)
+        if level:
+            level_upper = level.upper()
+            if level_upper == 'INFO':
+                # INFO and above: exclude DEBUG
+                where_clauses.append("UPPER(level) != 'DEBUG'")
+            elif level_upper == 'WARNING':
+                # WARNING and above
+                where_clauses.append("UPPER(level) IN ('WARNING', 'ERROR', 'CRITICAL')")
+            elif level_upper == 'ERROR':
+                # ERROR and above
+                where_clauses.append("UPPER(level) IN ('ERROR', 'CRITICAL')")
+            elif level_upper == 'CRITICAL':
+                # CRITICAL only
+                where_clauses.append("UPPER(level) = 'CRITICAL'")
+        
         if since_id is not None:
             try:
                 since_value = int(since_id)

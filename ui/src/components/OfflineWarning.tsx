@@ -8,37 +8,7 @@ export interface OfflineWarningProps {
   onClose?: () => void;
 }
 
-const AUTO_CLOSE_DELAY_MS = 120000; // Auto-close tab after 2 minutes
-
 export const OfflineWarning: React.FC<OfflineWarningProps> = ({ open, onClose }) => {
-  const [countdown, setCountdown] = useState(AUTO_CLOSE_DELAY_MS / 1000);
-
-  useEffect(() => {
-    if (!open) {
-      setCountdown(AUTO_CLOSE_DELAY_MS / 1000);
-      return;
-    }
-
-    // Start countdown
-    const interval = setInterval(() => {
-      setCountdown((prev) => {
-        if (prev <= 1) {
-          clearInterval(interval);
-          // Auto-close the tab
-          window.close();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [open]);
-
-  const handleCloseTab = () => {
-    window.close();
-  };
-
   const handleDismiss = () => {
     if (onClose) {
       onClose();
@@ -112,7 +82,10 @@ export const OfflineWarning: React.FC<OfflineWarningProps> = ({ open, onClose })
               ❌ Real-time dashboard will not update
             </Typography>
             <Typography component="li" variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-              ✅ Historical data viewing and exports still work
+              ❌ Historical data viewing is unavailable (backend offline)
+            </Typography>
+            <Typography component="li" variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+              ❌ Exports are unavailable (backend offline)
             </Typography>
             <Typography component="li" variant="body2" color="text.secondary" sx={{ mb: 1 }}>
               ✅ All captured data is safely saved to the database
@@ -121,30 +94,20 @@ export const OfflineWarning: React.FC<OfflineWarningProps> = ({ open, onClose })
 
           <Typography
             variant="body2"
-            color="warning.main"
-            fontWeight="bold"
+            color="text.secondary"
             sx={{ mb: 3 }}
           >
-            📌 This tab will automatically close in {countdown} seconds...
+            💡 <strong>You can safely close this browser tab now.</strong> Nothing will work until you restart the launcher.
           </Typography>
 
           {/* Action Buttons */}
           <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
             <Button
-              variant="outlined"
+              variant="contained"
               onClick={handleDismiss}
               sx={{ minWidth: 120 }}
             >
-              Keep Tab Open
-            </Button>
-            <Button
-              variant="contained"
-              color="error"
-              startIcon={<CloseIcon />}
-              onClick={handleCloseTab}
-              sx={{ minWidth: 120 }}
-            >
-              Close Tab Now
+              Dismiss
             </Button>
           </Box>
         </Paper>

@@ -149,6 +149,7 @@ def _handler_factory(monitor: HealthMonitor):
                 params = parse_qs(parsed.query)
                 limit_param = params.get('limit', ['20'])[-1]
                 since_param = params.get('since_id', [None])[-1]
+                level_param = params.get('level', [None])[-1]
                 try:
                     limit = int(limit_param)
                 except (TypeError, ValueError):
@@ -158,7 +159,7 @@ def _handler_factory(monitor: HealthMonitor):
                 except (TypeError, ValueError):
                     since_id = None
                 try:
-                    events = monitor.recent_events(limit=limit, since_id=since_id)
+                    events = monitor.recent_events(limit=limit, since_id=since_id, level=level_param)
                 except Exception as exc:  # pragma: no cover - defensive
                     self.send_error(HTTPStatus.INTERNAL_SERVER_ERROR, f'Failed to fetch events: {exc}')
                     return
@@ -192,12 +193,13 @@ def _handler_factory(monitor: HealthMonitor):
                 since_id = None
 
             try:
-                events = monitor.recent_events(limit=limit, since_id=since_id)
+                events = monitor.recent_events(limit=limit, since_id=since_id, level=level_param)
             except Exception as exc:  # pragma: no cover - defensive
                 self.send_error(HTTPStatus.INTERNAL_SERVER_ERROR, f'Failed to fetch events: {exc}')
                 return
 
-            if level_param or category_param:
+            # Category filtering still done in-memory (not in database)
+            if category_param:
                 filtered = []
                 for event in events:
                     if not isinstance(event, dict):

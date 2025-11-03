@@ -32,7 +32,7 @@ import type {
 
 import DiagnosticBundleSummaryAlert, { type BundleSummary } from './components/DiagnosticBundleSummaryAlert';
 
-const LOG_LIST_LIMIT = 25;
+const LOG_LIST_LIMIT = 999; // Show up to 999 events
 
 const formatDateTime = (value?: string | null): string => {
   if (!value) {
@@ -389,7 +389,7 @@ export default function ServiceHealthPage() {
               </Typography>
               <Stack direction="row" spacing={1} alignItems="center">
                 <Chip
-                  label={logsLoading ? 'Loading…' : `${logEvents.length} events`}
+                  label={logsLoading ? 'Loading…' : `${logEvents.filter(e => e.level.toUpperCase() !== 'DEBUG').length} events`}
                   size="small"
                   variant="outlined"
                 />
@@ -424,28 +424,33 @@ export default function ServiceHealthPage() {
                 </Stack>
               ) : logEvents.length ? (
                 <List dense disablePadding>
-                  {logEvents.map((event: HealthLogEvent, index: number) => (
-                    <ListItem key={event.id} disableGutters sx={{ pb: index === logEvents.length - 1 ? 0 : 1.5 }}>
-                      <Stack spacing={0.5} sx={{ width: '100%' }}>
-                        <Stack direction="row" spacing={1} alignItems="center">
+                  {logEvents.map((event: HealthLogEvent, index: number) => {
+                    // Filter out DEBUG logs on frontend as well (backup)
+                    if (event.level.toUpperCase() === 'DEBUG') {
+                      return null;
+                    }
+                    
+                    // Compact single-row format: [LEVEL] category - message {payload}
+                    const payloadText = event.payload ? ` ${JSON.stringify(event.payload)}` : '';
+                    const fullText = `${event.message}${payloadText}`;
+                    
+                    return (
+                      <ListItem key={event.id} disableGutters sx={{ pb: index === logEvents.length - 1 ? 0 : 1 }}>
+                        <Stack direction="row" spacing={1} alignItems="center" sx={{ width: '100%' }}>
                           <Chip label={event.level.toUpperCase()} size="small" color={levelColor(event.level)} />
                           <Typography variant="body2" fontWeight={600}>
                             {event.category}
                           </Typography>
-                          <Typography variant="caption" color="text.secondary">
+                          <Typography variant="body2" color="text.secondary" sx={{ flexGrow: 1 }}>
+                            - {fullText}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary" sx={{ flexShrink: 0 }}>
                             {formatDateTime(event.created_at)}
                           </Typography>
                         </Stack>
-                        <ListItemText
-                          primaryTypographyProps={{ variant: 'body2' }}
-                          secondaryTypographyProps={{ variant: 'caption', color: 'text.secondary' }}
-                          primary={event.message}
-                          secondary={event.payload ? JSON.stringify(event.payload) : undefined}
-                          sx={{ margin: 0 }}
-                        />
-                      </Stack>
-                    </ListItem>
-                  ))}
+                      </ListItem>
+                    );
+                  })}
                 </List>
               ) : (
                 <Typography variant="body2" color="text.secondary">
