@@ -25,7 +25,12 @@ yarn-error.log*
 # Database files (exclude production data)
 *.sqlite
 *.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
 *.db
+*.db-journal
+*.db-wal
+*.db-shm
 
 # Logs
 *.log
@@ -34,6 +39,10 @@ yarn-error.log*
 captures/*.log
 captures/*.err.log
 captures/*.out.log
+
+# Captures directory (session buffers and runtime files)
+captures/*.jsonl
+captures/*.lock
 
 # IDE / Editor
 .vscode/

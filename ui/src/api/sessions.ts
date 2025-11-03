@@ -47,10 +47,9 @@ export interface SessionEvaluationStatistics {
 }
 
 export interface SessionEvaluationMarker {
-  type: string;
-  timestamp: string | null;
-  offset_seconds: number | null;
-  measurement_id: number | null;
+  marker_number: number;
+  offset_seconds: number;
+  offset_minutes: number;
 }
 
 export interface SessionEvaluationResponse {

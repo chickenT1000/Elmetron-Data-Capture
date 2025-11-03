@@ -38,8 +38,8 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import { DatePicker, LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { useQueries, type UseQueryResult } from '@tanstack/react-query';
-import { Line, LineChart, CartesianGrid, ResponsiveContainer, Tooltip as RechartsTooltip, XAxis, YAxis, Scatter } from 'recharts';
+import { useQueries, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
+import { Line, LineChart, CartesianGrid, ResponsiveContainer, Tooltip as RechartsTooltip, XAxis, YAxis, ReferenceDot } from 'recharts';
 import { toPng } from 'html-to-image';
 
 import {
@@ -80,29 +80,34 @@ const formatDuration = (value?: number | null): string => {
   if (value === undefined || value === null) {
     return '—';
   }
-  const abs = Math.abs(value);
-  if (abs >= 3600) {
-    const hours = value / 3600;
-    return `${hours.toFixed(2)} h`;
-  }
-  if (abs >= 60) {
-    const minutes = value / 60;
-    return `${minutes.toFixed(2)} min`;
-  }
-  return `${value.toFixed(2)} s`;
+  const totalSeconds = Math.floor(Math.abs(value));
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  
+  // Format as HH:MM:SS
+  const hh = hours.toString().padStart(2, '0');
+  const mm = minutes.toString().padStart(2, '0');
+  const ss = seconds.toString().padStart(2, '0');
+  
+  return `${hh}:${mm}:${ss}`;
 };
 
 const formatOffset = (value?: number | null): string => {
   if (value === undefined || value === null) {
     return '—';
   }
-  const sign = value > 0 ? '+' : value < 0 ? '−' : '';
-  const abs = Math.abs(value);
+  // Round to nearest second (device sends 1 Hz data)
+  const rounded = Math.round(value);
+  const sign = rounded > 0 ? '+' : rounded < 0 ? '−' : '';
+  const abs = Math.abs(rounded);
+  
   if (abs >= 60) {
-    const minutes = abs / 60;
-    return `${sign}${minutes.toFixed(2)} min`;
+    const minutes = Math.floor(abs / 60);
+    const seconds = abs % 60;
+    return seconds > 0 ? `${sign}${minutes}m ${seconds}s` : `${sign}${minutes}m`;
   }
-  return `${sign}${abs.toFixed(2)} s`;
+  return `${sign}${abs}s`;
 };
 
 const formatMinutes = (seconds?: number | null): number => {
@@ -144,7 +149,7 @@ const MarkerBubble = (props: any) => {
   const { cx, cy, payload } = props;
   if (!cx || !cy || !payload) return null;
   
-  const radius = 16;
+  const radius = 12;
   const color = payload.color || '#1976d2';
   const number = payload.marker_number || '?';
   
@@ -154,9 +159,9 @@ const MarkerBubble = (props: any) => {
         cx={cx} 
         cy={cy} 
         r={radius} 
-        fill={color} 
-        stroke="#fff" 
-        strokeWidth={2}
+        fill="#fff" 
+        stroke={color} 
+        strokeWidth={2.5}
         style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))' }}
       />
       <text
@@ -164,8 +169,8 @@ const MarkerBubble = (props: any) => {
         y={cy}
         textAnchor="middle"
         dominantBaseline="central"
-        fill="#fff"
-        fontSize={12}
+        fill={color}
+        fontSize={11}
         fontWeight="bold"
       >
         {number}
@@ -261,12 +266,21 @@ const buildExportEnvelope = (evaluations: SessionEvaluationResponse[], anchor: s
 });
 
 export default function SessionEvaluationPage() {
+  // Version: 2025-10-30-14:00 - Marker fixes v3
+  const queryClient = useQueryClient();
   const [anchor, setAnchor] = useState<'start' | 'first_marker' | 'last_marker'>('start');
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [hiddenSessionIds, setHiddenSessionIds] = useState<Set<number>>(new Set());
   const [exportError, setExportError] = useState<string | null>(null);
   const [exportingPng, setExportingPng] = useState(false);
   const chartRef = useRef<HTMLDivElement | null>(null);
+  
+  // Manual axis range control
+  const [manualRangeEnabled, setManualRangeEnabled] = useState(false);
+  const [manualXMin, setManualXMin] = useState<number>(0);
+  const [manualXMax, setManualXMax] = useState<number>(0);
+  const [manualYMin, setManualYMin] = useState<number>(0);
+  const [manualYMax, setManualYMax] = useState<number>(0);
 
   // Filter state
   const [operatorFilter, setOperatorFilter] = useState<string>('');
@@ -298,8 +312,10 @@ export default function SessionEvaluationPage() {
     timestamp: string;
     offset_seconds: number;
     offset_minutes: number;
+    markerId?: number; // For editing existing markers
   } | null>(null);
   const [markerNote, setMarkerNote] = useState('');
+  const [markerOffsetMinutes, setMarkerOffsetMinutes] = useState<number>(0); // For manual time adjustment
   const [hoveredChartData, setHoveredChartData] = useState<any>(null);
 
   // Dialog state
@@ -312,6 +328,19 @@ export default function SessionEvaluationPage() {
   const [newOperator, setNewOperator] = useState('');
   const [dialogLoading, setDialogLoading] = useState(false);
   const [dialogError, setDialogError] = useState<string | null>(null);
+
+  // Auto-disable manual range when sessions change
+  useEffect(() => {
+    setManualRangeEnabled(false);
+  }, [selectedIds]);
+
+  // Cancel marker placement mode when user takes other actions
+  useEffect(() => {
+    if (markerPlacementMode) {
+      // Cancel on alignment change, parameter change, etc.
+      handleCancelMarkerPlacement();
+    }
+  }, [anchor, selectedParameter, showTemperature, selectedIds]); // Don't include handleCancelMarkerPlacement or markerPlacementMode
 
   // Fetch sessions with filters
   const fetchSessions = useCallback(async () => {
@@ -416,18 +445,110 @@ export default function SessionEvaluationPage() {
     [evaluations, hiddenSessionIds]
   );
 
-  const chartData = useMemo(() => mergeSeriesForChart(visibleEvaluations, selectedParameter, showTemperature), [visibleEvaluations, selectedParameter, showTemperature]);
+  const chartData = useMemo(() => {
+    let data = mergeSeriesForChart(visibleEvaluations, selectedParameter, showTemperature);
+    
+    // Filter data based on manual range or anchor mode
+    if (manualRangeEnabled) {
+      // Filter by manual X range, respecting anchor constraints
+      let xMinSeconds = manualXMin * 60;
+      let xMaxSeconds = manualXMax * 60;
+      
+      // Override based on anchor mode
+      if (anchor === 'first_marker') {
+        xMinSeconds = 0; // First marker always at 0
+      } else if (anchor === 'last_marker') {
+        xMaxSeconds = 0; // Last marker always at 0
+      }
+      
+      data = data.filter(point => {
+        if (point.offset_seconds === undefined) return true;
+        return point.offset_seconds >= xMinSeconds && point.offset_seconds <= xMaxSeconds;
+      });
+    } else {
+      // Filter by anchor mode
+      if (anchor === 'first_marker') {
+        // Only show data from first marker onwards (offset >= 0)
+        data = data.filter(point => point.offset_seconds === undefined || point.offset_seconds >= 0);
+      } else if (anchor === 'last_marker') {
+        // Only show data up to last marker (offset <= 0)
+        data = data.filter(point => point.offset_seconds === undefined || point.offset_seconds <= 0);
+      }
+    }
+    
+    console.log(`Chart data points: ${data.length}, Sample:`, data.slice(0, 3));
+    return data;
+  }, [visibleEvaluations, selectedParameter, showTemperature, anchor, manualRangeEnabled, manualXMin, manualXMax]);
 
-  // Calculate max time for smart interval
-  const maxTimeSeconds = useMemo(() => {
+  // Calculate time range for smart interval and X-axis domain
+  const timeRange = useMemo(() => {
+    // Use manual range if enabled, respecting anchor constraints
+    if (manualRangeEnabled) {
+      let min = manualXMin * 60;
+      let max = manualXMax * 60;
+      
+      // Override based on anchor mode
+      if (anchor === 'first_marker') {
+        min = 0; // First marker always at 0
+      } else if (anchor === 'last_marker') {
+        max = 0; // Last marker always at 0
+      }
+      
+      return { min, max };
+    }
+    
+    let min = 0;
     let max = 0;
     chartData.forEach(point => {
-      if (point.offset_seconds && point.offset_seconds > max) {
-        max = point.offset_seconds;
+      if (point.offset_seconds !== undefined && point.offset_seconds !== null) {
+        if (point.offset_seconds < min) min = point.offset_seconds;
+        if (point.offset_seconds > max) max = point.offset_seconds;
       }
     });
-    return max;
-  }, [chartData]);
+    
+    // Adjust domain based on anchor mode
+    if (anchor === 'first_marker') {
+      // First marker at X=0 (left edge) - only show data from marker onwards
+      min = 0;
+    } else if (anchor === 'last_marker') {
+      // Last marker at X=0 (right edge) - only show data before marker
+      max = 0;
+    }
+    
+    console.log(`Time range (${anchor}): min=${min}s (${(min/60).toFixed(1)}min), max=${max}s (${(max/60).toFixed(1)}min)`);
+    return { min, max };
+  }, [chartData, anchor, manualRangeEnabled, manualXMin, manualXMax]);
+  
+  const maxTimeSeconds = timeRange.max;
+
+  // Calculate Y-axis domain from line data only (not markers) to keep scale stable
+  const yAxisDomain = useMemo(() => {
+    // Use manual range if enabled (check if values have been set, not just non-zero)
+    if (manualRangeEnabled && (manualYMin !== manualYMax)) {
+      return [manualYMin, manualYMax] as const;
+    }
+    
+    let min = Infinity;
+    let max = -Infinity;
+    
+    chartData.forEach(point => {
+      visibleEvaluations.forEach(evaluation => {
+        const value = (point as any)[`session_${evaluation.session.id}`];
+        if (value !== undefined && value !== null && typeof value === 'number') {
+          if (value < min) min = value;
+          if (value > max) max = value;
+        }
+      });
+    });
+    
+    if (min === Infinity || max === -Infinity) {
+      return ['auto', 'auto'] as const;
+    }
+    
+    // Add 5% padding to top and bottom
+    const padding = (max - min) * 0.05;
+    return [min - padding, max + padding] as const;
+  }, [chartData, visibleEvaluations, manualRangeEnabled, manualYMin, manualYMax]);
 
   const colorBySession = useMemo(() => {
     const map = new Map<number, string>();
@@ -441,20 +562,24 @@ export default function SessionEvaluationPage() {
   const combinedMarkers = useMemo(() => {
     const markers: Array<{ session_id: number; marker_number: number; offset_seconds: number; note?: string }> = [];
     
-    // Use sessionMarkers state which has our manual markers
-    sessionMarkers.forEach((markerList, sessionId) => {
-      markerList.forEach((marker) => {
-        markers.push({
-          session_id: sessionId,
-          marker_number: marker.marker_number,
-          offset_seconds: marker.offset_seconds,
-          note: marker.note
+    // Use markers from evaluation responses (already adjusted for anchor mode)
+    visibleEvaluations.forEach((evaluation) => {
+      console.log(`Session ${evaluation.session.id} markers from evaluation:`, evaluation.markers);
+      if (evaluation.markers) {
+        evaluation.markers.forEach((marker) => {
+          markers.push({
+            session_id: evaluation.session.id,
+            marker_number: marker.marker_number,
+            offset_seconds: marker.offset_seconds,
+            note: undefined
+          });
         });
-      });
+      }
     });
     
+    console.log('Combined markers for chart:', markers);
     return markers;
-  }, [sessionMarkers]);
+  }, [visibleEvaluations]);
 
   // Prepare marker scatter data for chart
   const markerScatterData = useMemo(() => {
@@ -467,40 +592,38 @@ export default function SessionEvaluationPage() {
       note?: string;
     }> = [];
     
-    visibleEvaluations.forEach((evaluation) => {
-      const markers = sessionMarkers.get(evaluation.session.id) || [];
-      const color = colorBySession.get(evaluation.session.id) ?? '#1976d2';
+    // Use combinedMarkers which are already adjusted for anchor mode
+    combinedMarkers.forEach((marker) => {
+      const color = colorBySession.get(marker.session_id) ?? '#1976d2';
       
-      markers.forEach((marker) => {
-        // Find the value at this marker's time (closest data point)
-        const markerMinutes = marker.offset_seconds / 60;
-        const closestPoint = chartData.reduce((closest, point) => {
-          if (!point.offset_minutes) return closest;
-          const diff = Math.abs(point.offset_minutes - markerMinutes);
-          const value = (point as any)[`session_${evaluation.session.id}`];
-          if (value !== undefined && value !== null) {
-            if (!closest || diff < closest.diff) {
-              return { point, diff, value: value as number };
-            }
+      // Find the value at this marker's time (closest data point)
+      const markerMinutes = marker.offset_seconds / 60;
+      const closestPoint = chartData.reduce((closest, point) => {
+        if (!point.offset_minutes) return closest;
+        const diff = Math.abs(point.offset_minutes - markerMinutes);
+        const value = (point as any)[`session_${marker.session_id}`];
+        if (value !== undefined && value !== null) {
+          if (!closest || diff < closest.diff) {
+            return { point, diff, value: value as number };
           }
-          return closest;
-        }, null as { point: any; diff: number; value: number } | null);
-        
-        if (closestPoint) {
-          data.push({
-            session_id: evaluation.session.id,
-            marker_number: marker.marker_number,
-            offset_minutes: markerMinutes,
-            value: closestPoint.value,
-            color,
-            note: marker.note
-          });
         }
-      });
+        return closest;
+      }, null as { point: any; diff: number; value: number } | null);
+      
+      if (closestPoint) {
+        data.push({
+          session_id: marker.session_id,
+          marker_number: marker.marker_number,
+          offset_minutes: markerMinutes,
+          value: closestPoint.value,
+          color,
+          note: marker.note
+        });
+      }
     });
     
     return data;
-  }, [visibleEvaluations, sessionMarkers, chartData, colorBySession]);
+  }, [combinedMarkers, chartData, colorBySession]);
 
   const evaluationLoading = evaluationQueries.some((query) => query.isLoading || query.isFetching);
   const evaluationError = evaluationQueries
@@ -510,6 +633,13 @@ export default function SessionEvaluationPage() {
   const handleAddSession = () => {
     if (sessionToAdd && typeof sessionToAdd === 'number') {
       setSelectedIds(prev => [...prev, sessionToAdd]);
+      
+      // Auto-select the session's dominant parameter
+      const session = sessions.find(s => s.id === sessionToAdd);
+      if (session?.dominant_parameter && session.dominant_parameter !== 'none') {
+        setSelectedParameter(session.dominant_parameter as 'ph' | 'redox' | 'conductivity');
+      }
+      
       setSessionToAdd('');
     }
   };
@@ -618,64 +748,70 @@ export default function SessionEvaluationPage() {
     setSessionForMarker(sessionId);
   };
 
-  const handleCancelMarkerPlacement = () => {
+  const handleCancelMarkerPlacement = useCallback(() => {
     setMarkerPlacementMode(false);
     setSessionForMarker(null);
     setPendingMarker(null);
     setMarkerNote('');
+    setMarkerOffsetMinutes(0);
     setHoveredChartData(null);
-  };
+  }, []);
 
   const handleChartMouseMove = (event: any) => {
-    if (markerPlacementMode && event?.activePayload && event.activePayload.length > 0) {
-      setHoveredChartData(event.activePayload[0].payload);
+    if (markerPlacementMode) {
+      // Store the mouse position data when available, but ignore marker scatter data
+      if (event?.activePayload && event.activePayload.length > 0) {
+        // Filter to only Line data (has session_ dataKey), not Scatter data (has 'value' dataKey)
+        const linePayload = event.activePayload.find((item: any) => 
+          item.dataKey && typeof item.dataKey === 'string' && item.dataKey.startsWith('session_')
+        );
+        
+        if (linePayload?.payload) {
+          setHoveredChartData(linePayload.payload);
+        }
+      }
     }
-  };
-
-  const handleChartMouseLeave = () => {
-    // Don't clear immediately - keep last hovered data available for click
-    // Only clear when exiting placement mode
   };
 
   const handleChartClick = (event: any) => {
-    console.log('Chart clicked - Full event:', event);
-    console.log('Event keys:', event ? Object.keys(event) : 'null');
-    console.log('Hovered data:', hoveredChartData);
-    
     if (!markerPlacementMode || !sessionForMarker) {
-      console.log('Not in placement mode or no session selected');
       return;
     }
     
-    // Use hovered data (from onMouseMove) since onClick doesn't provide activePayload
-    let point = hoveredChartData;
+    // Try multiple methods to get the click position, filtering out marker scatter data
+    let point = null;
     
-    // Fallback: try to extract from event if available
-    if (!point && event?.activePayload && event.activePayload.length > 0) {
-      point = event.activePayload[0].payload;
-      console.log('Got point from event activePayload:', point);
-    } else if (!point && event?.activeTooltipIndex !== undefined && chartData[event.activeTooltipIndex]) {
+    // Method 1: From activePayload (direct hit on data point) - prefer Line data over Scatter
+    if (event?.activePayload && event.activePayload.length > 0) {
+      const linePayload = event.activePayload.find((item: any) => 
+        item.dataKey && typeof item.dataKey === 'string' && item.dataKey.startsWith('session_')
+      );
+      
+      if (linePayload?.payload) {
+        point = linePayload.payload;
+      }
+    }
+    // Method 2: From activeTooltipIndex
+    if (!point && event?.activeTooltipIndex !== undefined && chartData[event.activeTooltipIndex]) {
       point = chartData[event.activeTooltipIndex];
-      console.log('Got point from event activeTooltipIndex:', point);
+    }
+    // Method 3: Use last hovered data (allows clicking near where you hovered)
+    if (!point && hoveredChartData) {
+      point = hoveredChartData;
     }
     
     if (point && point.offset_minutes !== undefined) {
-      console.log('Processing point:', point);
-      
       const offset_minutes = point.offset_minutes;
       const offset_seconds = point.offset_seconds || offset_minutes * 60;
       
       // Calculate timestamp
       const session = sessions.find(s => s.id === sessionForMarker);
       if (!session) {
-        console.log('Session not found:', sessionForMarker);
         return;
       }
       
       const sessionStart = new Date(session.started_at);
       const markerTime = new Date(sessionStart.getTime() + offset_seconds * 1000);
-      
-      console.log('Creating marker at:', { offset_minutes, offset_seconds, markerTime: markerTime.toISOString() });
       
       setPendingMarker({
         sessionId: sessionForMarker,
@@ -683,9 +819,8 @@ export default function SessionEvaluationPage() {
         offset_seconds,
         offset_minutes
       });
+      setMarkerOffsetMinutes(offset_minutes);
       setMarkerDialogOpen(true);
-    } else {
-      console.log('Could not extract point data. Please hover over the chart point first, then click.');
     }
   };
 
@@ -695,10 +830,23 @@ export default function SessionEvaluationPage() {
     setDialogLoading(true);
     setDialogError(null);
     try {
+      // Use manually adjusted time if changed
+      const finalOffsetSeconds = markerOffsetMinutes * 60;
+      const session = sessions.find(s => s.id === pendingMarker.sessionId);
+      if (!session) return;
+      
+      const sessionStart = new Date(session.started_at);
+      const finalTimestamp = new Date(sessionStart.getTime() + finalOffsetSeconds * 1000).toISOString();
+      
+      if (pendingMarker.markerId) {
+        // Editing existing marker - delete and recreate
+        await deleteSessionMarker(pendingMarker.sessionId, pendingMarker.markerId);
+      }
+      
       await addSessionMarker(
         pendingMarker.sessionId,
-        pendingMarker.timestamp,
-        pendingMarker.offset_seconds,
+        finalTimestamp,
+        finalOffsetSeconds,
         markerNote.trim() || undefined
       );
       
@@ -706,18 +854,41 @@ export default function SessionEvaluationPage() {
       const markers = await fetchSessionMarkers(pendingMarker.sessionId);
       setSessionMarkers(prev => new Map(prev).set(pendingMarker.sessionId, markers));
       
+      // Invalidate evaluation query to refresh chart markers immediately
+      queryClient.invalidateQueries({ queryKey: ['session-evaluation', pendingMarker.sessionId] });
+      
       // Close dialogs and reset state
       setMarkerDialogOpen(false);
       setMarkerPlacementMode(false);
       setSessionForMarker(null);
       setPendingMarker(null);
       setMarkerNote('');
+      setMarkerOffsetMinutes(0);
       setHoveredChartData(null);
     } catch (error) {
-      setDialogError(error instanceof Error ? error.message : 'Failed to add marker');
+      setDialogError(error instanceof Error ? error.message : 'Failed to save marker');
     } finally {
       setDialogLoading(false);
     }
+  };
+
+  const handleEditMarker = (sessionId: number, marker: SessionMarker) => {
+    const session = sessions.find(s => s.id === sessionId);
+    if (!session) return;
+    
+    const sessionStart = new Date(session.started_at);
+    const markerTime = new Date(sessionStart.getTime() + marker.offset_seconds * 1000);
+    
+    setPendingMarker({
+      sessionId,
+      timestamp: markerTime.toISOString(),
+      offset_seconds: marker.offset_seconds,
+      offset_minutes: marker.offset_seconds / 60,
+      markerId: marker.id
+    });
+    setMarkerNote(marker.note || '');
+    setMarkerOffsetMinutes(marker.offset_seconds / 60);
+    setMarkerDialogOpen(true);
   };
 
   const handleDeleteMarker = async (sessionId: number, markerId: number) => {
@@ -726,12 +897,15 @@ export default function SessionEvaluationPage() {
       // Reload markers for this session
       const markers = await fetchSessionMarkers(sessionId);
       setSessionMarkers(prev => new Map(prev).set(sessionId, markers));
+      
+      // Invalidate evaluation query to refresh chart markers immediately
+      queryClient.invalidateQueries({ queryKey: ['session-evaluation', sessionId] });
     } catch (error) {
       console.error('Failed to delete marker:', error);
     }
   };
 
-  const handleExportJson = async () => {
+  const handleExportJSON = async () => {
     if (!evaluations.length) {
       return;
     }
@@ -746,7 +920,42 @@ export default function SessionEvaluationPage() {
     URL.revokeObjectURL(link.href);
   };
 
-  const handleExportPng = async () => {
+  const handleExportCSV = async () => {
+    if (!evaluations.length) {
+      return;
+    }
+    
+    // Build CSV with all session data
+    const headers = ['Session ID', 'Session Name', 'Offset (seconds)', 'Offset (minutes)', 'pH', 'Redox (mV)', 'Conductivity (µS/cm)', 'Temperature (°C)'];
+    const rows: string[][] = [headers];
+    
+    evaluations.forEach((evaluation) => {
+      evaluation.series.forEach((point) => {
+        rows.push([
+          evaluation.session.id.toString(),
+          evaluation.session.note || `Session ${evaluation.session.id}`,
+          point.offset_seconds.toFixed(2),
+          (point.offset_seconds / 60).toFixed(2),
+          point.ph?.toFixed(3) ?? '',
+          point.redox?.toFixed(2) ?? '',
+          point.conductivity?.toFixed(2) ?? '',
+          point.temperature?.toFixed(2) ?? ''
+        ]);
+      });
+    });
+    
+    const csvContent = rows.map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = buildFilename('csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(link.href);
+  };
+
+  const handleExportPNG = async () => {
     if (!chartRef.current || !evaluations.length) {
       return;
     }
@@ -797,63 +1006,7 @@ export default function SessionEvaluationPage() {
   };
 
   return (
-    <Stack spacing={3}>
-      <Card>
-        <CardContent>
-          <Stack spacing={2} direction={{ xs: 'column', md: 'row' }} justifyContent="space-between">
-            <Box>
-              <Typography variant="h5" fontWeight={600} gutterBottom>
-                Session Evaluation & Overlays
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Align recent sessions, compare derived metrics, and export overlay evidence for calibration reviews.
-              </Typography>
-            </Box>
-            <Stack direction="row" spacing={2} alignItems="center">
-              <FormControl size="small" sx={{ minWidth: 200 }}>
-                <InputLabel id="anchor-select">Alignment</InputLabel>
-                <Select
-                  labelId="anchor-select"
-                  value={anchor}
-                  label="Alignment"
-                  onChange={(event) => setAnchor(event.target.value as 'start' | 'first_marker' | 'last_marker')}
-                >
-                  {ANCHOR_OPTIONS.map((option) => (
-                    <MenuItem key={option.value} value={option.value}>
-                      {option.label}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-              <Button
-                variant="outlined"
-                startIcon={<TimelineIcon />}
-                disabled={!selectedIds.length}
-                onClick={handleDownloadSessionJson}
-              >
-                Export session JSON
-              </Button>
-              <Button
-                variant="outlined"
-                startIcon={<DownloadIcon />}
-                disabled={!evaluations.length}
-                onClick={handleExportJson}
-              >
-                Export combined JSON
-              </Button>
-              <Button
-                variant="contained"
-                startIcon={<ImageIcon />}
-                disabled={!evaluations.length || exportingPng}
-                onClick={handleExportPng}
-              >
-                {exportingPng ? 'Rendering…' : 'Export PNG'}
-              </Button>
-            </Stack>
-          </Stack>
-        </CardContent>
-      </Card>
-
+    <Stack spacing={3} sx={{ pb: 3 }}>
       {exportError ? (
         <Alert severity="error" onClose={() => setExportError(null)}>
           {exportError}
@@ -987,9 +1140,46 @@ export default function SessionEvaluationPage() {
           {/* Selected Sessions Card */}
           <Card>
             <CardContent>
-              <Typography variant="subtitle1" fontWeight={600} gutterBottom>
-                Selected Sessions
-              </Typography>
+              <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
+                <Typography variant="subtitle1" fontWeight={600}>
+                  Selected Sessions
+                </Typography>
+                <Stack direction="row" spacing={2} alignItems="center">
+                  <FormControl size="small" sx={{ minWidth: 220 }}>
+                    <InputLabel id="anchor-select">Workspace Alignment</InputLabel>
+                    <Select
+                      labelId="anchor-select"
+                      value={anchor}
+                      label="Workspace Alignment"
+                      onChange={(event) => setAnchor(event.target.value as 'start' | 'first_marker' | 'last_marker')}
+                    >
+                      {ANCHOR_OPTIONS.map((option) => (
+                        <MenuItem key={option.value} value={option.value}>
+                          {option.label}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                  <FormControl size="small" sx={{ minWidth: 220 }}>
+                    <InputLabel id="export-select" shrink>Export</InputLabel>
+                    <Select
+                      labelId="export-select"
+                      value=""
+                      label="Export"
+                      displayEmpty
+                      notched
+                      renderValue={() => 'Select data'}
+                    >
+                      <MenuItem onClick={handleExportPNG}>Export as PNG</MenuItem>
+                      <MenuItem onClick={handleExportCSV}>Export as CSV</MenuItem>
+                      <MenuItem onClick={handleExportJSON}>Export as JSON</MenuItem>
+                      <MenuItem onClick={handleDownloadSessionJson} disabled={!selectedIds.length}>
+                        Export session JSON
+                      </MenuItem>
+                    </Select>
+                  </FormControl>
+                </Stack>
+              </Stack>
               {selectedSessions.length === 0 ? (
                 <Typography variant="body2" color="text.secondary">
                   No sessions selected. Use the dropdown above to add sessions to the overlay.
@@ -999,9 +1189,19 @@ export default function SessionEvaluationPage() {
                   {selectedSessions.map((session) => {
                     const color = colorBySession.get(session.id) ?? '#1976d2';
                     const isHidden = hiddenSessionIds.has(session.id);
-                    const duration = session.ended_at 
-                      ? (new Date(session.ended_at).getTime() - new Date(session.started_at).getTime()) / 1000
-                      : null;
+                    
+                    // Calculate duration from ended_at or from evaluation data
+                    let duration: number | null = null;
+                    if (session.ended_at) {
+                      duration = (new Date(session.ended_at).getTime() - new Date(session.started_at).getTime()) / 1000;
+                    } else {
+                      // Fallback: Try to get duration from evaluation data (last measurement timestamp)
+                      const evaluation = evaluations.find(e => e.session.id === session.id);
+                      if (evaluation && evaluation.series.length > 0) {
+                        const lastPoint = evaluation.series[evaluation.series.length - 1];
+                        duration = lastPoint.offset_seconds;
+                      }
+                    }
                     
                     return (
                       <Stack key={session.id} spacing={1}>
@@ -1103,18 +1303,46 @@ export default function SessionEvaluationPage() {
                           )}
                         </Stack>
                         {sessionMarkers.get(session.id) && sessionMarkers.get(session.id)!.length > 0 && (
-                          <Stack direction="row" spacing={0.5} flexWrap="wrap" alignItems="center">
-                            <Typography variant="caption" color="text.secondary">
-                              Markers:
-                            </Typography>
+                          <Stack spacing={0.5} mt={1}>
                             {sessionMarkers.get(session.id)!.map((marker) => (
-                              <Chip
+                              <Box
                                 key={marker.id}
-                                label={`${marker.marker_number}: ${formatMinutes(marker.offset_seconds).toFixed(1)} min`}
-                                size="small"
-                                onDelete={() => handleDeleteMarker(session.id, marker.id)}
-                                sx={{ height: 20 }}
-                              />
+                                sx={{
+                                  display: 'flex',
+                                  alignItems: 'flex-start',
+                                  gap: 1,
+                                  p: 1,
+                                  bgcolor: 'action.hover',
+                                  borderRadius: 1
+                                }}
+                              >
+                                <Stack flex={1} spacing={0.5}>
+                                  <Typography variant="body2">
+                                    <strong>Marker {marker.marker_number}:</strong> {formatOffset(marker.offset_seconds)}
+                                  </Typography>
+                                  {marker.note && (
+                                    <Typography variant="caption" color="text.secondary">
+                                      {marker.note}
+                                    </Typography>
+                                  )}
+                                </Stack>
+                                <Stack direction="row" spacing={0.5}>
+                                  <IconButton
+                                    size="small"
+                                    onClick={() => handleEditMarker(session.id, marker)}
+                                    title="Edit marker"
+                                  >
+                                    <EditIcon fontSize="small" />
+                                  </IconButton>
+                                  <IconButton
+                                    size="small"
+                                    onClick={() => handleDeleteMarker(session.id, marker.id)}
+                                    title="Delete marker"
+                                  >
+                                    <DeleteIcon fontSize="small" />
+                                  </IconButton>
+                                </Stack>
+                              </Box>
                             ))}
                           </Stack>
                         )}
@@ -1147,18 +1375,20 @@ export default function SessionEvaluationPage() {
                 >
                   <ToggleButton value="ph">pH</ToggleButton>
                   <ToggleButton value="redox">Redox</ToggleButton>
-                  <ToggleButton value="conductivity">Cond</ToggleButton>
+                  <ToggleButton value="conductivity">Conductivity</ToggleButton>
                 </ToggleButtonGroup>
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={showTemperature}
-                      onChange={(e) => setShowTemperature(e.target.checked)}
-                      size="small"
-                    />
-                  }
-                  label="Show Temperature"
-                />
+                
+                {/* Visual separator for standalone feature */}
+                <Box sx={{ width: 16 }} />
+                
+                <ToggleButtonGroup
+                  value={showTemperature ? ['temperature'] : []}
+                  onChange={(_, value) => setShowTemperature(value.includes('temperature'))}
+                  size="small"
+                  sx={{ '& .MuiToggleButton-root': { textTransform: 'none' } }}
+                >
+                  <ToggleButton value="temperature">Temperature</ToggleButton>
+                </ToggleButtonGroup>
               </Stack>
 
               {/* Marker Placement Mode Banner */}
@@ -1206,19 +1436,20 @@ export default function SessionEvaluationPage() {
                     margin={{ top: 16, right: 24, left: 8, bottom: 40 }}
                     onClick={markerPlacementMode ? handleChartClick : undefined}
                     onMouseMove={markerPlacementMode ? handleChartMouseMove : undefined}
+                    syncId={markerPlacementMode ? undefined : "chart-sync"}
                   >
                     <CartesianGrid strokeDasharray="3 3" stroke="#ddd" />
                     <XAxis
                       dataKey="offset_minutes"
                       type="number"
-                      domain={[0, 'auto']}
-                      ticks={Array.from(
-                        { length: Math.ceil(formatMinutes(maxTimeSeconds) / calculateTimeInterval(maxTimeSeconds)) + 1 },
-                        (_, i) => i * calculateTimeInterval(maxTimeSeconds)
-                      )}
+                      domain={[timeRange.min / 60, timeRange.max / 60]}
                       tickFormatter={(value: number) => value.toFixed(0)}
                       label={{ 
-                        value: 'Time from session start (min)', 
+                        value: anchor === 'start' 
+                          ? 'Time from session start (min)' 
+                          : anchor === 'first_marker'
+                          ? 'Time from first marker (min)'
+                          : 'Time from last marker (min)', 
                         position: 'insideBottom', 
                         offset: -15,
                         style: { fontSize: 14 }
@@ -1226,6 +1457,7 @@ export default function SessionEvaluationPage() {
                     />
                     <YAxis
                       yAxisId="left"
+                      domain={yAxisDomain}
                       tickFormatter={(value: number) => value.toFixed(2)}
                       label={{ 
                         value: getParameterLabel(selectedParameter), 
@@ -1302,47 +1534,137 @@ export default function SessionEvaluationPage() {
                         />
                       );
                     })}
-                    {markerScatterData.length > 0 && (
-                      <Scatter
+                    {markerScatterData.map((marker, idx) => (
+                      <ReferenceDot
+                        key={`marker-${marker.session_id}-${marker.marker_number}`}
+                        x={marker.offset_minutes}
+                        y={marker.value}
                         yAxisId="left"
-                        data={markerScatterData}
-                        dataKey="value"
-                        shape={<MarkerBubble />}
-                        isAnimationActive={false}
-                        fill="#8884d8"
+                        r={12}
+                        fill="#fff"
+                        stroke={marker.color}
+                        strokeWidth={2.5}
+                        ifOverflow="extendDomain"
+                        shape={(props: any) => {
+                          const { cx, cy } = props;
+                          if (!cx || !cy) return null;
+                          return (
+                            <g>
+                              <circle
+                                cx={cx}
+                                cy={cy}
+                                r={12}
+                                fill="#fff"
+                                stroke={marker.color}
+                                strokeWidth={2.5}
+                                style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))', pointerEvents: 'none' }}
+                              />
+                              <text
+                                x={cx}
+                                y={cy}
+                                textAnchor="middle"
+                                dominantBaseline="central"
+                                fill={marker.color}
+                                fontSize={11}
+                                fontWeight="bold"
+                                style={{ pointerEvents: 'none' }}
+                              >
+                                {marker.marker_number}
+                              </text>
+                            </g>
+                          );
+                        }}
                       />
-                    )}
+                    ))}
                   </LineChart>
                 </ResponsiveContainer>
+              </Box>
+            )}
+            
+            {/* Manual Axis Range Controls */}
+            {evaluations.length > 0 && (
+              <Box sx={{ mt: 2, pt: 2, borderTop: 1, borderColor: 'divider' }}>
+                <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap">
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={manualRangeEnabled}
+                        onChange={(e) => {
+                          setManualRangeEnabled(e.target.checked);
+                          if (e.target.checked) {
+                            // Initialize with current range
+                            setManualXMin(Math.floor(timeRange.min / 60));
+                            setManualXMax(Math.ceil(timeRange.max / 60));
+                            const [yMin, yMax] = yAxisDomain;
+                            if (typeof yMin === 'number' && typeof yMax === 'number') {
+                              setManualYMin(Math.floor(yMin));
+                              setManualYMax(Math.ceil(yMax));
+                            }
+                          }
+                        }}
+                        size="small"
+                      />
+                    }
+                    label={<Typography variant="body2" fontWeight={500}>Manual Range</Typography>}
+                  />
+                  {manualRangeEnabled && (
+                    <>
+                      <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
+                        X-Axis:
+                      </Typography>
+                      <TextField
+                        label="Min (min)"
+                        type="number"
+                        size="small"
+                        value={anchor === 'first_marker' ? 0 : manualXMin}
+                        onChange={(e) => setManualXMin(Number(e.target.value))}
+                        disabled={anchor === 'first_marker'}
+                        sx={{ width: 110 }}
+                        inputProps={{ step: 1 }}
+                        helperText={anchor === 'first_marker' ? 'Locked to 0' : ''}
+                      />
+                      <TextField
+                        label="Max (min)"
+                        type="number"
+                        size="small"
+                        value={anchor === 'last_marker' ? 0 : manualXMax}
+                        onChange={(e) => setManualXMax(Number(e.target.value))}
+                        disabled={anchor === 'last_marker'}
+                        sx={{ width: 110 }}
+                        inputProps={{ step: 1 }}
+                        helperText={anchor === 'last_marker' ? 'Locked to 0' : ''}
+                      />
+                      <Divider orientation="vertical" flexItem />
+                      <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
+                        Y-Axis:
+                      </Typography>
+                      <TextField
+                        label="Min"
+                        type="number"
+                        size="small"
+                        value={manualYMin}
+                        onChange={(e) => setManualYMin(Number(e.target.value))}
+                        sx={{ width: 110 }}
+                        inputProps={{ step: 0.1 }}
+                      />
+                      <TextField
+                        label="Max"
+                        type="number"
+                        size="small"
+                        value={manualYMax}
+                        onChange={(e) => setManualYMax(Number(e.target.value))}
+                        sx={{ width: 110 }}
+                        inputProps={{ step: 0.1 }}
+                      />
+                    </>
+                  )}
+                </Stack>
               </Box>
             )}
           </CardContent>
         </Card>
         </Stack>
       </Box>
-
-      <Card>
-        <CardContent>
-          <Typography variant="subtitle1" fontWeight={600} gutterBottom>
-            Markers & notes
-          </Typography>
-          {!combinedMarkers.length ? (
-            <Typography variant="body2" color="text.secondary">
-              Click "Add Marker" on any session to place calibration markers on the chart.
-            </Typography>
-          ) : (
-            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-              {combinedMarkers.map((marker) => (
-                <Chip
-                  key={`${marker.session_id}-${marker.marker_number}`}
-                  label={`Session ${marker.session_id} • Marker ${marker.marker_number} • ${formatOffset(marker.offset_seconds)}${marker.note ? ` • ${marker.note}` : ''}`}
-                  size="small"
-                />
-              ))}
-            </Stack>
-          )}
-        </CardContent>
-      </Card>
 
       {/* Rename Dialog */}
       <Dialog open={renameDialogOpen} onClose={() => !dialogLoading && setRenameDialogOpen(false)}>
@@ -1456,7 +1778,7 @@ export default function SessionEvaluationPage() {
 
       {/* Marker Placement Dialog */}
       <Dialog open={markerDialogOpen} onClose={() => !dialogLoading && setMarkerDialogOpen(false)}>
-        <DialogTitle>Add Marker</DialogTitle>
+        <DialogTitle>{pendingMarker?.markerId ? 'Edit Marker' : 'Add Marker'}</DialogTitle>
         <DialogContent>
           {dialogError && (
             <Alert severity="error" sx={{ mb: 2 }}>
@@ -1465,12 +1787,15 @@ export default function SessionEvaluationPage() {
           )}
           {pendingMarker && (
             <>
-              <Typography variant="body2" sx={{ mt: 2 }}>
-                <strong>Time:</strong> {pendingMarker.offset_minutes.toFixed(1)} min from session start
-              </Typography>
-              <Typography variant="body2" color="text.secondary" gutterBottom>
-                {formatDateTime(pendingMarker.timestamp)}
-              </Typography>
+              <TextField
+                fullWidth
+                label="Time from session start"
+                type="text"
+                value={formatOffset(markerOffsetMinutes * 60)}
+                disabled
+                sx={{ mt: 2 }}
+                helperText="Marker position on timeline (rounded to nearest second)"
+              />
               <TextField
                 fullWidth
                 label="Note (optional)"

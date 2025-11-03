@@ -587,6 +587,9 @@ def create_session_marker(session_id: int):
         if offset_seconds is None:
             return jsonify({'error': 'Missing offset_seconds'}), 400
         
+        # Round to nearest second (device sends 1 Hz data)
+        offset_seconds = round(float(offset_seconds))
+        
         conn = sqlite3.connect(str(db.path))
         conn.row_factory = sqlite3.Row
         
@@ -1185,13 +1188,30 @@ def get_session_evaluation(session_id: int):
         
         # Get markers for anchor calculation (before closing connection)
         markers_rows = conn.execute("""
-            SELECT event_timestamp 
+            SELECT event_timestamp, payload_json
             FROM audit_events
             WHERE session_id = ? AND event_type = 'manual_marker'
             ORDER BY event_timestamp ASC
         """, (session_id,)).fetchall()
         
         conn.close()
+        
+        # Calculate actual marker timestamps from session start + offset_seconds
+        marker_timestamps = []
+        if markers_rows:
+            from datetime import datetime, timedelta
+            try:
+                session_start = datetime.fromisoformat(session_row['started_at'].replace('Z', '+00:00'))
+                for marker_row in markers_rows:
+                    payload = json.loads(marker_row['payload_json']) if marker_row['payload_json'] else {}
+                    offset_seconds = payload.get('offset_seconds')
+                    if offset_seconds is not None:
+                        # Calculate actual timestamp: session_start + offset
+                        marker_ts = session_start + timedelta(seconds=offset_seconds)
+                        marker_timestamps.append(marker_ts.isoformat())
+            except Exception as e:
+                print(f"Error calculating marker timestamps: {e}")
+                marker_timestamps = []
         
         # Build evaluation response
         session = {
@@ -1215,11 +1235,11 @@ def get_session_evaluation(session_id: int):
         anchor_time = session_row['started_at']  # Default: session start
         
         if anchor == 'first_marker' or anchor == 'last_marker':
-            if markers_rows:
+            if marker_timestamps:
                 if anchor == 'first_marker':
-                    anchor_time = markers_rows[0]['event_timestamp']
+                    anchor_time = marker_timestamps[0]
                 else:  # last_marker
-                    anchor_time = markers_rows[-1]['event_timestamp']
+                    anchor_time = marker_timestamps[-1]
             else:
                 # Fallback: if no markers, use first/last measurement
                 if measurement_rows:
@@ -1236,16 +1256,38 @@ def get_session_evaluation(session_id: int):
         for row in measurement_rows:
             payload = json.loads(row['payload_json']) if row['payload_json'] else {}
             
-            # Calculate offset from anchor (simplified - assumes ISO timestamp)
+            # Calculate offset from anchor
             offset_seconds = None
             if row['timestamp'] and anchor_time:
                 try:
                     from datetime import datetime
-                    ts = datetime.fromisoformat(row['timestamp'].replace('Z', '+00:00'))
-                    anchor_ts = datetime.fromisoformat(anchor_time.replace('Z', '+00:00'))
-                    offset_seconds = (ts - anchor_ts).total_seconds()
-                except:
-                    pass
+                    # Handle various timestamp formats
+                    ts_str = row['timestamp']
+                    anchor_str = anchor_time
+                    
+                    # Normalize timestamps: replace Z with +00:00 for fromisoformat
+                    if 'Z' in ts_str:
+                        ts_str = ts_str.replace('Z', '+00:00')
+                    if 'Z' in anchor_str:
+                        anchor_str = anchor_str.replace('Z', '+00:00')
+                    
+                    # Parse timestamps - fromisoformat handles both with/without timezone
+                    ts = datetime.fromisoformat(ts_str)
+                    anchor_ts = datetime.fromisoformat(anchor_str)
+                    offset_seconds = round((ts - anchor_ts).total_seconds())
+                except Exception as e:
+                    # If parsing fails, try without timezone
+                    try:
+                        from datetime import datetime
+                        # Strip any timezone info and parse as naive datetime
+                        ts_clean = row['timestamp'].replace('Z', '').split('+')[0].split('-')[0:3]
+                        anchor_clean = anchor_time.replace('Z', '').split('+')[0].split('-')[0:3]
+                        ts = datetime.fromisoformat(row['timestamp'].replace('Z', '').split('+')[0])
+                        anchor_ts = datetime.fromisoformat(anchor_time.replace('Z', '').split('+')[0])
+                        offset_seconds = round((ts - anchor_ts).total_seconds())
+                    except:
+                        print(f"Failed to parse timestamps: {row['timestamp']} or {anchor_time}")
+                        pass
             
             point = {
                 'measurement_id': row['measurement_id'],
@@ -1294,12 +1336,29 @@ def get_session_evaluation(session_id: int):
             except:
                 pass
         
+        # Calculate adjusted marker positions based on anchor
+        adjusted_markers = []
+        if marker_timestamps:
+            from datetime import datetime
+            try:
+                anchor_ts = datetime.fromisoformat(anchor_time.replace('Z', '+00:00'))
+                for i, marker_ts_str in enumerate(marker_timestamps):
+                    marker_ts = datetime.fromisoformat(marker_ts_str.replace('Z', '+00:00'))
+                    marker_offset = (marker_ts - anchor_ts).total_seconds()
+                    adjusted_markers.append({
+                        'marker_number': i + 1,
+                        'offset_seconds': marker_offset,
+                        'offset_minutes': marker_offset / 60.0
+                    })
+            except Exception as e:
+                print(f"Error adjusting marker positions: {e}")
+        
         return jsonify({
             'session': session,
             'anchor': anchor,
             'anchor_timestamp': anchor_time,
             'series': series,
-            'markers': [],  # TODO: Extract from audit events
+            'markers': adjusted_markers,
             'statistics': {
                 'value': value_stats,
                 'temperature': temp_stats

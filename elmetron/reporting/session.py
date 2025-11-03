@@ -225,7 +225,7 @@ def build_session_evaluation(
         timestamp = _parse_timestamp(measurement_ts) if isinstance(measurement_ts, str) else None
         offset_seconds: Optional[float] = None
         if timestamp and anchor_ts:
-            offset_seconds = (timestamp - anchor_ts).total_seconds()
+            offset_seconds = round((timestamp - anchor_ts).total_seconds())
             offsets.append(offset_seconds)
         payload = record.get('payload')
         analytics = record.get('analytics')
@@ -234,7 +234,7 @@ def build_session_evaluation(
             'frame_id': record.get('frame_id'),
             'timestamp': measurement_ts,
             'captured_at': record.get('captured_at'),
-            'offset_seconds': offset_seconds,
+            'offset_seconds': round(offset_seconds) if offset_seconds is not None else None,
             'value': record.get('value'),
             'unit': record.get('unit'),
             'temperature': record.get('temperature'),
@@ -249,7 +249,7 @@ def build_session_evaluation(
             markers.append({
                 'type': 'calibration',
                 'timestamp': measurement_ts,
-                'offset_seconds': offset_seconds,
+                'offset_seconds': round(offset_seconds) if offset_seconds is not None else None,
                 'measurement_id': record.get('measurement_id'),
             })
 
