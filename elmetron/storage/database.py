@@ -427,13 +427,14 @@ class Database:
         started_at: datetime,
         metadata: DeviceMetadata,
         session_metadata: Optional[Dict[str, Any]] = None,
+        operator_name: Optional[str] = None,
     ) -> "SessionHandle":
         conn = self.connect()
         instrument_id = self._ensure_instrument(conn, metadata)
         with conn:
             cursor = conn.execute(
-                "INSERT INTO sessions (instrument_id, started_at) VALUES (?, ?)",
-                (instrument_id, started_at.isoformat()),
+                "INSERT INTO sessions (instrument_id, started_at, operator_name) VALUES (?, ?, ?)",
+                (instrument_id, started_at.isoformat(), operator_name),
             )
             session_id = cursor.lastrowid
         handle = SessionHandle(self, session_id, instrument_id, metadata)

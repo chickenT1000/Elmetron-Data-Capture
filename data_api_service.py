@@ -332,6 +332,98 @@ def get_sessions():
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/operators', methods=['GET'])
+def get_operators():
+    """
+    Get list of distinct operator names from all sessions.
+    
+    Returns:
+        {
+            "operators": ["Alice", "Bob", "Charlie"]
+        }
+    """
+    try:
+        conn = sqlite3.connect(str(db.path))
+        conn.row_factory = sqlite3.Row
+        
+        operators = conn.execute("""
+            SELECT DISTINCT operator_name 
+            FROM sessions 
+            WHERE operator_name IS NOT NULL AND operator_name != ''
+            ORDER BY operator_name ASC
+        """).fetchall()
+        conn.close()
+        
+        operator_list = [row['operator_name'] for row in operators]
+        return jsonify({'operators': operator_list})
+    
+    except Exception as e:
+        logger.error(f"Error fetching operators: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/sessions/active/operator', methods=['PATCH'])
+def update_active_session_operator():
+    """
+    Update the operator name for the currently active session.
+    
+    Request body:
+        {
+            "operator_name": "Alice"
+        }
+    
+    Returns:
+        {
+            "success": true,
+            "session_id": 123,
+            "operator_name": "Alice"
+        }
+    """
+    try:
+        data = request.get_json()
+        operator_name = data.get('operator_name', '').strip()
+        
+        if not operator_name:
+            return jsonify({'error': 'operator_name is required'}), 400
+        
+        conn = sqlite3.connect(str(db.path))
+        
+        # Find the active session (most recent without ended_at)
+        cursor = conn.execute("""
+            SELECT id FROM sessions 
+            WHERE ended_at IS NULL 
+            ORDER BY started_at DESC 
+            LIMIT 1
+        """)
+        row = cursor.fetchone()
+        
+        if not row:
+            conn.close()
+            return jsonify({'error': 'No active session found'}), 404
+        
+        session_id = row[0]
+        
+        # Update the operator name
+        conn.execute("""
+            UPDATE sessions 
+            SET operator_name = ? 
+            WHERE id = ?
+        """, (operator_name, session_id))
+        conn.commit()
+        conn.close()
+        
+        logger.info(f"Updated active session {session_id} operator to '{operator_name}'")
+        
+        return jsonify({
+            'success': True,
+            'session_id': session_id,
+            'operator_name': operator_name
+        })
+    except Exception as e:
+        logger.error(f"Error updating active session operator: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/sessions/<int:session_id>', methods=['GET'])
 def get_session_details(session_id: int):
     """
