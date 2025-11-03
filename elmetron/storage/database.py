@@ -123,13 +123,14 @@ class Database:
                 );
                 CREATE TABLE IF NOT EXISTS audit_events (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    session_id INTEGER NOT NULL,
+                    session_id INTEGER NULL,
                     level TEXT NOT NULL,
                     category TEXT NOT NULL,
                     message TEXT NOT NULL,
                     payload_json TEXT,
                     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY(session_id) REFERENCES sessions(id)
+                    source TEXT DEFAULT 'backend',
+                    FOREIGN KEY(session_id) REFERENCES sessions(id) ON DELETE SET NULL
                 );
                 CREATE TABLE IF NOT EXISTS derived_metrics (
                     measurement_id INTEGER PRIMARY KEY,
@@ -153,12 +154,61 @@ class Database:
             self.apply_retention(datetime.utcnow())
 
     def apply_retention(self, now: datetime) -> None:
-        if not self._config.retention_days:
+        """Apply retention policies.
+        
+        NOTE: This now ONLY deletes old system logs, NOT session data!
+        Session data retention should be managed separately by users.
+        
+        System logs older than retention_days are deleted to prevent unbounded growth.
+        Session data (measurements, frames, etc.) is preserved.
+        """
+        if not self._config.retention_days or self._config.retention_days <= 0:
             return
+        
+        # ONLY delete old system logs (session_id IS NULL)
+        # Do NOT delete session data - that's user data!
         cutoff = now - timedelta(days=self._config.retention_days)
         conn = self.connect()
         cutoff_iso = cutoff.isoformat()
-
+        
+        deleted_system_logs = 0
+        with conn:
+            cursor = conn.execute(
+                """
+                DELETE FROM audit_events 
+                WHERE session_id IS NULL 
+                AND created_at < ?
+                """,
+                (cutoff_iso,),
+            )
+            deleted_system_logs = cursor.rowcount
+        
+        # Log retention cleanup if any system logs were deleted
+        if deleted_system_logs > 0:
+            self.append_system_audit_event(
+                AuditEvent(
+                    level='info',
+                    category='retention',
+                    message=f'Deleted {deleted_system_logs} old system log events',
+                    payload={
+                        'cutoff_date': cutoff_iso,
+                        'retention_days': self._config.retention_days,
+                        'deleted_system_logs': deleted_system_logs,
+                        'note': 'Session data preserved - only system logs deleted'
+                    }
+                ),
+                source='backend'
+            )
+        
+        # Session data deletion removed - handled separately by user
+        # All code below this point is now unused/dead code for session deletion
+    
+    def _apply_session_retention_UNUSED(self, now: datetime) -> None:
+        """UNUSED: Old session deletion code - kept for reference only.
+        
+        This was the old retention that deleted sessions. 
+        Now disabled to preserve user data.
+        """
         def _initial_summary() -> Dict[str, Any]:
             return {
                 'session_id': None,
@@ -240,8 +290,10 @@ class Database:
                     summary['session_id'] = session_id
                 summary['removed_frames'] = int(row['removed'])
 
+            # Find old sessions to delete (use started_at, not ended_at)
+            # This ensures even sessions that were never properly closed get deleted
             ended_session_rows = conn.execute(
-                "SELECT id FROM sessions WHERE ended_at IS NOT NULL AND ended_at < ?",
+                "SELECT id FROM sessions WHERE started_at < ?",
                 (cutoff_iso,),
             ).fetchall()
             ended_session_ids = {int(row['id']) for row in ended_session_rows}
@@ -256,7 +308,7 @@ class Database:
                 SELECT session_id, COUNT(*) AS removed
                 FROM session_metadata
                 WHERE session_id IN (
-                    SELECT id FROM sessions WHERE ended_at IS NOT NULL AND ended_at < ?
+                    SELECT id FROM sessions WHERE started_at < ?
                 )
                 GROUP BY session_id
                 """,
@@ -274,7 +326,7 @@ class Database:
                 SELECT session_id, COUNT(*) AS removed
                 FROM audit_events
                 WHERE session_id IN (
-                    SELECT id FROM sessions WHERE ended_at IS NOT NULL AND ended_at < ?
+                    SELECT id FROM sessions WHERE started_at < ?
                 )
                 GROUP BY session_id
                 """,
@@ -319,11 +371,11 @@ class Database:
                 (cutoff_iso,),
             )
             conn.execute(
-                "DELETE FROM session_metadata WHERE session_id IN (SELECT id FROM sessions WHERE ended_at IS NOT NULL AND ended_at < ?)",
+                "DELETE FROM session_metadata WHERE session_id IN (SELECT id FROM sessions WHERE started_at < ?)",
                 (cutoff_iso,),
             )
             conn.execute(
-                "DELETE FROM audit_events WHERE session_id IN (SELECT id FROM sessions WHERE ended_at IS NOT NULL AND ended_at < ?)",
+                "DELETE FROM audit_events WHERE session_id IN (SELECT id FROM sessions WHERE started_at < ?)",
                 (cutoff_iso,),
             )
             if ended_session_ids:
@@ -344,31 +396,31 @@ class Database:
 
             retention_entries.sort(key=lambda item: item.get('session_id') or 0)
 
-            if not retention_entries:
-                return
-
-            retention_session_id = self._ensure_retention_session(conn)
-            payload = json.dumps(
-                {
-                    'cutoff': cutoff_iso,
+            # Log retention cleanup (using new system event logging)
+            deleted_sessions = len([e for e in retention_entries if e.get('session_id') is not None])
+            total_deleted_system_logs = deleted_system_logs  # From earlier deletion
+            
+            if deleted_sessions > 0 or total_deleted_system_logs > 0:
+                payload = {
+                    'cutoff_date': cutoff_iso,
                     'retention_days': self._config.retention_days,
-                    'changes': retention_entries,
-                },
-                ensure_ascii=False,
-            )
-            conn.execute(
-                """
-                INSERT INTO audit_events (session_id, level, category, message, payload_json)
-                VALUES (?, ?, ?, ?, ?)
-                """,
-                (
-                    retention_session_id,
-                    'info',
-                    'retention',
-                    'Applied data retention policy',
-                    payload,
-                ),
-            )
+                }
+                if deleted_sessions > 0:
+                    payload['deleted_sessions'] = deleted_sessions
+                    payload['session_details'] = retention_entries
+                if total_deleted_system_logs > 0:
+                    payload['deleted_system_logs'] = total_deleted_system_logs
+                
+                # Use system event logging (not tied to retention session)
+                self.append_system_audit_event(
+                    AuditEvent(
+                        level='info',
+                        category='retention',
+                        message=f'Applied retention policy: {deleted_sessions} sessions, {total_deleted_system_logs} system logs',
+                        payload=payload
+                    ),
+                    source='backend'
+                )
 
     def start_session(
         self,
@@ -427,7 +479,22 @@ class Database:
             )
 
 
-    def append_audit_event(self, session_id: int, event: AuditEvent) -> None:
+    def append_audit_event(self, session_id: Optional[int], event: AuditEvent, source: str = 'backend') -> None:
+        """Log event (session-specific or system-wide).
+        
+        Args:
+            session_id: Session ID for session-specific events, or None for system events
+            event: AuditEvent to log
+            source: Source of the event ('backend', 'launcher', 'api')
+        
+        Note:
+            DEBUG level events are NOT saved to database to prevent spam.
+            Only INFO and above are persisted.
+        """
+        # Filter out DEBUG logs - don't save to database
+        if event.level.upper() == 'DEBUG':
+            return
+        
         conn = self.connect()
         payload_json = None
         if event.payload is not None:
@@ -435,11 +502,20 @@ class Database:
         with conn:
             conn.execute(
                 """
-                INSERT INTO audit_events (session_id, level, category, message, payload_json)
-                VALUES (?, ?, ?, ?, ?)
+                INSERT INTO audit_events (session_id, level, category, message, payload_json, source)
+                VALUES (?, ?, ?, ?, ?, ?)
                 """,
-                (session_id, event.level, event.category, event.message, payload_json),
+                (session_id, event.level, event.category, event.message, payload_json, source),
             )
+    
+    def append_system_audit_event(self, event: AuditEvent, source: str = 'backend') -> None:
+        """Log system-wide event (not tied to any session).
+        
+        Args:
+            event: AuditEvent to log
+            source: Source of the event ('backend', 'launcher', 'api')
+        """
+        self.append_audit_event(None, event, source)
 
 
     def recent_audit_events(
@@ -448,6 +524,8 @@ class Database:
         limit: int = 20,
         since_id: Optional[int] = None,
         level: Optional[str] = None,
+        session_id: Optional[int] = None,
+        system_only: bool = False
     ) -> list[Dict[str, Any]]:
         """Return the most recent audit events for dashboards/diagnostics.
         
@@ -456,6 +534,8 @@ class Database:
             since_id: Only return events with id > since_id
             level: Filter by minimum log level (INFO, WARNING, ERROR, etc.)
                    If provided, filters out levels below it (e.g., INFO filters out DEBUG)
+            session_id: Filter by specific session ID (None = all)
+            system_only: If True, only return system events (session_id IS NULL)
         """
 
         try:
@@ -464,7 +544,7 @@ class Database:
             limit_value = 20
         limit_value = max(1, min(limit_value, 500))
 
-        query = ["SELECT id, session_id, level, category, message, payload_json, created_at FROM audit_events"]
+        query = ["SELECT id, session_id, level, category, message, payload_json, created_at, source FROM audit_events"]
         where_clauses: list[str] = []
         params: list[Any] = []
         
@@ -483,6 +563,13 @@ class Database:
             elif level_upper == 'CRITICAL':
                 # CRITICAL only
                 where_clauses.append("UPPER(level) = 'CRITICAL'")
+        
+        # Filter by session
+        if system_only:
+            where_clauses.append("session_id IS NULL")
+        elif session_id is not None:
+            where_clauses.append("session_id = ?")
+            params.append(session_id)
         
         if since_id is not None:
             try:
@@ -519,6 +606,7 @@ class Database:
                 'message': row['message'],
                 'payload': payload,
                 'created_at': row['created_at'],
+                'source': row['source'] if 'source' in row.keys() else 'backend',  # Handle old rows
             })
         return events
 
@@ -737,7 +825,13 @@ class SessionHandle:
         message: str,
         payload: Optional[Dict[str, Any]] = None,
     ) -> None:
-        self._database.append_audit_event(self.id, AuditEvent(level, category, message, payload))
+        """Log an audit event for this session.
+        
+        Note: DEBUG level events are not saved to database to prevent spam.
+        """
+        # Filter out DEBUG logs - don't save to database
+        if level.upper() != 'DEBUG':
+            self._database.append_audit_event(self.id, AuditEvent(level, category, message, payload))
 
     def store_capture(
         self,

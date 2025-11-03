@@ -117,6 +117,25 @@ def build_diagnostic_bundle(
         events = monitor.recent_events(limit=event_limit)
     except Exception:  # pragma: no cover - fallback to empty list
         events = []
+    
+    # Create summary of log events (system vs session breakdown)
+    system_events = [e for e in events if e.get('session_id') is None]
+    session_events = [e for e in events if e.get('session_id') is not None]
+    log_summary = {
+        'total_events': len(events),
+        'system_events': len(system_events),
+        'session_events': len(session_events),
+        'by_level': {},
+        'by_category': {},
+        'by_source': {}
+    }
+    for event in events:
+        level = event.get('level', 'unknown')
+        category = event.get('category', 'unknown')
+        source = event.get('source', 'backend')
+        log_summary['by_level'][level] = log_summary['by_level'].get(level, 0) + 1
+        log_summary['by_category'][category] = log_summary['by_category'].get(category, 0) + 1
+        log_summary['by_source'][source] = log_summary['by_source'].get(source, 0) + 1
 
     config = getattr(service, '_config', None)
     command_definitions = getattr(service, '_command_definitions', {})
@@ -141,6 +160,7 @@ def build_diagnostic_bundle(
             'files': {
                 'health_snapshot': 'health/snapshot.json',
                 'log_events': 'health/log_events.json',
+                'log_summary': 'health/log_summary.json',
                 'service_stats': 'service/stats.json',
                 'command_metrics': 'service/command_metrics.json',
                 'environment': 'service/environment.json',
@@ -153,6 +173,7 @@ def build_diagnostic_bundle(
         archive.writestr('manifest.json', _json_bytes(manifest))
         archive.writestr('health/snapshot.json', _json_bytes(snapshot))
         archive.writestr('health/log_events.json', _json_bytes(events))
+        archive.writestr('health/log_summary.json', _json_bytes(log_summary))
         archive.writestr('service/stats.json', _json_bytes(_stats_payload(service)))
         archive.writestr('service/command_metrics.json', _json_bytes(_command_metrics_payload(service)))
         archive.writestr('service/environment.json', _json_bytes(_environment_payload()))

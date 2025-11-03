@@ -332,9 +332,6 @@ export default function ServiceHealthPage() {
             <Typography variant="h5" fontWeight={600} gutterBottom>
               Service Health & Diagnostics
             </Typography>
-            <Typography variant="body2" color="text.secondary" gutterBottom>
-              Monitor watchdog heartbeat, command queues, and scheduled maintenance tasks for the CX-505 capture service.
-            </Typography>
             {isArchiveMode && isError ? (
               <Alert severity="info" sx={{ mt: 2 }}>
                 <strong>Archive Mode</strong> - The CX-505 device is not connected. Live health monitoring is unavailable, but you can browse historical sessions in the Sessions tab.
@@ -358,34 +355,115 @@ export default function ServiceHealthPage() {
         </CardContent>
         {data ? (
           <CardContent sx={{ pt: 0 }}>
-            <Divider sx={{ mb: 2 }} />
+            {/* Two-column layout: Stats on left, Diagnostic Bundle on right */}
             <Box
               sx={{
                 display: 'grid',
                 gap: 3,
-                gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', md: 'repeat(4, minmax(0, 1fr))' },
+                gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
               }}
             >
-              <Stat label="Frames processed" value={data.frames.toLocaleString()} />
-              <Stat label="Bytes read" value={data.bytes_read.toLocaleString()} />
-              <Stat label="Last frame" value={formatDateTime(data.last_frame_at)} />
-              <Stat label="Capture window" value={formatDateTime(data.last_window_started)} />
+              {/* Left column: Stats */}
+              <Box>
+                <Box
+                  sx={{
+                    display: 'grid',
+                    gap: 2,
+                    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+                  }}
+                >
+                  <Stat label="Frames processed" value={data.frames.toLocaleString()} />
+                  <Stat label="Bytes read" value={data.bytes_read.toLocaleString()} />
+                  <Stat label="Last frame" value={formatDateTime(data.last_frame_at)} />
+                  <Stat label="Capture window" value={formatDateTime(data.last_window_started)} />
+                </Box>
+                {data.watchdog_alert ? (
+                  <Alert severity="warning" sx={{ mt: 2 }}>
+                    {data.watchdog_alert}
+                  </Alert>
+                ) : null}
+              </Box>
+
+              {/* Right column: Diagnostic Bundle */}
+              <Box>
+                <Typography variant="subtitle1" fontWeight={600} gutterBottom>
+                  Diagnostic Bundle
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                  Download a diagnostic bundle containing system logs, configuration, and health data for troubleshooting.
+                  Logs are automatically cleaned at application startup (deletes logs older than 30 days). Download diagnostic bundles regularly to preserve historical data.
+                </Typography>
+                <Button
+                  startIcon={bundleLoading ? <CircularProgress size={16} /> : <BugReportIcon />}
+                  onClick={handleDownloadBundle}
+                  disabled={bundleLoading}
+                  variant="outlined"
+                >
+                  {bundleLoading ? 'Preparing bundle...' : 'Download Diagnostic Bundle'}
+                </Button>
+                {bundleError ? (
+                  <Alert severity="error" sx={{ mt: 2 }}>
+                    {bundleError}
+                  </Alert>
+                ) : null}
+                {bundleManifest && bundleSummary ? (
+                  <DiagnosticBundleSummaryAlert
+                    summary={bundleSummary}
+                    filename={bundleFilename}
+                    onClose={() => {
+                      setBundleManifest(null);
+                      setBundleFilename(null);
+                    }}
+                  />
+                ) : null}
+              </Box>
             </Box>
-            {data.watchdog_alert ? (
-              <Alert severity="warning" sx={{ mt: 3 }}>
-                {data.watchdog_alert}
+          </CardContent>
+        ) : null}
+        
+        {/* Diagnostic Bundle when no data (fallback) */}
+        {!data ? (
+          <CardContent sx={{ pt: 3 }}>
+            <Typography variant="subtitle1" fontWeight={600} gutterBottom>
+              Diagnostic Bundle
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Download a diagnostic bundle containing system logs, configuration, and health data for troubleshooting.
+              Logs are automatically cleaned at application startup (deletes logs older than 30 days). Download diagnostic bundles regularly to preserve historical data.
+            </Typography>
+            <Button
+              startIcon={bundleLoading ? <CircularProgress size={16} /> : <BugReportIcon />}
+              onClick={handleDownloadBundle}
+              disabled={bundleLoading}
+              variant="outlined"
+            >
+              {bundleLoading ? 'Preparing bundle...' : 'Download Diagnostic Bundle'}
+            </Button>
+            {bundleError ? (
+              <Alert severity="error" sx={{ mt: 2 }}>
+                {bundleError}
               </Alert>
+            ) : null}
+            {bundleManifest && bundleSummary ? (
+              <DiagnosticBundleSummaryAlert
+                summary={bundleSummary}
+                filename={bundleFilename}
+                onClose={() => {
+                  setBundleManifest(null);
+                  setBundleFilename(null);
+                }}
+              />
             ) : null}
           </CardContent>
         ) : null}
       </Card>
 
-      {/* Event Log Stream - full width */}
+      {/* Event Logs - full width */}
       <Card>
         <CardContent>
             <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1.5}>
               <Typography variant="subtitle1" fontWeight={600}>
-                Event Log Stream
+                Event Logs
               </Typography>
               <Stack direction="row" spacing={1} alignItems="center">
                 <Chip
@@ -430,21 +508,44 @@ export default function ServiceHealthPage() {
                       return null;
                     }
                     
-                    // Compact single-row format: [LEVEL] category - message {payload}
+                    // Compact single-row format: [LEVEL] category  message {payload}
                     const payloadText = event.payload ? ` ${JSON.stringify(event.payload)}` : '';
                     const fullText = `${event.message}${payloadText}`;
                     
                     return (
                       <ListItem key={event.id} disableGutters sx={{ pb: index === logEvents.length - 1 ? 0 : 1 }}>
-                        <Stack direction="row" spacing={1} alignItems="center" sx={{ width: '100%' }}>
-                          <Chip label={event.level.toUpperCase()} size="small" color={levelColor(event.level)} />
-                          <Typography variant="body2" fontWeight={600}>
+                        <Stack direction="row" spacing={1} alignItems="flex-start" sx={{ width: '100%' }}>
+                          <Chip 
+                            label={event.level.toUpperCase()} 
+                            size="small" 
+                            color={levelColor(event.level)} 
+                            sx={{ minWidth: '80px', justifyContent: 'center', mt: 0.25 }}
+                          />
+                          <Typography 
+                            variant="body2" 
+                            fontWeight={600}
+                            sx={{ minWidth: '120px', flexShrink: 0, pt: 0.5 }}
+                          >
                             {event.category}
                           </Typography>
-                          <Typography variant="body2" color="text.secondary" sx={{ flexGrow: 1 }}>
-                            - {fullText}
+                          <Typography 
+                            variant="body2" 
+                            color="text.secondary" 
+                            sx={{ 
+                              flexGrow: 1,
+                              wordWrap: 'break-word',
+                              overflowWrap: 'break-word',
+                              minWidth: 0,
+                              pt: 0.5
+                            }}
+                          >
+                            {fullText}
                           </Typography>
-                          <Typography variant="caption" color="text.secondary" sx={{ flexShrink: 0 }}>
+                          <Typography 
+                            variant="caption" 
+                            color="text.secondary" 
+                            sx={{ flexShrink: 0, whiteSpace: 'nowrap', pt: 0.5 }}
+                          >
                             {formatDateTime(event.created_at)}
                           </Typography>
                         </Stack>
@@ -509,41 +610,7 @@ export default function ServiceHealthPage() {
         </Card>
       )}
 
-      {/* Diagnostic Bundle Download */}
-      <Card>
-        <CardContent>
-          <Typography variant="subtitle1" fontWeight={600} gutterBottom>
-            Diagnostic Bundle
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Download a diagnostic bundle containing system logs, configuration, and health data for troubleshooting.
-            Logs are automatically cleaned at application startup (deletes logs older than 30 days). Download diagnostic bundles regularly to preserve historical data.
-          </Typography>
-          <Button
-            startIcon={bundleLoading ? <CircularProgress size={16} /> : <BugReportIcon />}
-            onClick={handleDownloadBundle}
-            disabled={bundleLoading}
-            variant="outlined"
-          >
-            {bundleLoading ? 'Preparing bundle...' : 'Download Diagnostic Bundle'}
-          </Button>
-          {bundleError ? (
-            <Alert severity="error" sx={{ mt: 2 }}>
-              {bundleError}
-            </Alert>
-          ) : null}
-          {bundleManifest && bundleSummary ? (
-            <DiagnosticBundleSummaryAlert
-              summary={bundleSummary}
-              filename={bundleFilename}
-              onClose={() => {
-                setBundleManifest(null);
-                setBundleFilename(null);
-              }}
-            />
-          ) : null}
-        </CardContent>
-      </Card>
+
     </Stack>
   );
 }

@@ -24,7 +24,7 @@ startup_commands = []
 database_path = "data/elmetron.sqlite"
 ensure_directories = true
 vacuum_on_start = false
-retention_days = 90
+retention_days = 0  # Disabled - don't auto-delete sessions! Only for system logs.
 
 [ingestion]
 annotate_device = true

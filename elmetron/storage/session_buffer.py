@@ -319,27 +319,88 @@ class SessionBuffer:
         self._file_handle.write(line + '\n')
     
     @staticmethod
+    def is_buffer_orphaned(buffer_path: Path) -> bool:
+        """Check if a buffer file is orphaned (session didn't close properly).
+        
+        An orphaned buffer is one that doesn't have a session_end record,
+        indicating the service crashed or was killed during an active session.
+        
+        However, buffers with only session_start and no measurements are NOT
+        considered orphaned - they're just empty sessions that were terminated
+        quickly (e.g., launcher closed immediately after start).
+        
+        Args:
+            buffer_path: Path to buffer file to check
+            
+        Returns:
+            True if orphaned (no clean shutdown AND has data), False otherwise
+        """
+        if not buffer_path.exists():
+            return False
+        
+        try:
+            with open(buffer_path, 'r') as f:
+                # Read all records
+                records = []
+                for line in f:
+                    line = line.strip()
+                    if line:
+                        try:
+                            records.append(json.loads(line))
+                        except json.JSONDecodeError:
+                            continue
+                
+                if not records:
+                    # Empty buffer = orphaned
+                    return True
+                
+                # Check if last record is session_end
+                last_record = records[-1]
+                if last_record.get('type') == 'session_end':
+                    # Has clean shutdown marker
+                    return False
+                
+                # Count measurements - if zero, this is just an empty session
+                # that was terminated before any data was captured
+                measurement_count = sum(1 for r in records if r.get('type') == 'measurement')
+                if measurement_count == 0:
+                    # Empty session (just session_start) - not really a crash
+                    # Likely launcher closed immediately after session started
+                    return False
+                
+                # No session_end marker AND has measurements = actual orphan
+                return True
+                
+        except Exception as e:
+            print(f"Warning: Could not read buffer {buffer_path}: {e}")
+            # If we can't read it, assume it's orphaned to be safe
+            return True
+    
+    @staticmethod
     def list_orphaned_buffers(captures_dir: Path) -> List[Path]:
         """Find all orphaned buffer files in captures directory.
         
         An orphaned buffer is one that was created but never properly closed,
         indicating a crash or power loss during capture.
         
+        Now checks for session_end marker to distinguish actual crashes
+        from normal shutdowns.
+        
         Args:
             captures_dir: Directory containing buffer files
             
         Returns:
-            List of paths to orphaned buffer files
+            List of paths to orphaned buffer files (actual crashes only)
         """
         if not captures_dir.exists():
             return []
         
-        buffers: List[Path] = []
+        orphaned: List[Path] = []
         for path in captures_dir.glob("session_*_buffer.jsonl"):
-            if path.is_file():
-                buffers.append(path)
+            if path.is_file() and SessionBuffer.is_buffer_orphaned(path):
+                orphaned.append(path)
         
-        return sorted(buffers)
+        return sorted(orphaned)
     
     @staticmethod
     def recover_orphaned_buffers(
@@ -524,12 +585,13 @@ class SessionBuffer:
                         print(f"Warning: Error processing line {line_num} in {buffer_path}: {e}")
                         continue
             
-            # Log recovery event
-            if session_handle:
+            # Log recovery event only if this was an actual crash
+            # (buffer was orphaned without clean shutdown)
+            if session_handle and SessionBuffer.is_buffer_orphaned(buffer_path):
                 recovery_event = AuditEvent(
-                    level='info',
+                    level='warning',  # Changed from 'info' - this is a problem
                     category='recovery',
-                    message=f'Recovered session data from buffer file after crash',
+                    message=f'Recovered session data after unexpected shutdown',
                     payload={
                         'buffer_file': str(buffer_path),
                         'measurements_recovered': measurements_recovered,

@@ -526,13 +526,13 @@ def get_session_markers(session_id: int):
             SELECT 
                 id,
                 session_id,
-                event_timestamp,
+                created_at AS event_timestamp,
                 message,
                 payload_json,
                 created_at
             FROM audit_events
-            WHERE session_id = ? AND event_type = 'manual_marker'
-            ORDER BY event_timestamp ASC
+            WHERE session_id = ? AND category = 'marker'
+            ORDER BY created_at ASC
         """, (session_id,)).fetchall()
         
         conn.close()
@@ -603,7 +603,7 @@ def create_session_marker(session_id: int):
         marker_count = conn.execute("""
             SELECT COUNT(*) as count 
             FROM audit_events 
-            WHERE session_id = ? AND event_type = 'manual_marker'
+            WHERE session_id = ? AND category = 'marker'
         """, (session_id,)).fetchone()['count']
         
         if marker_count >= 99:
@@ -620,14 +620,13 @@ def create_session_marker(session_id: int):
         cursor = conn.cursor()
         cursor.execute("""
             INSERT INTO audit_events 
-            (session_id, level, category, message, event_type, event_timestamp, payload_json)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            (session_id, level, category, message, created_at, payload_json)
+            VALUES (?, ?, ?, ?, ?, ?)
         """, (
             session_id,
             'info',
             'marker',
             f'Manual marker added',
-            'manual_marker',
             event_timestamp,
             json.dumps(payload)
         ))
@@ -667,7 +666,7 @@ def delete_session_marker(session_id: int, marker_id: int):
         # Verify marker exists and belongs to session
         marker = conn.execute("""
             SELECT id FROM audit_events
-            WHERE id = ? AND session_id = ? AND event_type = 'manual_marker'
+            WHERE id = ? AND session_id = ? AND category = 'marker'
         """, (marker_id, session_id)).fetchone()
         
         if not marker:
@@ -1188,10 +1187,10 @@ def get_session_evaluation(session_id: int):
         
         # Get markers for anchor calculation (before closing connection)
         markers_rows = conn.execute("""
-            SELECT event_timestamp, payload_json
+            SELECT created_at AS event_timestamp, payload_json
             FROM audit_events
-            WHERE session_id = ? AND event_type = 'manual_marker'
-            ORDER BY event_timestamp ASC
+            WHERE session_id = ? AND category = 'marker'
+            ORDER BY created_at ASC
         """, (session_id,)).fetchall()
         
         conn.close()

@@ -32,6 +32,10 @@ yarn-error.log*
 *.db-wal
 *.db-shm
 
+# Data directory (exclude all database and backup files)
+data/
+*.backup
+
 # Logs
 *.log
 *.err.log
