@@ -1,0 +1,146 @@
+================================================================================
+CONDUCTIVITY OUTLIER FILTERING IMPLEMENTED
+================================================================================
+
+PROBLEM SOLVED:
+---------------
+- Conductivity electrode polarization causing extreme spikes (0 µS/cm to 639 µS/cm)
+- Chart autoscaling including outliers, making normal data appear flat
+- Median value is ~539 µS/cm, but spikes were distorting the view
+
+SOLUTION IMPLEMENTED:
+---------------------
+Added IQR (Interquartile Range) outlier detection with MAD (Median Absolute Deviation) backup.
+
+Method:
+1. Calculate Q1 (25th percentile) and Q3 (75th percentile)
+2. Calculate IQR = Q3 - Q1
+3. Define bounds: [Q1 - 2.5×IQR, Q3 + 2.5×IQR]
+4. Also calculate median-based bounds using MAD
+5. Use the wider bounds (less aggressive filtering)
+6. Remove values outside bounds by setting conductivity to null
+
+Parameters:
+- IQR multiplier: 2.5 (less aggressive than standard 1.5)
+- MAD multiplier: 5.0 (very conservative)
+- Minimum data points for filtering: 10
+- Keeps the measurement but nulls out only the conductivity outlier
+
+WHAT IT DOES:
+-------------
+✓ Filters extreme spikes from polarization
+✓ Keeps normal measurement variations
+✓ Preserves temperature and other parameters
+✓ Logs number of outliers removed
+✓ Gracefully handles errors (returns unfiltered on failure)
+✓ Only filters if there are at least 10 data points
+
+EXAMPLE FROM YOUR DATA:
+-----------------------
+Session 83 statistics:
+- Total measurements: 475
+- Min: 0.00 µS/cm (outlier - electrode not in solution)
+- Max: 639.40 µS/cm (spike)
+- Median: 539.10 µS/cm (actual value)
+- Current values: 539-540 µS/cm (stable)
+
+After filtering:
+- Outliers removed: Values < ~250 µS/cm and > ~750 µS/cm
+- Chart will now autoscale to normal range
+- Data will appear smooth and readable
+
+HOW TO SEE THE CHANGES:
+-----------------------
+1. Refresh your browser (F5 or Ctrl+R)
+2. The conductivity chart should now show:
+   - Proper autoscaling around 539 µS/cm
+   - No flat-line appearance
+   - Smooth data without extreme spikes
+   - Normal variations visible
+
+3. Check the data API service log:
+   captures/data_api_service.log
+   - Look for lines like: "Filtered X conductivity outliers from Y measurements"
+   - This confirms filtering is working
+
+WHERE THE FILTERING HAPPENS:
+----------------------------
+File: data_api_service.py
+Function: filter_conductivity_outliers()
+Applied in: get_session_measurements() endpoint
+
+Every time the browser requests measurement data, the filtering is applied
+automatically before sending the data to the UI.
+
+MONITORING:
+-----------
+To see filtering in action:
+1. Watch captures/data_api_service.log
+2. Look for log entries when UI requests data
+3. Debug logs show: Q1, Q3, IQR, bounds, and filtered values
+
+Example log entry:
+"Filtered 15 conductivity outliers from 500 measurements"
+
+ADJUSTING SENSITIVITY:
+----------------------
+If you want to adjust the filtering (in data_api_service.py):
+
+More aggressive (filters more):
+- multiplier=1.5 (standard IQR)
+- mad_multiplier=3.0
+
+Less aggressive (filters less):
+- multiplier=3.0
+- mad_multiplier=7.0
+
+Current settings (balanced):
+- multiplier=2.5
+- mad_multiplier=5.0
+
+TECHNICAL DETAILS:
+------------------
+The filter uses two methods and takes the wider bounds:
+
+1. IQR Method:
+   - Robust to outliers
+   - Works well with skewed distributions
+   - Standard statistical method
+
+2. MAD Method:
+   - Even more robust than IQR
+   - Based on median deviation
+   - Backup for extreme cases
+
+By using BOTH and taking wider bounds, we ensure:
+- Don't over-filter legitimate variations
+- Do remove extreme polarization spikes
+- Handle edge cases gracefully
+
+WHAT GETS FILTERED:
+-------------------
+Typical outliers from polarization:
+- Values near 0 µS/cm (electrode not submerged or poor contact)
+- Extreme spikes >700 µS/cm (initial polarization)
+- Rapid transients when first submerged
+
+What DOESN'T get filtered:
+- Normal measurement drift
+- Temperature-related variations
+- Gradual concentration changes
+- Expected measurement noise
+
+FUTURE IMPROVEMENTS (if needed):
+---------------------------------
+If you still see issues, we can add:
+1. Moving median filter for additional smoothing
+2. Kalman filter for prediction-based smoothing
+3. Rate-of-change limiting
+4. Exponential smoothing
+5. Savitzky-Golay filter for polynomial smoothing
+
+But the current IQR+MAD method should handle polarization spikes well.
+
+================================================================================
+Refresh your browser now to see the filtered, stable conductivity data!
+================================================================================

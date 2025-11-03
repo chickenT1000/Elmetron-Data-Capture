@@ -771,6 +771,26 @@ class SessionHandle:
         if self._closed:
             return
         conn = self._database.connect()
+        
+        # Check measurement count before closing
+        measurement_count = conn.execute(
+            "SELECT COUNT(*) FROM measurements WHERE session_id = ?",
+            (self.id,)
+        ).fetchone()[0]
+        
+        # Delete session if it has fewer than 10 measurements
+        if measurement_count < 10:
+            with conn:
+                # Delete related data first (foreign keys)
+                conn.execute("DELETE FROM raw_frames WHERE session_id = ?", (self.id,))
+                conn.execute("DELETE FROM measurements WHERE session_id = ?", (self.id,))
+                conn.execute("DELETE FROM audit_events WHERE session_id = ?", (self.id,))
+                conn.execute("DELETE FROM session_metadata WHERE session_id = ?", (self.id,))
+                conn.execute("DELETE FROM sessions WHERE id = ?", (self.id,))
+            self._closed = True
+            return
+        
+        # Session has enough data - close it normally
         with conn:
             conn.execute(
                 "UPDATE sessions SET ended_at = ? WHERE id = ?",

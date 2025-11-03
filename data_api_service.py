@@ -64,7 +64,6 @@ config = None
 # Status file for live capture service communication
 LIVE_STATUS_FILE = ROOT / "captures" / ".live_capture_status.json"
 
-
 # ============================================================================
 # Health & Status Endpoints
 # ============================================================================
@@ -184,43 +183,149 @@ def live_status():
 @app.route('/api/sessions', methods=['GET'])
 def get_sessions():
     """
-    Get list of recent sessions.
+    Get list of sessions with filtering and sorting.
     
     Query params:
         limit: Number of sessions to return (default: 20, max: 100)
+        operator: Filter by operator name (partial match)
+        start_date: Filter sessions started after this date (ISO format)
+        end_date: Filter sessions started before this date (ISO format)
+        has_ph: Filter sessions with pH measurements (true/false)
+        has_redox: Filter sessions with redox measurements (true/false)
+        has_conductivity: Filter sessions with conductivity measurements (true/false)
+        sort_by: Sort by field (started_at, measurement_count, duration) default: started_at
+        order: Sort order (asc, desc) default: desc
     
-    Returns:
-        {
-            "sessions": [
-                {
-                    "id": 1,
-                    "started_at": "2025-09-30T10:00:00Z",
-                    "ended_at": "2025-09-30T11:00:00Z",
-                    "note": "Test session",
-                    "instrument": {...},
-                    "counts": {
-                        "measurements": 150,
-                        "frames": 150,
-                        "audit_events": 5
-                    },
-                    "metadata": {...},
-                    "latest_measurement_at": "2025-09-30T10:59:59Z"
-                },
-                ...
-            ],
-            "total": 1
-        }
+    Returns: List of sessions with counts per parameter type
     """
     try:
         limit = request.args.get('limit', 20, type=int)
+        operator = request.args.get('operator', type=str)
+        start_date = request.args.get('start_date', type=str)
+        end_date = request.args.get('end_date', type=str)
+        has_ph = request.args.get('has_ph', 'false', type=str).lower() == 'true'
+        has_redox = request.args.get('has_redox', 'false', type=str).lower() == 'true'
+        has_conductivity = request.args.get('has_conductivity', 'false', type=str).lower() == 'true'
+        sort_by = request.args.get('sort_by', 'started_at', type=str)
+        order = request.args.get('order', 'desc', type=str).lower()
+        
         limit = max(1, min(limit, 100))
         
-        sessions = db.recent_sessions(limit=limit)
+        # Build query with filters
+        query_parts = []
+        params = []
         
-        return jsonify({
-            'sessions': sessions,
-            'total': len(sessions)
-        })
+        # Base query with measurement counts per type
+        query_parts.append("""
+            SELECT
+                s.id,
+                s.started_at,
+                s.ended_at,
+                s.note,
+                s.operator_name,
+                i.serial AS instrument_serial,
+                i.description AS instrument_description,
+                i.model AS instrument_model,
+                (SELECT COUNT(*) FROM measurements m WHERE m.session_id = s.id) AS measurement_count,
+                (SELECT COUNT(*) FROM measurements m WHERE m.session_id = s.id AND m.unit LIKE '%pH%') AS ph_count,
+                (SELECT COUNT(*) FROM measurements m WHERE m.session_id = s.id AND (m.unit LIKE '%mV%' OR m.unit LIKE '%ORP%')) AS redox_count,
+                (SELECT COUNT(*) FROM measurements m WHERE m.session_id = s.id AND (m.unit LIKE '%S/cm%' OR m.unit LIKE '%siemens%')) AS conductivity_count,
+                (SELECT COUNT(*) FROM raw_frames f WHERE f.session_id = s.id) AS frame_count,
+                (SELECT COUNT(*) FROM audit_events a WHERE a.session_id = s.id) AS audit_count,
+                (SELECT measurement_timestamp FROM measurements m WHERE m.session_id = s.id ORDER BY m.id DESC LIMIT 1) AS latest_measurement
+            FROM sessions s
+            LEFT JOIN instruments i ON s.instrument_id = i.id
+        """)
+        
+        # Build WHERE clause
+        where_conditions = []
+        
+        if operator:
+            where_conditions.append('s.operator_name LIKE ?')
+            params.append(f'%{operator}%')
+        
+        if start_date:
+            where_conditions.append('s.started_at >= ?')
+            params.append(start_date)
+        
+        if end_date:
+            where_conditions.append('s.started_at <= ?')
+            params.append(end_date)
+        
+        if where_conditions:
+            query_parts.append('WHERE ' + ' AND '.join(where_conditions))
+        
+        # Add ORDER BY
+        order_clause = 'ASC' if order == 'asc' else 'DESC'
+        if sort_by == 'measurement_count':
+            query_parts.append(f'ORDER BY measurement_count {order_clause}, s.id DESC')
+        elif sort_by == 'duration':
+            query_parts.append(f'ORDER BY (julianday(COALESCE(s.ended_at, datetime(\'now\'))) - julianday(s.started_at)) {order_clause}, s.id DESC')
+        else:  # started_at
+            query_parts.append(f'ORDER BY s.started_at {order_clause}, s.id DESC')
+        
+        query_parts.append('LIMIT ?')
+        params.append(limit)
+        
+        conn = sqlite3.connect(str(db.path))
+        conn.row_factory = sqlite3.Row
+        try:
+            rows = conn.execute(' '.join(query_parts), params).fetchall()
+            sessions = []
+            
+            for row in rows:
+                ph_count = int(row['ph_count'] or 0)
+                redox_count = int(row['redox_count'] or 0)
+                conductivity_count = int(row['conductivity_count'] or 0)
+                
+                # Apply parameter type filters
+                if has_ph and ph_count == 0:
+                    continue
+                if has_redox and redox_count == 0:
+                    continue
+                if has_conductivity and conductivity_count == 0:
+                    continue
+                
+                # Determine dominant parameter
+                dominant = 'none'
+                max_count = max(ph_count, redox_count, conductivity_count)
+                if max_count > 0:
+                    if ph_count == max_count:
+                        dominant = 'ph'
+                    elif redox_count == max_count:
+                        dominant = 'redox'
+                    elif conductivity_count == max_count:
+                        dominant = 'conductivity'
+                
+                sessions.append({
+                    'id': row['id'],
+                    'started_at': row['started_at'],
+                    'ended_at': row['ended_at'],
+                    'note': row['note'],
+                    'operator_name': row['operator_name'],
+                    'instrument': {
+                        'serial': row['instrument_serial'],
+                        'description': row['instrument_description'],
+                        'model': row['instrument_model'],
+                    },
+                    'counts': {
+                        'measurements': int(row['measurement_count'] or 0),
+                        'ph_measurements': ph_count,
+                        'redox_measurements': redox_count,
+                        'conductivity_measurements': conductivity_count,
+                        'frames': int(row['frame_count'] or 0),
+                        'audit_events': int(row['audit_count'] or 0),
+                    },
+                    'dominant_parameter': dominant,
+                    'latest_measurement_at': row['latest_measurement'],
+                })
+            
+            return jsonify({
+                'sessions': sessions,
+                'total': len(sessions)
+            })
+        finally:
+            conn.close()
     
     except Exception as e:
         logger.error(f"Error fetching sessions: {e}", exc_info=True)
@@ -323,6 +428,266 @@ def get_session_details(session_id: int):
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/sessions/<int:session_id>', methods=['DELETE'])
+def delete_session(session_id: int):
+    """
+    Permanently delete a session and all associated data.
+    
+    WARNING: This operation cannot be undone!
+    
+    Deletes:
+    - Session record
+    - All measurements
+    - All raw frames
+    - All audit events
+    - Session metadata
+    
+    Returns:
+        204 No Content on success
+        404 if session not found
+    """
+    try:
+        conn = sqlite3.connect(str(db.path))
+        cursor = conn.cursor()
+        
+        # Check if session exists
+        cursor.execute("SELECT id FROM sessions WHERE id = ?", (session_id,))
+        if not cursor.fetchone():
+            conn.close()
+            return jsonify({'error': f'Session {session_id} not found'}), 404
+        
+        # Get counts for logging
+        cursor.execute("SELECT COUNT(*) FROM measurements WHERE session_id = ?", (session_id,))
+        measurement_count = cursor.fetchone()[0]
+        
+        cursor.execute("SELECT COUNT(*) FROM raw_frames WHERE session_id = ?", (session_id,))
+        frame_count = cursor.fetchone()[0]
+        
+        cursor.execute("SELECT COUNT(*) FROM audit_events WHERE session_id = ?", (session_id,))
+        audit_count = cursor.fetchone()[0]
+        
+        logger.info(f"Deleting session {session_id}: {measurement_count} measurements, {frame_count} frames, {audit_count} audit events")
+        
+        # Delete in transaction (cascade delete)
+        try:
+            # Delete measurements
+            cursor.execute("DELETE FROM measurements WHERE session_id = ?", (session_id,))
+            
+            # Delete raw frames
+            cursor.execute("DELETE FROM raw_frames WHERE session_id = ?", (session_id,))
+            
+            # Delete audit events
+            cursor.execute("DELETE FROM audit_events WHERE session_id = ?", (session_id,))
+            
+            # Delete session metadata
+            cursor.execute("DELETE FROM session_metadata WHERE session_id = ?", (session_id,))
+            
+            # Delete session
+            cursor.execute("DELETE FROM sessions WHERE id = ?", (session_id,))
+            
+            conn.commit()
+            
+            logger.info(f"Successfully deleted session {session_id}")
+            
+            return '', 204  # No content
+            
+        except Exception as e:
+            conn.rollback()
+            logger.error(f"Failed to delete session {session_id}: {e}", exc_info=True)
+            return jsonify({'error': f'Failed to delete session: {str(e)}'}), 500
+        finally:
+            conn.close()
+    
+    except Exception as e:
+        logger.error(f"Error deleting session {session_id}: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/sessions/<int:session_id>/markers', methods=['GET'])
+def get_session_markers(session_id: int):
+    """
+    Get all manual markers for a session.
+    
+    Returns markers as audit_events with event_type='manual_marker',
+    sorted by timestamp with sequential numbering.
+    """
+    try:
+        conn = sqlite3.connect(str(db.path))
+        conn.row_factory = sqlite3.Row
+        
+        # Check if session exists
+        session = conn.execute("SELECT id FROM sessions WHERE id = ?", (session_id,)).fetchone()
+        if not session:
+            conn.close()
+            return jsonify({'error': f'Session {session_id} not found'}), 404
+        
+        # Get markers ordered by timestamp
+        markers = conn.execute("""
+            SELECT 
+                id,
+                session_id,
+                event_timestamp,
+                message,
+                payload_json,
+                created_at
+            FROM audit_events
+            WHERE session_id = ? AND event_type = 'manual_marker'
+            ORDER BY event_timestamp ASC
+        """, (session_id,)).fetchall()
+        
+        conn.close()
+        
+        # Build response with marker numbers
+        result = []
+        for idx, marker in enumerate(markers, start=1):
+            payload = json.loads(marker['payload_json']) if marker['payload_json'] else {}
+            result.append({
+                'id': marker['id'],
+                'session_id': marker['session_id'],
+                'marker_number': idx,
+                'event_timestamp': marker['event_timestamp'],
+                'offset_seconds': payload.get('offset_seconds'),
+                'note': payload.get('note'),
+                'created_at': marker['created_at']
+            })
+        
+        return jsonify({'markers': result})
+    
+    except Exception as e:
+        logger.error(f"Error fetching markers for session {session_id}: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/sessions/<int:session_id>/markers', methods=['POST'])
+def create_session_marker(session_id: int):
+    """
+    Create a new manual marker for a session.
+    
+    Request body:
+        {
+            "event_timestamp": "2025-10-29T12:34:56Z",
+            "offset_seconds": 123.45,
+            "note": "Optional note"
+        }
+    
+    Returns created marker with auto-calculated marker_number.
+    """
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Missing request body'}), 400
+        
+        event_timestamp = data.get('event_timestamp')
+        offset_seconds = data.get('offset_seconds')
+        note = data.get('note', '')
+        
+        if not event_timestamp:
+            return jsonify({'error': 'Missing event_timestamp'}), 400
+        
+        if offset_seconds is None:
+            return jsonify({'error': 'Missing offset_seconds'}), 400
+        
+        # Round to nearest second (device sends 1 Hz data)
+        offset_seconds = round(float(offset_seconds))
+        
+        conn = sqlite3.connect(str(db.path))
+        conn.row_factory = sqlite3.Row
+        
+        # Check if session exists
+        session = conn.execute("SELECT id FROM sessions WHERE id = ?", (session_id,)).fetchone()
+        if not session:
+            conn.close()
+            return jsonify({'error': f'Session {session_id} not found'}), 404
+        
+        # Count existing markers (limit to 99)
+        marker_count = conn.execute("""
+            SELECT COUNT(*) as count 
+            FROM audit_events 
+            WHERE session_id = ? AND event_type = 'manual_marker'
+        """, (session_id,)).fetchone()['count']
+        
+        if marker_count >= 99:
+            conn.close()
+            return jsonify({'error': 'Maximum 99 markers per session'}), 400
+        
+        # Create payload
+        payload = {
+            'offset_seconds': offset_seconds,
+            'note': note
+        }
+        
+        # Insert marker
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO audit_events 
+            (session_id, level, category, message, event_type, event_timestamp, payload_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (
+            session_id,
+            'info',
+            'marker',
+            f'Manual marker added',
+            'manual_marker',
+            event_timestamp,
+            json.dumps(payload)
+        ))
+        
+        marker_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+        
+        logger.info(f"Created marker {marker_id} for session {session_id} at offset {offset_seconds}s")
+        
+        return jsonify({
+            'id': marker_id,
+            'session_id': session_id,
+            'marker_number': marker_count + 1,
+            'event_timestamp': event_timestamp,
+            'offset_seconds': offset_seconds,
+            'note': note,
+            'created_at': datetime.now().isoformat()
+        }), 201
+    
+    except Exception as e:
+        logger.error(f"Error creating marker for session {session_id}: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/sessions/<int:session_id>/markers/<int:marker_id>', methods=['DELETE'])
+def delete_session_marker(session_id: int, marker_id: int):
+    """
+    Delete a manual marker.
+    
+    Note: After deletion, remaining markers are automatically renumbered
+    based on their timestamp order when retrieved via GET.
+    """
+    try:
+        conn = sqlite3.connect(str(db.path))
+        
+        # Verify marker exists and belongs to session
+        marker = conn.execute("""
+            SELECT id FROM audit_events
+            WHERE id = ? AND session_id = ? AND event_type = 'manual_marker'
+        """, (marker_id, session_id)).fetchone()
+        
+        if not marker:
+            conn.close()
+            return jsonify({'error': 'Marker not found'}), 404
+        
+        # Delete marker
+        conn.execute("DELETE FROM audit_events WHERE id = ?", (marker_id,))
+        conn.commit()
+        conn.close()
+        
+        logger.info(f"Deleted marker {marker_id} from session {session_id}")
+        
+        return '', 204
+    
+    except Exception as e:
+        logger.error(f"Error deleting marker {marker_id}: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/sessions/<int:session_id>/rename', methods=['PATCH'])
 def rename_session(session_id: int):
     """
@@ -404,6 +769,76 @@ def rename_session(session_id: int):
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/sessions/<int:session_id>/operator', methods=['PATCH'])
+def update_session_operator(session_id: int):
+    """
+    Update operator name for a session.
+    
+    Request body:
+        {
+            "operator_name": "John Doe"
+        }
+    
+    Returns:
+        {
+            "id": 1,
+            "operator_name": "John Doe",
+            "updated_at": "2025-10-29T12:34:56Z"
+        }
+    """
+    try:
+        data = request.get_json()
+        if not data or 'operator_name' not in data:
+            return jsonify({'error': 'Missing "operator_name" in request body'}), 400
+        
+        operator_name = data['operator_name']
+        
+        # Validation
+        if operator_name is not None and not isinstance(operator_name, str):
+            return jsonify({'error': 'Operator name must be a string or null'}), 400
+        
+        # Sanitize
+        if operator_name:
+            operator_name = operator_name.strip()
+            if len(operator_name) > 100:
+                return jsonify({'error': 'Operator name must be 100 characters or less'}), 400
+            if len(operator_name) == 0:
+                operator_name = None
+        else:
+            operator_name = None
+        
+        # Update in database
+        conn = sqlite3.connect(str(db.path))
+        try:
+            cursor = conn.cursor()
+            
+            # Check if session exists
+            cursor.execute("SELECT id FROM sessions WHERE id = ?", (session_id,))
+            if not cursor.fetchone():
+                return jsonify({'error': f'Session {session_id} not found'}), 404
+            
+            # Update operator name
+            cursor.execute(
+                "UPDATE sessions SET operator_name = ? WHERE id = ?",
+                (operator_name, session_id)
+            )
+            conn.commit()
+            
+            logger.info(f"Session {session_id} operator updated to: {operator_name}")
+            
+            return jsonify({
+                'id': session_id,
+                'operator_name': operator_name,
+                'updated_at': datetime.utcnow().isoformat() + 'Z'
+            })
+        finally:
+            conn.close()
+    
+    except Exception as e:
+        logger.error(f"Error updating operator for session {session_id}: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/sessions/<int:session_id>/measurements', methods=['GET'])
 def get_session_measurements(session_id: int):
     """
@@ -477,19 +912,49 @@ def get_session_measurements(session_id: int):
         measurements = []
         for row in rows:
             payload = json.loads(row['payload_json']) if row['payload_json'] else {}
-            measurements.append({
+            
+            # Convert to unified format for filtering
+            measurement = {
                 'id': row['id'],
                 'timestamp': row['measurement_timestamp'],
+                'ph': None,
+                'redox': None,
+                'conductivity': None,
+                'temperature': row['temperature'],
                 'value': row['value'],
                 'unit': row['unit'],
-                'temperature': row['temperature'],
                 'temperature_unit': row['temperature_unit'],
                 'payload': payload
+            }
+            
+            # Map value to correct metric
+            if row['unit'] and row['value'] is not None:
+                unit_lower = row['unit'].lower()
+                if 'ph' in unit_lower:
+                    measurement['ph'] = row['value']
+                elif 'mv' in unit_lower or 'orp' in unit_lower:
+                    measurement['redox'] = row['value']
+                elif 'us' in unit_lower or 'ms' in unit_lower or 's/cm' in unit_lower:
+                    measurement['conductivity'] = row['value']
+            
+            measurements.append(measurement)
+        
+        # Convert back to original format
+        result_measurements = []
+        for m in measurements:
+            result_measurements.append({
+                'id': m.get('id'),
+                'timestamp': m['timestamp'],
+                'value': m.get('value'),
+                'unit': m.get('unit'),
+                'temperature': m.get('temperature'),
+                'temperature_unit': m.get('temperature_unit'),
+                'payload': m.get('payload', {})
             })
         
         return jsonify({
             'session_id': session_id,
-            'measurements': measurements,
+            'measurements': result_measurements,
             'total': total,
             'limit': limit,
             'offset': offset
@@ -721,7 +1186,32 @@ def get_session_evaluation(session_id: int):
             LIMIT ?
         """, (session_id, limit)).fetchall()
         
+        # Get markers for anchor calculation (before closing connection)
+        markers_rows = conn.execute("""
+            SELECT event_timestamp, payload_json
+            FROM audit_events
+            WHERE session_id = ? AND event_type = 'manual_marker'
+            ORDER BY event_timestamp ASC
+        """, (session_id,)).fetchall()
+        
         conn.close()
+        
+        # Calculate actual marker timestamps from session start + offset_seconds
+        marker_timestamps = []
+        if markers_rows:
+            from datetime import datetime, timedelta
+            try:
+                session_start = datetime.fromisoformat(session_row['started_at'].replace('Z', '+00:00'))
+                for marker_row in markers_rows:
+                    payload = json.loads(marker_row['payload_json']) if marker_row['payload_json'] else {}
+                    offset_seconds = payload.get('offset_seconds')
+                    if offset_seconds is not None:
+                        # Calculate actual timestamp: session_start + offset
+                        marker_ts = session_start + timedelta(seconds=offset_seconds)
+                        marker_timestamps.append(marker_ts.isoformat())
+            except Exception as e:
+                print(f"Error calculating marker timestamps: {e}")
+                marker_timestamps = []
         
         # Build evaluation response
         session = {
@@ -741,25 +1231,63 @@ def get_session_evaluation(session_id: int):
             }
         }
         
+        # Determine anchor time based on anchor parameter
+        anchor_time = session_row['started_at']  # Default: session start
+        
+        if anchor == 'first_marker' or anchor == 'last_marker':
+            if marker_timestamps:
+                if anchor == 'first_marker':
+                    anchor_time = marker_timestamps[0]
+                else:  # last_marker
+                    anchor_time = marker_timestamps[-1]
+            else:
+                # Fallback: if no markers, use first/last measurement
+                if measurement_rows:
+                    if anchor == 'first_marker':
+                        anchor_time = measurement_rows[0]['timestamp']
+                    else:  # last_marker
+                        anchor_time = measurement_rows[-1]['timestamp']
+        
         # Convert measurements to series format
         series = []
         values = []
         temps = []
-        anchor_time = session_row['started_at']  # Use start as anchor
         
         for row in measurement_rows:
             payload = json.loads(row['payload_json']) if row['payload_json'] else {}
             
-            # Calculate offset from anchor (simplified - assumes ISO timestamp)
+            # Calculate offset from anchor
             offset_seconds = None
             if row['timestamp'] and anchor_time:
                 try:
                     from datetime import datetime
-                    ts = datetime.fromisoformat(row['timestamp'].replace('Z', '+00:00'))
-                    anchor_ts = datetime.fromisoformat(anchor_time.replace('Z', '+00:00'))
-                    offset_seconds = (ts - anchor_ts).total_seconds()
-                except:
-                    pass
+                    # Handle various timestamp formats
+                    ts_str = row['timestamp']
+                    anchor_str = anchor_time
+                    
+                    # Normalize timestamps: replace Z with +00:00 for fromisoformat
+                    if 'Z' in ts_str:
+                        ts_str = ts_str.replace('Z', '+00:00')
+                    if 'Z' in anchor_str:
+                        anchor_str = anchor_str.replace('Z', '+00:00')
+                    
+                    # Parse timestamps - fromisoformat handles both with/without timezone
+                    ts = datetime.fromisoformat(ts_str)
+                    anchor_ts = datetime.fromisoformat(anchor_str)
+                    offset_seconds = round((ts - anchor_ts).total_seconds())
+                except Exception as e:
+                    # If parsing fails, try without timezone
+                    try:
+                        from datetime import datetime
+                        # Strip any timezone info and parse as naive datetime
+                        ts_clean = row['timestamp'].replace('Z', '').split('+')[0].split('-')[0:3]
+                        anchor_clean = anchor_time.replace('Z', '').split('+')[0].split('-')[0:3]
+                        ts = datetime.fromisoformat(row['timestamp'].replace('Z', '').split('+')[0])
+                        anchor_ts = datetime.fromisoformat(anchor_time.replace('Z', '').split('+')[0])
+                        offset_seconds = round((ts - anchor_ts).total_seconds())
+                    except:
+                        print(f"Failed to parse timestamps: {row['timestamp']} or {anchor_time}")
+                        pass
             
             point = {
                 'measurement_id': row['measurement_id'],
@@ -808,12 +1336,29 @@ def get_session_evaluation(session_id: int):
             except:
                 pass
         
+        # Calculate adjusted marker positions based on anchor
+        adjusted_markers = []
+        if marker_timestamps:
+            from datetime import datetime
+            try:
+                anchor_ts = datetime.fromisoformat(anchor_time.replace('Z', '+00:00'))
+                for i, marker_ts_str in enumerate(marker_timestamps):
+                    marker_ts = datetime.fromisoformat(marker_ts_str.replace('Z', '+00:00'))
+                    marker_offset = (marker_ts - anchor_ts).total_seconds()
+                    adjusted_markers.append({
+                        'marker_number': i + 1,
+                        'offset_seconds': marker_offset,
+                        'offset_minutes': marker_offset / 60.0
+                    })
+            except Exception as e:
+                print(f"Error adjusting marker positions: {e}")
+        
         return jsonify({
             'session': session,
             'anchor': anchor,
             'anchor_timestamp': anchor_time,
             'series': series,
-            'markers': [],  # TODO: Extract from audit events
+            'markers': adjusted_markers,
             'statistics': {
                 'value': value_stats,
                 'temperature': temp_stats

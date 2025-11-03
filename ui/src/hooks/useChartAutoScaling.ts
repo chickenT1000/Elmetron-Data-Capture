@@ -179,8 +179,27 @@ export function useChartAutoScaling({
     // Add buffer to avoid data touching edges
     const range = dataMax - dataMin;
     const buffer = range * bufferPercent;
-    const bufferedMin = dataMin - buffer;
-    const bufferedMax = dataMax + buffer;
+    let bufferedMin = dataMin - buffer;
+    let bufferedMax = dataMax + buffer;
+
+    // Apply metric-specific bounds to prevent impossible values
+    // This prevents the buffer from causing negative values or other invalid ranges
+    switch (dataKey) {
+      case 'conductivity':
+        bufferedMin = Math.max(0, bufferedMin);  // Conductivity can't be negative
+        break;
+      case 'ph':
+        bufferedMin = Math.max(-4, bufferedMin);  // pH rarely below -4
+        bufferedMax = Math.min(20, bufferedMax);  // pH rarely above 20
+        break;
+      case 'temperature':
+        bufferedMin = Math.max(-50, bufferedMin);  // Temperature rarely below -50°C in normal use
+        bufferedMax = Math.min(150, bufferedMax);  // Temperature rarely above 150°C
+        break;
+      case 'redox':
+        // Redox can be negative, so no lower bound adjustment needed
+        break;
+    }
 
     // Find the smallest preset that fits the buffered data
     const presets = SCALE_PRESETS[dataKey];
