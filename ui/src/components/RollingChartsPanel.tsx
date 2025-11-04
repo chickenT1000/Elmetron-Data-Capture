@@ -84,11 +84,11 @@ export const RollingChartsPanel: React.FC<RollingChartsPanelProps> = ({
 
           <Box>
             <MeasurementChart
-              title="Conductivity (µS/cm)"
+              title="Conductivity (μS/cm)"
               data={data}
               dataKey="conductivity"
               color="#4caf50"
-              unit="µS/cm"
+              unit="μS/cm"
               loading={loading}
               yAxisDomain={[0, 10000]}
               decimalPlaces={0}

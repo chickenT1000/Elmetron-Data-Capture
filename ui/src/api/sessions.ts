@@ -340,6 +340,26 @@ export async function addSessionMarker(
   return (await response.json()) as SessionMarker;
 }
 
+// Helper function to create marker with just offset and note
+export async function createSessionMarker(
+  sessionId: number,
+  offsetSeconds: number,
+  note: string | null,
+  sessionStartedAt: string
+): Promise<SessionMarker> {
+  // Calculate event timestamp from offset
+  const sessionStart = new Date(sessionStartedAt);
+  const eventTimestamp = new Date(sessionStart.getTime() + offsetSeconds * 1000).toISOString();
+  
+  console.log('Creating marker:');
+  console.log('  sessionStartedAt:', sessionStartedAt);
+  console.log('  sessionStart parsed:', sessionStart.toISOString());
+  console.log('  offsetSeconds:', offsetSeconds);
+  console.log('  eventTimestamp:', eventTimestamp);
+  
+  return addSessionMarker(sessionId, eventTimestamp, offsetSeconds, note || undefined);
+}
+
 export async function updateSessionMarker(
   sessionId: number,
   markerId: number,

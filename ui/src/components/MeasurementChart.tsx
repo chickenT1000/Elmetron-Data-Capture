@@ -339,7 +339,7 @@ export const MeasurementChart: React.FC<MeasurementChartProps> = ({
         flexDirection: 'column',
       }}
     >
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1, ml: 6 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <FiberManualRecordIcon 
             color={hasRecentData ? 'success' : 'default'} 

@@ -266,6 +266,17 @@ def get_sessions():
             query_parts.append(f'ORDER BY (julianday(COALESCE(s.ended_at, datetime(\'now\'))) - julianday(s.started_at)) {order_clause}, s.id DESC')
         elif sort_by == 'operator_name':
             query_parts.append(f'ORDER BY s.operator_name {order_clause}, s.id DESC')
+        elif sort_by == 'id':
+            query_parts.append(f'ORDER BY s.id {order_clause}')
+        elif sort_by == 'name':
+            query_parts.append(f'ORDER BY COALESCE(s.name, \'\') {order_clause}, s.id DESC')
+        elif sort_by == 'workspace':
+            # Sort with non-null workspaces first, then by name
+            query_parts.append(f'ORDER BY (i.name IS NULL), i.name {order_clause}, s.id DESC')
+        elif sort_by == 'dominant_parameter':
+            query_parts.append(f'ORDER BY s.dominant_parameter {order_clause}, s.id DESC')
+        elif sort_by == 'marker_count':
+            query_parts.append(f'ORDER BY marker_count {order_clause}, s.id DESC')
         else:  # started_at
             query_parts.append(f'ORDER BY s.started_at {order_clause}, s.id DESC')
         
@@ -747,6 +758,10 @@ def get_session_markers(session_id: int):
                 'created_at': marker['created_at']
             })
         
+        logger.info(f"GET markers for session {session_id}: found {len(result)} markers")
+        for m in result:
+            logger.info(f"  Marker #{m['marker_number']}: id={m['id']}, timestamp={m['event_timestamp']}, offset={m['offset_seconds']}s")
+        
         return jsonify({'markers': result})
     
     except Exception as e:
@@ -829,18 +844,28 @@ def create_session_marker(session_id: int):
         
         marker_id = cursor.lastrowid
         conn.commit()
+        
+        # Calculate marker number based on timestamp position (count markers before this one)
+        marker_number = conn.execute("""
+            SELECT COUNT(*) + 1 as marker_number
+            FROM audit_events
+            WHERE session_id = ? 
+              AND category = 'marker'
+              AND created_at < ?
+        """, (session_id, event_timestamp)).fetchone()['marker_number']
+        
         conn.close()
         
-        logger.info(f"Created marker {marker_id} for session {session_id} at offset {offset_seconds}s")
+        logger.info(f"Created marker {marker_id} for session {session_id}: timestamp={event_timestamp}, offset={offset_seconds}s, marker_number={marker_number}")
         
         return jsonify({
             'id': marker_id,
             'session_id': session_id,
-            'marker_number': marker_count + 1,
+            'marker_number': marker_number,
             'event_timestamp': event_timestamp,
             'offset_seconds': offset_seconds,
             'note': note,
-            'created_at': datetime.now().isoformat()
+            'created_at': event_timestamp
         }), 201
     
     except Exception as e:
@@ -882,8 +907,9 @@ def update_session_marker(session_id: int, marker_id: int):
         conn.row_factory = sqlite3.Row
         
         # Verify marker exists and belongs to session
+        # Note: created_at column stores the marker timestamp (when marker occurs in session)
         marker = conn.execute("""
-            SELECT id, event_timestamp, metadata, created_at 
+            SELECT id, created_at, payload_json
             FROM audit_events
             WHERE id = ? AND session_id = ? AND category = 'marker'
         """, (marker_id, session_id)).fetchone()
@@ -914,15 +940,19 @@ def update_session_marker(session_id: int, marker_id: int):
             new_event_timestamp = (session_start + timedelta(seconds=new_offset_seconds)).isoformat()
             offset_seconds = new_offset_seconds
         else:
-            # Keep existing timestamp
-            new_event_timestamp = marker['event_timestamp']
-            marker_time = datetime.fromisoformat(marker['event_timestamp'].replace('Z', '+00:00'))
+            # Keep existing timestamp (stored in created_at column)
+            new_event_timestamp = marker['created_at']
+            marker_time = datetime.fromisoformat(marker['created_at'].replace('Z', '+00:00'))
             offset_seconds = int((marker_time - session_start).total_seconds())
         
-        # Update marker
+        # Update marker (created_at stores the marker timestamp, payload_json stores offset and note)
+        updated_payload = {
+            'offset_seconds': offset_seconds,
+            'note': note
+        }
         conn.execute(
-            "UPDATE audit_events SET event_timestamp = ?, metadata = ? WHERE id = ?",
-            (new_event_timestamp, json.dumps({'note': note}), marker_id)
+            "UPDATE audit_events SET created_at = ?, payload_json = ? WHERE id = ?",
+            (new_event_timestamp, json.dumps(updated_payload), marker_id)
         )
         conn.commit()
         
@@ -932,7 +962,7 @@ def update_session_marker(session_id: int, marker_id: int):
             FROM audit_events
             WHERE session_id = ? 
               AND category = 'marker'
-              AND event_timestamp < ?
+              AND created_at < ?
         """, (session_id, new_event_timestamp)).fetchone()['marker_number']
         
         conn.close()
@@ -946,7 +976,7 @@ def update_session_marker(session_id: int, marker_id: int):
             'event_timestamp': new_event_timestamp,
             'offset_seconds': offset_seconds,
             'note': note,
-            'created_at': marker['created_at']
+            'created_at': new_event_timestamp
         })
     
     except Exception as e:

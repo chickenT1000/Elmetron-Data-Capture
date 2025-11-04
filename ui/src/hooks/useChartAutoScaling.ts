@@ -53,27 +53,27 @@ const SCALE_PRESETS: Record<MetricType, ScalePreset[]> = {
 
   conductivity: [
     // Ultra-pure water
-    { min: 0, max: 10, ticks: [0, 2, 4, 6, 8, 10], label: '0-10 µS/cm' },
-    { min: 0, max: 20, ticks: [0, 5, 10, 15, 20], label: '0-20 µS/cm' },
-    { min: 0, max: 50, ticks: [0, 10, 20, 30, 40, 50], label: '0-50 µS/cm' },
+    { min: 0, max: 10, ticks: [0, 2, 4, 6, 8, 10], label: '0-10 μS/cm' },
+    { min: 0, max: 20, ticks: [0, 5, 10, 15, 20], label: '0-20 μS/cm' },
+    { min: 0, max: 50, ticks: [0, 10, 20, 30, 40, 50], label: '0-50 μS/cm' },
     // Pure/distilled
-    { min: 0, max: 100, ticks: [0, 20, 40, 60, 80, 100], label: '0-100 µS/cm' },
-    { min: 0, max: 200, ticks: [0, 50, 100, 150, 200], label: '0-200 µS/cm' },
-    { min: 0, max: 500, ticks: [0, 100, 200, 300, 400, 500], label: '0-500 µS/cm' },
+    { min: 0, max: 100, ticks: [0, 20, 40, 60, 80, 100], label: '0-100 μS/cm' },
+    { min: 0, max: 200, ticks: [0, 50, 100, 150, 200], label: '0-200 μS/cm' },
+    { min: 0, max: 500, ticks: [0, 100, 200, 300, 400, 500], label: '0-500 μS/cm' },
     // Drinking water
-    { min: 0, max: 1000, ticks: [0, 200, 400, 600, 800, 1000], label: '0-1,000 µS/cm' },
-    { min: 0, max: 2000, ticks: [0, 500, 1000, 1500, 2000], label: '0-2,000 µS/cm' },
+    { min: 0, max: 1000, ticks: [0, 200, 400, 600, 800, 1000], label: '0-1,000 μS/cm' },
+    { min: 0, max: 2000, ticks: [0, 500, 1000, 1500, 2000], label: '0-2,000 μS/cm' },
     // General water
-    { min: 0, max: 5000, ticks: [0, 1000, 2000, 3000, 4000, 5000], label: '0-5,000 µS/cm' },
-    { min: 0, max: 10000, ticks: [0, 2000, 4000, 6000, 8000, 10000], label: '0-10,000 µS/cm' },
+    { min: 0, max: 5000, ticks: [0, 1000, 2000, 3000, 4000, 5000], label: '0-5,000 μS/cm' },
+    { min: 0, max: 10000, ticks: [0, 2000, 4000, 6000, 8000, 10000], label: '0-10,000 μS/cm' },
     // High conductivity
-    { min: 0, max: 20000, ticks: [0, 5000, 10000, 15000, 20000], label: '0-20,000 µS/cm' },
-    { min: 0, max: 50000, ticks: [0, 10000, 20000, 30000, 40000, 50000], label: '0-50,000 µS/cm' },
-    { min: 0, max: 100000, ticks: [0, 20000, 40000, 60000, 80000, 100000], label: '0-100,000 µS/cm' },
+    { min: 0, max: 20000, ticks: [0, 5000, 10000, 15000, 20000], label: '0-20,000 μS/cm' },
+    { min: 0, max: 50000, ticks: [0, 10000, 20000, 30000, 40000, 50000], label: '0-50,000 μS/cm' },
+    { min: 0, max: 100000, ticks: [0, 20000, 40000, 60000, 80000, 100000], label: '0-100,000 μS/cm' },
     // Seawater
-    { min: 0, max: 200000, ticks: [0, 50000, 100000, 150000, 200000], label: '0-200,000 µS/cm' },
+    { min: 0, max: 200000, ticks: [0, 50000, 100000, 150000, 200000], label: '0-200,000 μS/cm' },
     // Extreme (industrial/brine)
-    { min: 0, max: 500000, ticks: [0, 100000, 200000, 300000, 400000, 500000], label: '0-500,000 µS/cm' },
+    { min: 0, max: 500000, ticks: [0, 100000, 200000, 300000, 400000, 500000], label: '0-500,000 μS/cm' },
   ],
 
   redox: [
@@ -116,7 +116,7 @@ const SCALE_PRESETS: Record<MetricType, ScalePreset[]> = {
 // Default fixed scales (when auto-scaling is disabled)
 const DEFAULT_FIXED_SCALES: Record<MetricType, ScalePreset> = {
   ph: { min: 0, max: 14, ticks: [0, 2, 4, 6, 8, 10, 12, 14], label: '0-14 pH (fixed)' },
-  conductivity: { min: 0, max: 10000, ticks: [0, 2000, 4000, 6000, 8000, 10000], label: '0-10,000 µS/cm (fixed)' },
+  conductivity: { min: 0, max: 10000, ticks: [0, 2000, 4000, 6000, 8000, 10000], label: '0-10,000 μS/cm (fixed)' },
   redox: { min: -2000, max: 2000, ticks: [-2000, -1500, -1000, -500, 0, 500, 1000, 1500, 2000], label: '-2,000 to 2,000 mV (fixed)' },
   temperature: { min: 0, max: 50, ticks: [0, 10, 20, 30, 40, 50], label: '0-50 °C (fixed)' },
 };

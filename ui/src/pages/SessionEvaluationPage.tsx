@@ -69,7 +69,11 @@ const formatDateTime = (value?: string | null): string => {
   if (!value) {
     return 'Unknown';
   }
-  const date = new Date(value);
+  // Ensure timestamp is treated as UTC if it doesn't have timezone info
+  const normalizedValue = value.includes('Z') || value.includes('+') || value.includes('-', 10) 
+    ? value 
+    : value + 'Z';
+  const date = new Date(normalizedValue);
   return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
 };
 
@@ -134,7 +138,7 @@ const getParameterLabel = (param: 'ph' | 'redox' | 'conductivity'): string => {
   switch (param) {
     case 'ph': return 'pH';
     case 'redox': return 'Redox (mV)';
-    case 'conductivity': return 'Conductivity (�S/cm)';
+    case 'conductivity': return 'Conductivity (μS/cm)';
   }
 };
 
@@ -291,8 +295,8 @@ export default function SessionEvaluationPage() {
   const [startDateFilter, setStartDateFilter] = useState<Date | null>(null);
   const [endDateFilter, setEndDateFilter] = useState<Date | null>(null);
   const [chartTypeFilter, setChartTypeFilter] = useState<string>('all');
-  const [sortBy, setSortBy] = useState<'started_at' | 'measurement_count' | 'duration' | 'operator_name'>('started_at');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [sortBy, setSortBy] = useState<'started_at' | 'measurement_count' | 'duration' | 'operator_name' | 'id' | 'name' | 'workspace' | 'dominant_parameter' | 'marker_count'>('workspace');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
   // Session data
   const [sessions, setSessions] = useState<SessionSummary[]>([]);
@@ -835,25 +839,71 @@ export default function SessionEvaluationPage() {
     }
     
     if (point && point.offset_minutes !== undefined) {
-      const offset_minutes = point.offset_minutes;
-      const offset_seconds = point.offset_seconds || offset_minutes * 60;
+      const chartOffsetMinutes = point.offset_minutes;
+      const chartOffsetSeconds = point.offset_seconds || chartOffsetMinutes * 60;
       
-      // Calculate timestamp
+      // Calculate actual offset from session start
       const session = sessions.find(s => s.id === sessionForMarker);
       if (!session) {
         return;
       }
       
-      const sessionStart = new Date(session.started_at);
-      const markerTime = new Date(sessionStart.getTime() + offset_seconds * 1000);
+      // Get the evaluation data to find anchor_timestamp
+      const evaluation = evaluations.find(e => e.session.id === sessionForMarker);
+      if (!evaluation) {
+        return;
+      }
+      
+      // Convert chart offset to session offset based on anchor mode
+      let actualOffsetSeconds: number;
+      
+      if (anchor === 'start') {
+        // Chart offset is already relative to session start
+        actualOffsetSeconds = chartOffsetSeconds;
+      } else if (anchor === 'first_marker') {
+        // Chart shows offset from first marker, need to add first marker's offset from session start
+        if (evaluation.anchor_timestamp) {
+          const startedAt = session.started_at.includes('Z') ? session.started_at : session.started_at + 'Z';
+          const sessionStart = new Date(startedAt);
+          const anchorTime = new Date(evaluation.anchor_timestamp.includes('Z') ? evaluation.anchor_timestamp : evaluation.anchor_timestamp + 'Z');
+          const anchorOffsetSeconds = (anchorTime.getTime() - sessionStart.getTime()) / 1000;
+          actualOffsetSeconds = anchorOffsetSeconds + chartOffsetSeconds;
+        } else {
+          actualOffsetSeconds = chartOffsetSeconds;
+        }
+      } else if (anchor === 'last_marker') {
+        // Chart shows offset from last marker (negative = before marker), need to add last marker's offset from session start
+        if (evaluation.anchor_timestamp) {
+          const startedAt = session.started_at.includes('Z') ? session.started_at : session.started_at + 'Z';
+          const sessionStart = new Date(startedAt);
+          const anchorTime = new Date(evaluation.anchor_timestamp.includes('Z') ? evaluation.anchor_timestamp : evaluation.anchor_timestamp + 'Z');
+          const anchorOffsetSeconds = (anchorTime.getTime() - sessionStart.getTime()) / 1000;
+          actualOffsetSeconds = anchorOffsetSeconds + chartOffsetSeconds;
+        } else {
+          actualOffsetSeconds = chartOffsetSeconds;
+        }
+      } else {
+        actualOffsetSeconds = chartOffsetSeconds;
+      }
+      
+      // Ensure offset is not negative
+      if (actualOffsetSeconds < 0) {
+        console.warn('Calculated offset is negative, clamping to 0');
+        actualOffsetSeconds = 0;
+      }
+      
+      // Ensure started_at is treated as UTC
+      const startedAt = session.started_at.includes('Z') ? session.started_at : session.started_at + 'Z';
+      const sessionStart = new Date(startedAt);
+      const markerTime = new Date(sessionStart.getTime() + actualOffsetSeconds * 1000);
       
       setPendingMarker({
         sessionId: sessionForMarker,
         timestamp: markerTime.toISOString(),
-        offset_seconds,
-        offset_minutes
+        offset_seconds: actualOffsetSeconds,
+        offset_minutes: actualOffsetSeconds / 60
       });
-      setMarkerOffsetMinutes(offset_minutes);
+      setMarkerOffsetMinutes(actualOffsetSeconds / 60);
       setMarkerDialogOpen(true);
     }
   };
@@ -865,25 +915,29 @@ export default function SessionEvaluationPage() {
     setDialogLoading(true);
     setDialogError(null);
     try {
-      // Use manually adjusted time if changed
-      const finalOffsetSeconds = markerOffsetMinutes * 60;
+      // Use offset_seconds from pendingMarker (which is updated by the time inputs)
+      const finalOffsetSeconds = pendingMarker.offset_seconds;
       const session = sessions.find(s => s.id === pendingMarker.sessionId);
       if (!session) return;
       
-      const sessionStart = new Date(session.started_at);
+      // Ensure started_at is treated as UTC
+      const startedAt = session.started_at.includes('Z') ? session.started_at : session.started_at + 'Z';
+      const sessionStart = new Date(startedAt);
       const finalTimestamp = new Date(sessionStart.getTime() + finalOffsetSeconds * 1000).toISOString();
       
       if (pendingMarker.markerId) {
-        // Editing existing marker - delete and recreate
-        await deleteSessionMarker(pendingMarker.sessionId, pendingMarker.markerId);
+        // Update existing marker
+        const { updateSessionMarker } = await import('../api/sessions');
+        await updateSessionMarker(pendingMarker.sessionId, pendingMarker.markerId, finalOffsetSeconds, markerNote.trim() || null);
+      } else {
+        // Create new marker
+        await addSessionMarker(
+          pendingMarker.sessionId,
+          finalTimestamp,
+          finalOffsetSeconds,
+          markerNote.trim() || undefined
+        );
       }
-      
-      await addSessionMarker(
-        pendingMarker.sessionId,
-        finalTimestamp,
-        finalOffsetSeconds,
-        markerNote.trim() || undefined
-      );
       
       // Reload markers for this session
       const markers = await fetchSessionMarkers(pendingMarker.sessionId);
@@ -900,7 +954,6 @@ export default function SessionEvaluationPage() {
       setMarkerPlacementMode(false);
       setSessionForMarker(null);
       setPendingMarker(null);
-      setMarkerOffsetMinutes(0);
       setHoveredChartData(null);
       if (markerNoteInputRef.current) {
         markerNoteInputRef.current.value = '';
@@ -916,7 +969,9 @@ export default function SessionEvaluationPage() {
     const session = sessions.find(s => s.id === sessionId);
     if (!session) return;
     
-    const sessionStart = new Date(session.started_at);
+    // Ensure started_at is treated as UTC
+    const startedAt = session.started_at.includes('Z') ? session.started_at : session.started_at + 'Z';
+    const sessionStart = new Date(startedAt);
     const markerTime = new Date(sessionStart.getTime() + marker.offset_seconds * 1000);
     
     setPendingMarker({
@@ -926,7 +981,6 @@ export default function SessionEvaluationPage() {
       offset_minutes: marker.offset_seconds / 60,
       markerId: marker.id
     });
-    setMarkerOffsetMinutes(marker.offset_seconds / 60);
     setMarkerDialogOpen(true);
     // Set initial value after dialog opens
     setTimeout(() => {
@@ -974,7 +1028,7 @@ export default function SessionEvaluationPage() {
     }
     
     // Build CSV with all session data
-    const headers = ['Session ID', 'Session Name', 'Offset (seconds)', 'Offset (minutes)', 'pH', 'Redox (mV)', 'Conductivity (�S/cm)', 'Temperature (�C)'];
+    const headers = ['Session ID', 'Session Name', 'Offset (seconds)', 'Offset (minutes)', 'pH', 'Redox (mV)', 'Conductivity (μS/cm)', 'Temperature (°C)'];
     const rows: string[][] = [headers];
     
     evaluations.forEach((evaluation) => {
@@ -1153,7 +1207,7 @@ export default function SessionEvaluationPage() {
               <ResponsiveContainer>
                 <LineChart
                   data={chartData}
-                  margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+                  margin={{ top: 10, right: showTemperature ? 80 : 30, left: 80, bottom: 30 }}
                   onClick={markerPlacementMode ? handleChartClick : undefined}
                   style={markerPlacementMode ? { cursor: 'crosshair' } : undefined}
                 >
@@ -1163,6 +1217,7 @@ export default function SessionEvaluationPage() {
                     type="number"
                     domain={[timeRange.min / 60, timeRange.max / 60]}
                     tickFormatter={(value: number) => value.toFixed(0)}
+                    height={60}
                     label={{ 
                       value: anchor === 'start' 
                         ? 'Time from session start (min)' 
@@ -1170,20 +1225,21 @@ export default function SessionEvaluationPage() {
                         ? 'Time from first marker (min)'
                         : 'Time from last marker (min)', 
                       position: 'insideBottom', 
-                      offset: -15,
-                      style: { fontSize: 14 }
+                      offset: -5,
+                      style: { fontSize: 14, fill: '#333', fontWeight: 500 }
                     }}
                   />
                   <YAxis
                     yAxisId="left"
                     domain={yAxisDomain}
                     tickFormatter={(value: number) => value.toFixed(2)}
+                    width={80}
                     label={{ 
-                      value: selectedParameter === 'ph' ? 'pH' : selectedParameter === 'redox' ? 'Redox (mV)' : 'Conductivity (�S/cm)', 
+                      value: selectedParameter === 'ph' ? 'pH' : selectedParameter === 'redox' ? 'Redox (mV)' : 'Conductivity (μS/cm)', 
                       angle: -90, 
-                      position: 'insideLeft',
-                      offset: 10,
-                      style: { fontSize: 14, textAnchor: 'middle' }
+                      position: 'left',
+                      offset: 20,
+                      style: { fontSize: 14, textAnchor: 'middle', fill: '#333', fontWeight: 500 }
                     }}
                   />
                   {showTemperature && (
@@ -1191,12 +1247,13 @@ export default function SessionEvaluationPage() {
                       yAxisId="right"
                       orientation="right"
                       tickFormatter={(value: number) => value.toFixed(1)}
+                      width={80}
                       label={{ 
-                        value: 'Temperature (�C)', 
+                        value: 'Temperature (°C)', 
                         angle: 90, 
-                        position: 'insideRight',
-                        offset: 10,
-                        style: { fontSize: 14, textAnchor: 'middle' }
+                        position: 'right',
+                        offset: 20,
+                        style: { fontSize: 14, textAnchor: 'middle', fill: '#333', fontWeight: 500 }
                       }}
                     />
                   )}
@@ -1341,7 +1398,7 @@ export default function SessionEvaluationPage() {
                 <Box
                   sx={{
                     display: 'grid',
-                    gridTemplateColumns: '60px 180px 60px 180px 120px 100px 100px 80px 80px',
+                    gridTemplateColumns: '80px 180px 60px 180px 120px 100px 100px 80px 80px',
                     gap: 2,
                     alignItems: 'center',
                     py: 1,
@@ -1350,15 +1407,36 @@ export default function SessionEvaluationPage() {
                     mb: 1,
                   }}
                 >
-                  <Typography variant="caption" fontWeight={600} color="text.secondary">
-                    Workspace
-                  </Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: 0.5, cursor: 'pointer' }} onClick={() => {
+                    const newOrder = sortBy === 'workspace' && sortOrder === 'asc' ? 'desc' : 'asc';
+                    setSortBy('workspace');
+                    setSortOrder(newOrder);
+                  }}>
+                    <Typography variant="caption" fontWeight={600} color="text.secondary">
+                      Workspace
+                    </Typography>
+                    {sortBy === 'workspace' && (sortOrder === 'asc' ? <ArrowUpwardIcon sx={{ fontSize: 14 }} /> : <ArrowDownwardIcon sx={{ fontSize: 14 }} />)}
+                  </Box>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: 0.5, cursor: 'pointer' }} onClick={() => {
+                    const newOrder = sortBy === 'name' && sortOrder === 'asc' ? 'desc' : 'asc';
+                    setSortBy('name');
+                    setSortOrder(newOrder);
+                  }}>
                     <Typography variant="caption" fontWeight={600} color="text.secondary">
                       Session Name
                     </Typography>
-                    <Typography variant="caption" fontWeight={600} color="text.secondary" textAlign="center">
+                    {sortBy === 'name' && (sortOrder === 'asc' ? <ArrowUpwardIcon sx={{ fontSize: 14 }} /> : <ArrowDownwardIcon sx={{ fontSize: 14 }} />)}
+                  </Box>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, cursor: 'pointer' }} onClick={() => {
+                    const newOrder = sortBy === 'id' && sortOrder === 'asc' ? 'desc' : 'asc';
+                    setSortBy('id');
+                    setSortOrder(newOrder);
+                  }}>
+                    <Typography variant="caption" fontWeight={600} color="text.secondary">
                       ID
                     </Typography>
+                    {sortBy === 'id' && (sortOrder === 'asc' ? <ArrowUpwardIcon sx={{ fontSize: 14 }} /> : <ArrowDownwardIcon sx={{ fontSize: 14 }} />)}
+                  </Box>
                     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, cursor: 'pointer' }} onClick={() => {
                       const newOrder = sortBy === 'started_at' && sortOrder === 'asc' ? 'desc' : 'asc';
                       setSortBy('started_at');
@@ -1389,9 +1467,16 @@ export default function SessionEvaluationPage() {
                       </Typography>
                       {sortBy === 'duration' && (sortOrder === 'asc' ? <ArrowUpwardIcon sx={{ fontSize: 14 }} /> : <ArrowDownwardIcon sx={{ fontSize: 14 }} />)}
                     </Box>
-                    <Typography variant="caption" fontWeight={600} color="text.secondary" textAlign="center">
-                      Main Parameter
-                    </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, cursor: 'pointer' }} onClick={() => {
+                      const newOrder = sortBy === 'dominant_parameter' && sortOrder === 'asc' ? 'desc' : 'asc';
+                      setSortBy('dominant_parameter');
+                      setSortOrder(newOrder);
+                    }}>
+                      <Typography variant="caption" fontWeight={600} color="text.secondary">
+                        Main Parameter
+                      </Typography>
+                      {sortBy === 'dominant_parameter' && (sortOrder === 'asc' ? <ArrowUpwardIcon sx={{ fontSize: 14 }} /> : <ArrowDownwardIcon sx={{ fontSize: 14 }} />)}
+                    </Box>
                     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, cursor: 'pointer' }} onClick={() => {
                       const newOrder = sortBy === 'measurement_count' && sortOrder === 'asc' ? 'desc' : 'asc';
                       setSortBy('measurement_count');
@@ -1402,9 +1487,16 @@ export default function SessionEvaluationPage() {
                       </Typography>
                       {sortBy === 'measurement_count' && (sortOrder === 'asc' ? <ArrowUpwardIcon sx={{ fontSize: 14 }} /> : <ArrowDownwardIcon sx={{ fontSize: 14 }} />)}
                     </Box>
-                    <Typography variant="caption" fontWeight={600} color="text.secondary" textAlign="center">
-                      Markers
-                    </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, cursor: 'pointer' }} onClick={() => {
+                      const newOrder = sortBy === 'marker_count' && sortOrder === 'asc' ? 'desc' : 'asc';
+                      setSortBy('marker_count');
+                      setSortOrder(newOrder);
+                    }}>
+                      <Typography variant="caption" fontWeight={600} color="text.secondary">
+                        Markers
+                      </Typography>
+                      {sortBy === 'marker_count' && (sortOrder === 'asc' ? <ArrowUpwardIcon sx={{ fontSize: 14 }} /> : <ArrowDownwardIcon sx={{ fontSize: 14 }} />)}
+                    </Box>
                 </Box>
                 
                 <Stack spacing={0.5}>
@@ -1415,7 +1507,8 @@ export default function SessionEvaluationPage() {
                   // Use calculated_ended_at for duration if ended_at is not available
                   const endTime = session.ended_at || session.calculated_ended_at;
                   const duration = endTime 
-                    ? (new Date(endTime).getTime() - new Date(session.started_at).getTime()) / 1000
+                    ? (new Date(endTime.includes('Z') ? endTime : endTime + 'Z').getTime() - 
+                       new Date(session.started_at.includes('Z') ? session.started_at : session.started_at + 'Z').getTime()) / 1000
                     : null;
                   
                   return (
@@ -1436,7 +1529,7 @@ export default function SessionEvaluationPage() {
                           sx={{
                             flex: 1,
                             display: 'grid',
-                            gridTemplateColumns: '60px 180px 60px 180px 120px 100px 100px 80px 80px',
+                            gridTemplateColumns: '80px 180px 60px 180px 120px 100px 100px 80px 80px',
                             gap: 2,
                             alignItems: 'center',
                           }}
@@ -1534,8 +1627,14 @@ export default function SessionEvaluationPage() {
                           <Tooltip title="Delete session">
                             <IconButton 
                               size="small" 
-                              color="error"
                               onClick={() => handleDeleteOpen(session.id)}
+                              sx={{ 
+                                color: 'text.secondary',
+                                '&:hover': { 
+                                  backgroundColor: 'action.hover',
+                                  color: 'error.main'
+                                }
+                              }}
                             >
                               <DeleteIcon fontSize="small" />
                             </IconButton>
@@ -1556,7 +1655,10 @@ export default function SessionEvaluationPage() {
                                 p: 1,
                                 mb: 0.5,
                                 borderRadius: 1,
-                                borderLeft: `3px solid ${color}`
+                                borderLeft: `3px solid ${color}`,
+                                '&:hover': {
+                                  bgcolor: 'action.hover',
+                                }
                               }}
                             >
                               <Typography variant="caption" flex={1}>
@@ -1564,20 +1666,36 @@ export default function SessionEvaluationPage() {
                                 {marker.note && ` - ${marker.note}`}
                               </Typography>
                               <Stack direction="row" spacing={0.5}>
-                                <IconButton
-                                  size="small"
-                                  onClick={() => handleEditMarker(session.id, marker)}
-                                  title="Edit marker"
-                                >
-                                  <EditIcon fontSize="small" />
-                                </IconButton>
-                                <IconButton
-                                  size="small"
-                                  onClick={() => handleDeleteMarker(session.id, marker.id)}
-                                  title="Delete marker"
-                                >
-                                  <DeleteIcon fontSize="small" />
-                                </IconButton>
+                                <Tooltip title="Edit marker">
+                                  <IconButton
+                                    size="small"
+                                    onClick={() => handleEditMarker(session.id, marker)}
+                                    sx={{ 
+                                      color: 'text.secondary',
+                                      '&:hover': { 
+                                        backgroundColor: 'action.hover',
+                                        color: 'primary.main'
+                                      }
+                                    }}
+                                  >
+                                    <EditIcon fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                                <Tooltip title="Delete marker">
+                                  <IconButton
+                                    size="small"
+                                    onClick={() => handleDeleteMarker(session.id, marker.id)}
+                                    sx={{ 
+                                      color: 'text.secondary',
+                                      '&:hover': { 
+                                        backgroundColor: 'action.hover',
+                                        color: 'error.main'
+                                      }
+                                    }}
+                                  >
+                                    <DeleteIcon fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
                               </Stack>
                             </Box>
                           ))}
@@ -1675,7 +1793,7 @@ export default function SessionEvaluationPage() {
       </Dialog>
 
       {/* Marker Placement Dialog */}
-      <Dialog open={markerDialogOpen} onClose={() => !dialogLoading && setMarkerDialogOpen(false)}>
+      <Dialog open={markerDialogOpen} onClose={() => !dialogLoading && setMarkerDialogOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>{pendingMarker?.markerId ? 'Edit Marker' : 'Add Marker'}</DialogTitle>
         <DialogContent>
           {dialogError && (
@@ -1683,6 +1801,84 @@ export default function SessionEvaluationPage() {
               {dialogError}
             </Alert>
           )}
+          
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 2, mb: 2 }}>
+            {pendingMarker?.markerId 
+              ? 'Update the marker position and note.' 
+              : 'Place a marker at the specified time in this session.'}
+          </Typography>
+          
+          {/* Time Input */}
+          {pendingMarker && (
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>
+                Marker Time (from session start)
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
+                <TextField
+                  size="small"
+                  label="Hours"
+                  type="number"
+                  value={Math.floor(pendingMarker.offset_seconds / 3600)}
+                  onChange={(e) => {
+                    const hours = Math.max(0, parseInt(e.target.value) || 0);
+                    const minutes = Math.floor((pendingMarker.offset_seconds % 3600) / 60);
+                    const seconds = pendingMarker.offset_seconds % 60;
+                    const newOffset = hours * 3600 + minutes * 60 + seconds;
+                    setPendingMarker({ ...pendingMarker, offset_seconds: newOffset, offset_minutes: newOffset / 60 });
+                  }}
+                  disabled={dialogLoading}
+                  inputProps={{ min: 0, max: 99 }}
+                  sx={{ width: '80px' }}
+                />
+                <TextField
+                  size="small"
+                  label="Minutes"
+                  type="number"
+                  value={Math.floor((pendingMarker.offset_seconds % 3600) / 60)}
+                  onChange={(e) => {
+                    const hours = Math.floor(pendingMarker.offset_seconds / 3600);
+                    const minutes = Math.max(0, Math.min(59, parseInt(e.target.value) || 0));
+                    const seconds = pendingMarker.offset_seconds % 60;
+                    const newOffset = hours * 3600 + minutes * 60 + seconds;
+                    setPendingMarker({ ...pendingMarker, offset_seconds: newOffset, offset_minutes: newOffset / 60 });
+                  }}
+                  disabled={dialogLoading}
+                  inputProps={{ min: 0, max: 59 }}
+                  sx={{ width: '80px' }}
+                />
+                <TextField
+                  size="small"
+                  label="Seconds"
+                  type="number"
+                  value={pendingMarker.offset_seconds % 60}
+                  onChange={(e) => {
+                    const hours = Math.floor(pendingMarker.offset_seconds / 3600);
+                    const minutes = Math.floor((pendingMarker.offset_seconds % 3600) / 60);
+                    const seconds = Math.max(0, Math.min(59, parseInt(e.target.value) || 0));
+                    const newOffset = hours * 3600 + minutes * 60 + seconds;
+                    setPendingMarker({ ...pendingMarker, offset_seconds: newOffset, offset_minutes: newOffset / 60 });
+                  }}
+                  disabled={dialogLoading}
+                  inputProps={{ min: 0, max: 59 }}
+                  sx={{ width: '80px' }}
+                />
+                {pendingMarker.timestamp && (
+                  <Typography variant="caption" color="text.secondary" sx={{ pt: 1.5, flex: 1 }}>
+                    {(() => {
+                      const session = sessions.find(s => s.id === pendingMarker.sessionId);
+                      if (!session) return '';
+                      const startedAt = session.started_at.includes('Z') ? session.started_at : session.started_at + 'Z';
+                      const markerTime = new Date(new Date(startedAt).getTime() + pendingMarker.offset_seconds * 1000);
+                      return formatDateTime(markerTime.toISOString());
+                    })()}
+                  </Typography>
+                )}
+              </Box>
+            </Box>
+          )}
+          
+          {/* Note Input */}
           <TextField
             fullWidth
             label="Marker Note (optional)"
@@ -1690,8 +1886,8 @@ export default function SessionEvaluationPage() {
             defaultValue=""
             disabled={dialogLoading}
             multiline
-            rows={3}
-            sx={{ mt: 2 }}
+            rows={2}
+            placeholder="Enter a note for this marker..."
           />
         </DialogContent>
         <DialogActions>
@@ -1699,7 +1895,7 @@ export default function SessionEvaluationPage() {
             Cancel
           </Button>
           <Button onClick={handleConfirmMarker} variant="contained" disabled={dialogLoading}>
-            {dialogLoading ? <CircularProgress size={24} /> : 'Save'}
+            {dialogLoading ? <CircularProgress size={24} /> : (pendingMarker?.markerId ? 'Update Marker' : 'Add Marker')}
           </Button>
         </DialogActions>
       </Dialog>

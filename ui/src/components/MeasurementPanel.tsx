@@ -42,7 +42,11 @@ const formatNumber = (value?: number | null, digits = 2): string => {
 
 const formatTimestamp = (value?: string | null): string => {
   if (!value) return '—';
-  const date = new Date(value);
+  // Ensure timestamp is treated as UTC if it doesn't have timezone info
+  const normalizedValue = value.includes('Z') || value.includes('+') || value.includes('-', 10) 
+    ? value 
+    : value + 'Z';
+  const date = new Date(normalizedValue);
   if (Number.isNaN(date.getTime())) {
     return value;
   }
@@ -395,8 +399,17 @@ export const MeasurementPanel: React.FC<MeasurementPanelProps> = ({
     setMarkerNote('');
     // Calculate current offset for new marker
     const now = new Date();
-    const sessionStart = new Date(currentSession.started_at);
+    // Ensure started_at is treated as UTC
+    const startedAt = currentSession.started_at.includes('Z') ? currentSession.started_at : currentSession.started_at + 'Z';
+    const sessionStart = new Date(startedAt);
     const offsetSeconds = Math.floor((now.getTime() - sessionStart.getTime()) / 1000);
+    
+    console.log('Current time:', now.toISOString());
+    console.log('Session started_at:', currentSession.started_at);
+    console.log('Session started_at normalized:', startedAt);
+    console.log('Session start parsed:', sessionStart.toISOString());
+    console.log('Offset seconds:', offsetSeconds);
+    
     setMarkerOffsetSeconds(offsetSeconds);
     setMarkerError(null);
     setMarkerDialogOpen(true);
@@ -437,7 +450,7 @@ export const MeasurementPanel: React.FC<MeasurementPanelProps> = ({
       } else {
         // Create marker
         const { createSessionMarker } = await import('../api/sessions');
-        await createSessionMarker(currentSession.id, markerOffsetSeconds, markerNote || null);
+        await createSessionMarker(currentSession.id, markerOffsetSeconds, markerNote || null, currentSession.started_at);
         toast.success('Marker added successfully', {
           position: 'bottom-right',
           autoClose: 2000,
@@ -671,8 +684,12 @@ export const MeasurementPanel: React.FC<MeasurementPanelProps> = ({
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
                       Session length: {(() => {
-                        const start = new Date(currentSession.started_at).getTime();
-                        const end = currentSession.ended_at ? new Date(currentSession.ended_at).getTime() : Date.now();
+                        // Ensure timestamps are treated as UTC
+                        const startedAt = currentSession.started_at.includes('Z') ? currentSession.started_at : currentSession.started_at + 'Z';
+                        const start = new Date(startedAt).getTime();
+                        const end = currentSession.ended_at 
+                          ? new Date(currentSession.ended_at.includes('Z') ? currentSession.ended_at : currentSession.ended_at + 'Z').getTime() 
+                          : Date.now();
                         const diffMs = end - start;
                         const hours = Math.floor(diffMs / 3600000);
                         const minutes = Math.floor((diffMs % 3600000) / 60000);
@@ -697,7 +714,9 @@ export const MeasurementPanel: React.FC<MeasurementPanelProps> = ({
                         </Typography>
                         <Stack spacing={0.5}>
                           {sessionMarkers.map((marker) => {
-                            const markerTime = new Date(new Date(currentSession.started_at!).getTime() + marker.offset_seconds * 1000);
+                            // Ensure started_at is treated as UTC
+                            const startedAt = currentSession.started_at!.includes('Z') ? currentSession.started_at! : currentSession.started_at! + 'Z';
+                            const markerTime = new Date(new Date(startedAt).getTime() + marker.offset_seconds * 1000);
                             return (
                               <Box 
                                 key={marker.id} 
@@ -1158,7 +1177,9 @@ export const MeasurementPanel: React.FC<MeasurementPanelProps> = ({
               {currentSession.started_at && (
                 <Typography variant="caption" color="text.secondary" sx={{ pt: 1.5, flex: 1 }}>
                   {(() => {
-                    const markerTime = new Date(new Date(currentSession.started_at).getTime() + markerOffsetSeconds * 1000);
+                    // Ensure started_at is treated as UTC
+                    const startedAt = currentSession.started_at.includes('Z') ? currentSession.started_at : currentSession.started_at + 'Z';
+                    const markerTime = new Date(new Date(startedAt).getTime() + markerOffsetSeconds * 1000);
                     return formatTimestamp(markerTime.toISOString());
                   })()}
                 </Typography>

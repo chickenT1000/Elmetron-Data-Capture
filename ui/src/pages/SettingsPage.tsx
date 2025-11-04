@@ -266,7 +266,7 @@ export default function SettingsPage() {
 
                 <Grid item xs={12} sm={6}>
                   <Typography variant="caption" fontWeight={600} display="block" gutterBottom>
-                    Conductivity (µS/cm)
+                    Conductivity (μS/cm)
                   </Typography>
                   <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                     <TextField
