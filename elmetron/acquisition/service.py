@@ -1187,7 +1187,9 @@ class AcquisitionService:
                         'device.parity': device_cfg.parity,
                         'device.latency_timer_ms': device_cfg.latency_timer_ms,
                     }
-                    session_handle = self._database.start_session(datetime.utcnow(), metadata, session_context)
+                    # Get operator name from config
+                    operator_name = self._config.acquisition.default_operator if self._config.acquisition.default_operator else None
+                    session_handle = self._database.start_session(datetime.utcnow(), metadata, session_context, operator_name)
                     # Create crash-resistant session buffer
                     self._current_session_buffer = None
                     if self._captures_dir is not None:
