@@ -232,7 +232,10 @@ def get_sessions():
                 (SELECT COUNT(*) FROM measurements m WHERE m.session_id = s.id AND (m.unit LIKE '%S/cm%' OR m.unit LIKE '%siemens%')) AS conductivity_count,
                 (SELECT COUNT(*) FROM raw_frames f WHERE f.session_id = s.id) AS frame_count,
                 (SELECT COUNT(*) FROM audit_events a WHERE a.session_id = s.id) AS audit_count,
-                (SELECT measurement_timestamp FROM measurements m WHERE m.session_id = s.id ORDER BY m.id DESC LIMIT 1) AS latest_measurement
+                (SELECT COUNT(*) FROM audit_events a WHERE a.session_id = s.id AND a.category = 'marker') AS marker_count,
+                (SELECT measurement_timestamp FROM measurements m WHERE m.session_id = s.id ORDER BY m.id DESC LIMIT 1) AS latest_measurement,
+                (SELECT MAX(created_at) FROM measurements m WHERE m.session_id = s.id) AS last_measurement_captured,
+                (SELECT MAX(created_at) FROM audit_events a WHERE a.session_id = s.id) AS last_event_captured
             FROM sessions s
             LEFT JOIN instruments i ON s.instrument_id = i.id
         """)
@@ -299,10 +302,26 @@ def get_sessions():
                     elif conductivity_count == max_count:
                         dominant = 'conductivity'
                 
+                # Calculate duration with fallback
+                # If ended_at is null, use last activity timestamp
+                ended_at = row['ended_at']
+                calculated_ended_at = ended_at
+                
+                if not ended_at:
+                    # Fallback: use latest activity timestamp
+                    last_measurement = row['last_measurement_captured']
+                    last_event = row['last_event_captured']
+                    
+                    # Find the most recent activity
+                    candidates = [t for t in [last_measurement, last_event] if t]
+                    if candidates:
+                        calculated_ended_at = max(candidates)
+                
                 sessions.append({
                     'id': row['id'],
                     'started_at': row['started_at'],
-                    'ended_at': row['ended_at'],
+                    'ended_at': ended_at,  # Original value (may be null)
+                    'calculated_ended_at': calculated_ended_at,  # For duration calculation
                     'note': row['note'],
                     'operator_name': row['operator_name'],
                     'instrument': {
@@ -317,6 +336,7 @@ def get_sessions():
                         'conductivity_measurements': conductivity_count,
                         'frames': int(row['frame_count'] or 0),
                         'audit_events': int(row['audit_count'] or 0),
+                        'markers': int(row['marker_count'] or 0),
                     },
                     'dominant_parameter': dominant,
                     'latest_measurement_at': row['latest_measurement'],

@@ -28,6 +28,8 @@ import {
   Typography,
 } from '@mui/material';
 import AddLocationIcon from '@mui/icons-material/AddLocation';
+import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
+import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import DeleteIcon from '@mui/icons-material/Delete';
 import DownloadIcon from '@mui/icons-material/Download';
 import EditIcon from '@mui/icons-material/Edit';
@@ -323,7 +325,6 @@ export default function SessionEvaluationPage() {
     offset_minutes: number;
     markerId?: number; // For editing existing markers
   } | null>(null);
-  const [markerNote, setMarkerNote] = useState('');
   const [markerOffsetMinutes, setMarkerOffsetMinutes] = useState<number>(0); // For manual time adjustment
   const [hoveredChartData, setHoveredChartData] = useState<any>(null);
 
@@ -333,10 +334,13 @@ export default function SessionEvaluationPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [sessionToEdit, setSessionToEdit] = useState<number | null>(null);
   const [sessionToDelete, setSessionToDelete] = useState<number | null>(null);
-  const [newName, setNewName] = useState('');
-  const [newOperator, setNewOperator] = useState('');
   const [dialogLoading, setDialogLoading] = useState(false);
   const [dialogError, setDialogError] = useState<string | null>(null);
+  
+  // Refs for dialog inputs (to avoid re-renders on every keystroke)
+  const renameInputRef = useRef<HTMLInputElement>(null);
+  const operatorInputRef = useRef<HTMLInputElement>(null);
+  const markerNoteInputRef = useRef<HTMLTextAreaElement>(null);
 
   // Auto-disable manual range when sessions change
   useEffect(() => {
@@ -684,17 +688,27 @@ export default function SessionEvaluationPage() {
   const handleRenameOpen = (sessionId: number) => {
     const session = sessions.find(s => s.id === sessionId);
     setSessionToEdit(sessionId);
-    setNewName(session?.note || '');
     setRenameDialogOpen(true);
     setDialogError(null);
+    // Set initial value after dialog opens
+    setTimeout(() => {
+      if (renameInputRef.current) {
+        renameInputRef.current.value = session?.note || '';
+      }
+    }, 0);
   };
 
   const handleOperatorOpen = (sessionId: number) => {
     const session = sessions.find(s => s.id === sessionId);
     setSessionToEdit(sessionId);
-    setNewOperator(session?.operator_name || '');
     setOperatorDialogOpen(true);
     setDialogError(null);
+    // Set initial value after dialog opens
+    setTimeout(() => {
+      if (operatorInputRef.current) {
+        operatorInputRef.current.value = session?.operator_name || '';
+      }
+    }, 0);
   };
 
   const handleDeleteOpen = (sessionId: number) => {
@@ -704,6 +718,7 @@ export default function SessionEvaluationPage() {
   };
 
   const handleRenameSubmit = async () => {
+    const newName = renameInputRef.current?.value || '';
     if (!sessionToEdit || !newName.trim()) return;
     
     setDialogLoading(true);
@@ -721,6 +736,7 @@ export default function SessionEvaluationPage() {
 
   const handleOperatorSubmit = async () => {
     if (!sessionToEdit) return;
+    const newOperator = operatorInputRef.current?.value || '';
     
     setDialogLoading(true);
     setDialogError(null);
@@ -768,9 +784,11 @@ export default function SessionEvaluationPage() {
     setMarkerPlacementMode(false);
     setSessionForMarker(null);
     setPendingMarker(null);
-    setMarkerNote('');
     setMarkerOffsetMinutes(0);
     setHoveredChartData(null);
+    if (markerNoteInputRef.current) {
+      markerNoteInputRef.current.value = '';
+    }
   }, []);
 
   const handleChartMouseMove = (event: any) => {
@@ -842,6 +860,7 @@ export default function SessionEvaluationPage() {
 
   const handleConfirmMarker = async () => {
     if (!pendingMarker) return;
+    const markerNote = markerNoteInputRef.current?.value || '';
     
     setDialogLoading(true);
     setDialogError(null);
@@ -870,6 +889,9 @@ export default function SessionEvaluationPage() {
       const markers = await fetchSessionMarkers(pendingMarker.sessionId);
       setSessionMarkers(prev => new Map(prev).set(pendingMarker.sessionId, markers));
       
+      // Refresh sessions list to update marker count
+      await fetchSessions();
+      
       // Invalidate evaluation query to refresh chart markers immediately
       queryClient.invalidateQueries({ queryKey: ['session-evaluation', pendingMarker.sessionId] });
       
@@ -878,9 +900,11 @@ export default function SessionEvaluationPage() {
       setMarkerPlacementMode(false);
       setSessionForMarker(null);
       setPendingMarker(null);
-      setMarkerNote('');
       setMarkerOffsetMinutes(0);
       setHoveredChartData(null);
+      if (markerNoteInputRef.current) {
+        markerNoteInputRef.current.value = '';
+      }
     } catch (error) {
       setDialogError(error instanceof Error ? error.message : 'Failed to save marker');
     } finally {
@@ -902,9 +926,14 @@ export default function SessionEvaluationPage() {
       offset_minutes: marker.offset_seconds / 60,
       markerId: marker.id
     });
-    setMarkerNote(marker.note || '');
     setMarkerOffsetMinutes(marker.offset_seconds / 60);
     setMarkerDialogOpen(true);
+    // Set initial value after dialog opens
+    setTimeout(() => {
+      if (markerNoteInputRef.current) {
+        markerNoteInputRef.current.value = marker.note || '';
+      }
+    }, 0);
   };
 
   const handleDeleteMarker = async (sessionId: number, markerId: number) => {
@@ -913,6 +942,9 @@ export default function SessionEvaluationPage() {
       // Reload markers for this session
       const markers = await fetchSessionMarkers(sessionId);
       setSessionMarkers(prev => new Map(prev).set(sessionId, markers));
+      
+      // Refresh sessions list to update marker count
+      await fetchSessions();
       
       // Invalidate evaluation query to refresh chart markers immediately
       queryClient.invalidateQueries({ queryKey: ['session-evaluation', sessionId] });
@@ -1029,161 +1061,6 @@ export default function SessionEvaluationPage() {
         </Alert>
       ) : null}
 
-      {/* Selected Sessions Card - At Top */}
-      <Card>
-        <CardContent>
-          <Typography variant="subtitle1" fontWeight={600} gutterBottom>
-            Selected Sessions
-          </Typography>
-          {selectedSessions.length === 0 ? (
-            <Typography variant="body2" color="text.secondary">
-              No sessions selected. Click a session below to add it to the overlay.
-            </Typography>
-          ) : (
-            <Stack spacing={2} divider={<Divider flexItem />}>
-              {selectedSessions.map((session) => {
-                const color = colorBySession.get(session.id) ?? '#1976d2';
-                const isHidden = hiddenSessionIds.has(session.id);
-                
-                // Calculate duration from ended_at or from evaluation data
-                let duration: number | null = null;
-                if (session.ended_at) {
-                  duration = (new Date(session.ended_at).getTime() - new Date(session.started_at).getTime()) / 1000;
-                } else {
-                  // Fallback: Try to get duration from evaluation data (last measurement timestamp)
-                  const evaluation = evaluations.find(e => e.session.id === session.id);
-                  if (evaluation && evaluation.series.length > 0) {
-                    const lastPoint = evaluation.series[evaluation.series.length - 1];
-                    duration = lastPoint.offset_seconds;
-                  }
-                }
-                
-                return (
-                  <Stack key={session.id} spacing={1}>
-                    <Stack direction="row" alignItems="center" justifyContent="space-between">
-                      <Stack direction="row" alignItems="center" spacing={1}>
-                        <Box 
-                          sx={{ 
-                            width: 12, 
-                            height: 12, 
-                            borderRadius: '50%', 
-                            backgroundColor: color,
-                            opacity: isHidden ? 0.3 : 1
-                          }} 
-                        />
-                        <Typography 
-                          fontWeight={600} 
-                          sx={{ opacity: isHidden ? 0.5 : 1 }}
-                        >
-                          {session.note || `Session ${session.id}`}
-                        </Typography>
-                      </Stack>
-                      <Stack direction="row" spacing={0.5}>
-                        <Tooltip title={isHidden ? 'Show in chart' : 'Hide from chart'}>
-                          <IconButton 
-                            size="small" 
-                            onClick={() => handleToggleVisibility(session.id)}
-                          >
-                            {isHidden ? <VisibilityOffIcon fontSize="small" /> : <VisibilityIcon fontSize="small" />}
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Add marker">
-                          <IconButton 
-                            size="small" 
-                            onClick={() => handleStartMarkerPlacement(session.id)}
-                            disabled={markerPlacementMode}
-                          >
-                            <AddLocationIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Remove from workspace">
-                          <IconButton 
-                            size="small" 
-                            onClick={() => handleRemoveSession(session.id)}
-                          >
-                            <RemoveCircleOutlineIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      </Stack>
-                    </Stack>
-                    <Stack direction="row" spacing={2} flexWrap="wrap">
-                      <Typography variant="body2" color="text.secondary">
-                        ID: {session.id}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        Date: {formatDateTime(session.started_at)}
-                      </Typography>
-                      {duration !== null && (
-                        <Typography variant="body2" color="text.secondary">
-                          Duration: {formatDuration(duration)}
-                        </Typography>
-                      )}
-                      {session.dominant_parameter && session.dominant_parameter !== 'none' && (
-                        <Typography variant="body2" color="text.secondary">
-                          Main: {session.dominant_parameter}
-                        </Typography>
-                      )}
-                      <Typography variant="body2" color="text.secondary">
-                        Data Points: {session.counts?.measurements || 0}
-                      </Typography>
-                      {session.operator_name && (
-                        <Typography variant="body2" color="text.secondary">
-                          Operator: {session.operator_name}
-                        </Typography>
-                      )}
-                    </Stack>
-                    {sessionMarkers.get(session.id) && sessionMarkers.get(session.id)!.length > 0 && (
-                      <Stack spacing={0.5} mt={1}>
-                        {sessionMarkers.get(session.id)!.map((marker) => (
-                          <Box
-                            key={marker.id}
-                            sx={{
-                              display: 'flex',
-                              alignItems: 'flex-start',
-                              gap: 1,
-                              p: 1,
-                              bgcolor: 'action.hover',
-                              borderRadius: 1
-                            }}
-                          >
-                            <Stack flex={1} spacing={0.5}>
-                              <Typography variant="body2">
-                                <strong>Marker {marker.marker_number}:</strong> {formatOffset(marker.offset_seconds)}
-                              </Typography>
-                              {marker.note && (
-                                <Typography variant="caption" color="text.secondary">
-                                  {marker.note}
-                                </Typography>
-                              )}
-                            </Stack>
-                            <Stack direction="row" spacing={0.5}>
-                              <IconButton
-                                size="small"
-                                onClick={() => handleEditMarker(session.id, marker)}
-                                title="Edit marker"
-                              >
-                                <EditIcon fontSize="small" />
-                              </IconButton>
-                              <IconButton
-                                size="small"
-                                onClick={() => handleDeleteMarker(session.id, marker.id)}
-                                title="Delete marker"
-                              >
-                                <DeleteIcon fontSize="small" />
-                              </IconButton>
-                            </Stack>
-                          </Box>
-                        ))}
-                      </Stack>
-                    )}
-                  </Stack>
-                );
-              })}
-            </Stack>
-          )}
-        </CardContent>
-      </Card>
-
       {/* Workspace Card - Full Width */}
       <Card sx={{ minHeight: 360 }}>
         <CardContent>
@@ -1259,21 +1136,6 @@ export default function SessionEvaluationPage() {
               </FormControl>
             </Stack>
           </Stack>
-
-          {/* Marker Placement Mode Banner */}
-          {markerPlacementMode && (
-            <Alert 
-              severity="info" 
-              sx={{ mb: 2 }}
-              action={
-                <Button color="inherit" size="small" onClick={handleCancelMarkerPlacement}>
-                  Cancel
-                </Button>
-              }
-            >
-              Click on the chart to place a marker for <strong>Session {sessionForMarker}</strong>
-            </Alert>
-          )}
 
           {/* Chart */}
           {evaluationLoading ? (
@@ -1440,16 +1302,22 @@ export default function SessionEvaluationPage() {
         </CardContent>
       </Card>
 
-      {/* Two-column layout below workspace */}
-      <Box
-        sx={{
-          display: 'grid',
-          gridTemplateColumns: { xs: '1fr', lg: '1fr 400px' },
-          gap: 3,
-        }}
-      >
-        {/* Left: Add Session (Full List Display) */}
-        <Card>
+      {/* Marker Placement Mode Banner */}
+      {markerPlacementMode && (
+        <Alert 
+          severity="info" 
+          action={
+            <Button color="inherit" size="small" onClick={handleCancelMarkerPlacement}>
+              Cancel
+            </Button>
+          }
+        >
+          Click on the chart to place a marker for <strong>Session {sessionForMarker}</strong>
+        </Alert>
+      )}
+
+      {/* Saved Sessions Table */}
+      <Card>
           <CardContent>
             <Typography variant="subtitle1" fontWeight={600} gutterBottom>
               Saved Sessions
@@ -1472,144 +1340,249 @@ export default function SessionEvaluationPage() {
                 {/* Table Header */}
                 <Box
                   sx={{
-                    display: 'flex',
+                    display: 'grid',
+                    gridTemplateColumns: '60px 180px 60px 180px 120px 100px 100px 80px 80px',
+                    gap: 2,
                     alignItems: 'center',
                     py: 1,
-                    px: 1,
                     borderBottom: 1,
                     borderColor: 'divider',
                     mb: 1,
                   }}
                 >
-                  <Box sx={{ width: 80, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Typography variant="caption" fontWeight={600} color="text.secondary">
+                    Workspace
+                  </Typography>
                     <Typography variant="caption" fontWeight={600} color="text.secondary">
-                      Workspace
+                      Session Name
                     </Typography>
-                  </Box>
-                  <Box
-                    sx={{
-                      flex: 1,
-                      ml: 1,
-                      display: 'grid',
-                      gridTemplateColumns: '60px 180px 120px 100px 100px 80px',
-                      gap: 2,
-                    }}
-                  >
-                    <Typography variant="caption" fontWeight={600} color="text.secondary">
+                    <Typography variant="caption" fontWeight={600} color="text.secondary" textAlign="center">
                       ID
                     </Typography>
-                    <Typography variant="caption" fontWeight={600} color="text.secondary">
-                      Date & Time
-                    </Typography>
-                    <Typography variant="caption" fontWeight={600} color="text.secondary">
-                      Operator
-                    </Typography>
-                    <Typography variant="caption" fontWeight={600} color="text.secondary">
-                      Duration
-                    </Typography>
-                    <Typography variant="caption" fontWeight={600} color="text.secondary">
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, cursor: 'pointer' }} onClick={() => {
+                      const newOrder = sortBy === 'started_at' && sortOrder === 'asc' ? 'desc' : 'asc';
+                      setSortBy('started_at');
+                      setSortOrder(newOrder);
+                    }}>
+                      <Typography variant="caption" fontWeight={600} color="text.secondary">
+                        Date & Time
+                      </Typography>
+                      {sortBy === 'started_at' && (sortOrder === 'asc' ? <ArrowUpwardIcon sx={{ fontSize: 14 }} /> : <ArrowDownwardIcon sx={{ fontSize: 14 }} />)}
+                    </Box>
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, cursor: 'pointer' }} onClick={() => {
+                      const newOrder = sortBy === 'operator_name' && sortOrder === 'asc' ? 'desc' : 'asc';
+                      setSortBy('operator_name');
+                      setSortOrder(newOrder);
+                    }}>
+                      <Typography variant="caption" fontWeight={600} color="text.secondary">
+                        Operator
+                      </Typography>
+                      {sortBy === 'operator_name' && (sortOrder === 'asc' ? <ArrowUpwardIcon sx={{ fontSize: 14 }} /> : <ArrowDownwardIcon sx={{ fontSize: 14 }} />)}
+                    </Box>
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, cursor: 'pointer' }} onClick={() => {
+                      const newOrder = sortBy === 'duration' && sortOrder === 'asc' ? 'desc' : 'asc';
+                      setSortBy('duration');
+                      setSortOrder(newOrder);
+                    }}>
+                      <Typography variant="caption" fontWeight={600} color="text.secondary">
+                        Duration
+                      </Typography>
+                      {sortBy === 'duration' && (sortOrder === 'asc' ? <ArrowUpwardIcon sx={{ fontSize: 14 }} /> : <ArrowDownwardIcon sx={{ fontSize: 14 }} />)}
+                    </Box>
+                    <Typography variant="caption" fontWeight={600} color="text.secondary" textAlign="center">
                       Main Parameter
                     </Typography>
-                    <Typography variant="caption" fontWeight={600} color="text.secondary">
-                      Data Points
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, cursor: 'pointer' }} onClick={() => {
+                      const newOrder = sortBy === 'measurement_count' && sortOrder === 'asc' ? 'desc' : 'asc';
+                      setSortBy('measurement_count');
+                      setSortOrder(newOrder);
+                    }}>
+                      <Typography variant="caption" fontWeight={600} color="text.secondary">
+                        Data Points
+                      </Typography>
+                      {sortBy === 'measurement_count' && (sortOrder === 'asc' ? <ArrowUpwardIcon sx={{ fontSize: 14 }} /> : <ArrowDownwardIcon sx={{ fontSize: 14 }} />)}
+                    </Box>
+                    <Typography variant="caption" fontWeight={600} color="text.secondary" textAlign="center">
+                      Markers
                     </Typography>
-                  </Box>
                 </Box>
                 
                 <Stack spacing={0.5}>
                   {sessions.map((session) => {
                   const isSelected = selectedIds.includes(session.id);
-                  const duration = session.ended_at 
-                    ? (new Date(session.ended_at).getTime() - new Date(session.started_at).getTime()) / 1000
+                  const isHidden = hiddenSessionIds.has(session.id);
+                  const color = colorBySession.get(session.id) ?? '#1976d2';
+                  // Use calculated_ended_at for duration if ended_at is not available
+                  const endTime = session.ended_at || session.calculated_ended_at;
+                  const duration = endTime 
+                    ? (new Date(endTime).getTime() - new Date(session.started_at).getTime()) / 1000
                     : null;
                   
                   return (
-                    <Box
-                      key={session.id}
-                      sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        py: 0.5,
-                        px: 1,
-                        '&:hover': {
-                          bgcolor: 'action.hover',
-                        },
-                        borderRadius: 1,
-                      }}
-                    >
-                      <Checkbox
-                        checked={isSelected}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setSelectedIds(prev => [...prev, session.id]);
-                            // Auto-select the session's dominant parameter
-                            if (session.dominant_parameter && session.dominant_parameter !== 'none') {
-                              setSelectedParameter(session.dominant_parameter as 'ph' | 'redox' | 'conductivity');
-                            }
-                          } else {
-                            handleRemoveSession(session.id);
-                          }
+                    <Box key={session.id}>
+                      {/* Session Row */}
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          py: 0.5,
+                          '&:hover': {
+                            bgcolor: 'action.hover',
+                          },
+                          borderRadius: 1,
                         }}
-                      />
-                      <Box sx={{ flex: 1, ml: 1 }}>
-                        <Typography variant="body2" fontWeight={500} sx={{ mb: 0.5 }}>
-                          {session.note || `Session ${session.id}`}
-                        </Typography>
+                      >
                         <Box
                           sx={{
+                            flex: 1,
                             display: 'grid',
-                            gridTemplateColumns: '60px 180px 120px 100px 100px 80px',
+                            gridTemplateColumns: '60px 180px 60px 180px 120px 100px 100px 80px 80px',
                             gap: 2,
                             alignItems: 'center',
                           }}
                         >
-                          <Typography variant="caption" color="text.secondary">
+                        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 0.5 }}>
+                          <Checkbox
+                            checked={isSelected}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedIds(prev => [...prev, session.id]);
+                                // Auto-select the session's dominant parameter
+                                if (session.dominant_parameter && session.dominant_parameter !== 'none') {
+                                  setSelectedParameter(session.dominant_parameter as 'ph' | 'redox' | 'conductivity');
+                                }
+                              } else {
+                                handleRemoveSession(session.id);
+                              }
+                            }}
+                          />
+                          {isSelected && (
+                            <Box 
+                              sx={{ 
+                                width: 10, 
+                                height: 10, 
+                                borderRadius: '50%', 
+                                backgroundColor: color,
+                                opacity: isHidden ? 0.3 : 1
+                              }} 
+                            />
+                          )}
+                        </Box>
+                          <Typography variant="body2" fontWeight={500} sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '180px' }}>
+                            {session.note || `Session ${session.id}`}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary" textAlign="center">
                             {session.id}
                           </Typography>
-                          <Typography variant="caption" color="text.secondary" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          <Typography variant="caption" color="text.secondary" textAlign="center" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {formatDateTime(session.started_at)}
                           </Typography>
-                          <Typography variant="caption" color="text.secondary" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          <Typography variant="caption" color="text.secondary" textAlign="center" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {session.operator_name || '—'}
                           </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            {duration !== null ? formatDuration(duration) : '—'}
+                          <Typography variant="caption" color="text.secondary" textAlign="center">
+                            {duration !== null ? formatDuration(duration) : 'Ongoing'}
                           </Typography>
-                          <Typography variant="caption" color="text.secondary">
+                          <Typography variant="caption" color="text.secondary" textAlign="center">
                             {session.dominant_parameter && session.dominant_parameter !== 'none' ? session.dominant_parameter : '—'}
                           </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            {session.counts?.measurements || 0} pts
+                          <Typography variant="caption" color="text.secondary" textAlign="center">
+                            {session.counts?.measurements || 0}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary" textAlign="center">
+                            {session.counts?.markers || 0}
                           </Typography>
                         </Box>
+                        <Stack direction="row" spacing={0.5} sx={{ ml: 1 }}>
+                          {isSelected && (
+                            <>
+                              <Tooltip title={isHidden ? 'Show in chart' : 'Hide from chart'}>
+                                <IconButton 
+                                  size="small" 
+                                  onClick={() => handleToggleVisibility(session.id)}
+                                >
+                                  {isHidden ? <VisibilityOffIcon fontSize="small" /> : <VisibilityIcon fontSize="small" />}
+                                </IconButton>
+                              </Tooltip>
+                              <Tooltip title="Add marker">
+                                <IconButton 
+                                  size="small" 
+                                  onClick={() => handleStartMarkerPlacement(session.id)}
+                                  disabled={markerPlacementMode}
+                                >
+                                  <AddLocationIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                            </>
+                          )}
+                          <Tooltip title="Rename session">
+                            <IconButton 
+                              size="small" 
+                              onClick={() => handleRenameOpen(session.id)}
+                            >
+                              <EditIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Edit operator">
+                            <IconButton 
+                              size="small" 
+                              onClick={() => handleOperatorOpen(session.id)}
+                            >
+                              <PersonIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Delete session">
+                            <IconButton 
+                              size="small" 
+                              color="error"
+                              onClick={() => handleDeleteOpen(session.id)}
+                            >
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        </Stack>
                       </Box>
-                      <Stack direction="row" spacing={0.5} sx={{ ml: 1 }}>
-                        <Tooltip title="Rename session">
-                          <IconButton 
-                            size="small" 
-                            onClick={() => handleRenameOpen(session.id)}
-                          >
-                            <EditIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Edit operator">
-                          <IconButton 
-                            size="small" 
-                            onClick={() => handleOperatorOpen(session.id)}
-                          >
-                            <PersonIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Delete session">
-                          <IconButton 
-                            size="small" 
-                            color="error"
-                            onClick={() => handleDeleteOpen(session.id)}
-                          >
-                            <DeleteIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      </Stack>
+                      
+                      {/* Marker Rows - Only show if session is selected */}
+                      {isSelected && sessionMarkers.get(session.id) && sessionMarkers.get(session.id)!.length > 0 && (
+                        <Box sx={{ ml: 8, mt: 0.5, mb: 0.5 }}>
+                          {sessionMarkers.get(session.id)!.map((marker) => (
+                            <Box
+                              key={marker.id}
+                              sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                p: 1,
+                                mb: 0.5,
+                                borderRadius: 1,
+                                borderLeft: `3px solid ${color}`
+                              }}
+                            >
+                              <Typography variant="caption" flex={1}>
+                                <strong>Marker {marker.marker_number}:</strong> {formatOffset(marker.offset_seconds)}
+                                {marker.note && ` - ${marker.note}`}
+                              </Typography>
+                              <Stack direction="row" spacing={0.5}>
+                                <IconButton
+                                  size="small"
+                                  onClick={() => handleEditMarker(session.id, marker)}
+                                  title="Edit marker"
+                                >
+                                  <EditIcon fontSize="small" />
+                                </IconButton>
+                                <IconButton
+                                  size="small"
+                                  onClick={() => handleDeleteMarker(session.id, marker.id)}
+                                  title="Delete marker"
+                                >
+                                  <DeleteIcon fontSize="small" />
+                                </IconButton>
+                              </Stack>
+                            </Box>
+                          ))}
+                        </Box>
+                      )}
                     </Box>
                   );
                 })}
@@ -1618,87 +1591,6 @@ export default function SessionEvaluationPage() {
             )}
           </CardContent>
         </Card>
-
-        {/* Right: Session Filters */}
-        <Card>
-          <CardContent>
-            <Typography variant="subtitle1" fontWeight={600} gutterBottom>
-              Session Filters
-            </Typography>
-            
-            <LocalizationProvider dateAdapter={AdapterDateFns}>
-              <Stack spacing={2}>
-                <Autocomplete
-                  size="small"
-                  options={operators}
-                  value={operatorFilter}
-                  onChange={(_, newValue) => setOperatorFilter(newValue || '')}
-                  freeSolo
-                  forcePopupIcon
-                  openOnFocus={false}
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      label="Operator Name"
-                      placeholder="Filter by operator..."
-                    />
-                  )}
-                />
-                
-                <DatePicker
-                  label="Started after..."
-                  value={startDateFilter}
-                  onChange={(date) => setStartDateFilter(date)}
-                  format="dd/MM/yyyy"
-                  slotProps={{ textField: { size: 'small', fullWidth: true } }}
-                />
-                <DatePicker
-                  label="Ended before..."
-                  value={endDateFilter}
-                  onChange={(date) => setEndDateFilter(date)}
-                  format="dd/MM/yyyy"
-                  slotProps={{ textField: { size: 'small', fullWidth: true } }}
-                />
-                
-                <FormControl size="small" fullWidth>
-                  <InputLabel>Chart Type</InputLabel>
-                  <Select
-                    value={chartTypeFilter}
-                    label="Chart Type"
-                    onChange={(e) => setChartTypeFilter(e.target.value)}
-                  >
-                    <MenuItem value="all">All Parameters</MenuItem>
-                    <MenuItem value="ph">pH</MenuItem>
-                    <MenuItem value="redox">Redox</MenuItem>
-                    <MenuItem value="conductivity">Conductivity</MenuItem>
-                    <MenuItem value="most_data">Main Parameter</MenuItem>
-                  </Select>
-                </FormControl>
-                
-                <FormControl size="small" fullWidth>
-                  <InputLabel>Sort By</InputLabel>
-                  <Select
-                    value={`${sortBy}_${sortOrder}`}
-                    label="Sort By"
-                    onChange={(e) => {
-                      const [field, order] = e.target.value.split('_');
-                      setSortBy(field as typeof sortBy);
-                      setSortOrder(order as typeof sortOrder);
-                    }}
-                  >
-                    <MenuItem value="started_at_desc">Date (Newest First)</MenuItem>
-                    <MenuItem value="started_at_asc">Date (Oldest First)</MenuItem>
-                    <MenuItem value="operator_name_asc">Operator Name (A-Z)</MenuItem>
-                    <MenuItem value="operator_name_desc">Operator Name (Z-A)</MenuItem>
-                    <MenuItem value="measurement_count_desc">Most Measurements</MenuItem>
-                    <MenuItem value="duration_desc">Longest Duration</MenuItem>
-                  </Select>
-                </FormControl>
-              </Stack>
-            </LocalizationProvider>
-          </CardContent>
-        </Card>
-      </Box>
 
       {/* Rename Dialog */}
       <Dialog open={renameDialogOpen} onClose={() => !dialogLoading && setRenameDialogOpen(false)}>
@@ -1713,8 +1605,8 @@ export default function SessionEvaluationPage() {
             autoFocus
             fullWidth
             label="Session Name"
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
+            inputRef={renameInputRef}
+            defaultValue=""
             disabled={dialogLoading}
             sx={{ mt: 2 }}
           />
@@ -1742,8 +1634,8 @@ export default function SessionEvaluationPage() {
             autoFocus
             fullWidth
             label="Operator Name"
-            value={newOperator}
-            onChange={(e) => setNewOperator(e.target.value)}
+            inputRef={operatorInputRef}
+            defaultValue=""
             disabled={dialogLoading}
             sx={{ mt: 2 }}
           />
@@ -1794,8 +1686,8 @@ export default function SessionEvaluationPage() {
           <TextField
             fullWidth
             label="Marker Note (optional)"
-            value={markerNote}
-            onChange={(e) => setMarkerNote(e.target.value)}
+            inputRef={markerNoteInputRef}
+            defaultValue=""
             disabled={dialogLoading}
             multiline
             rows={3}

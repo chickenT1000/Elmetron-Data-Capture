@@ -43,6 +43,7 @@ export interface SessionSummary {
   id: number;
   started_at: string;
   ended_at: string | null;
+  calculated_ended_at?: string | null;  // Fallback end time based on last activity
   note?: string | null;
   operator_name?: string | null;
   instrument?: {
@@ -57,6 +58,7 @@ export interface SessionSummary {
     conductivity_measurements?: number;
     frames?: number;
     audit_events?: number;
+    markers?: number;
   } | null;
   dominant_parameter?: 'ph' | 'redox' | 'conductivity' | 'none';
   metadata?: Record<string, unknown> | null;
