@@ -2,7 +2,7 @@ import { Card, CardContent, Stack, Typography, Switch, FormControlLabel, TextFie
 import { useSettings, validateOperatorName, type AutoscalingMode } from '../contexts/SettingsContext';
 import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { fetchOperators, updateActiveSessionOperator } from '../api/sessions';
+import { fetchOperators, updateActiveSessionOperator, updateDefaultOperator } from '../api/sessions';
 import SaveIcon from '@mui/icons-material/Save';
 import CancelIcon from '@mui/icons-material/Cancel';
 
@@ -47,6 +47,14 @@ export default function SettingsPage() {
     
     // Save settings to localStorage
     updateSettings(localSettings);
+    
+    // Update the default operator in backend config (for new sessions)
+    try {
+      await updateDefaultOperator(localSettings.operatorName);
+    } catch (err) {
+      console.error('Failed to update default operator config:', err);
+      // Continue anyway - settings were saved to localStorage
+    }
     
     // Update the active session's operator name (if exists)
     try {

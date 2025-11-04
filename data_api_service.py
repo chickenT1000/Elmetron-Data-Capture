@@ -193,7 +193,7 @@ def get_sessions():
         has_ph: Filter sessions with pH measurements (true/false)
         has_redox: Filter sessions with redox measurements (true/false)
         has_conductivity: Filter sessions with conductivity measurements (true/false)
-        sort_by: Sort by field (started_at, measurement_count, duration) default: started_at
+        sort_by: Sort by field (started_at, measurement_count, duration, operator_name) default: started_at
         order: Sort order (asc, desc) default: desc
     
     Returns: List of sessions with counts per parameter type
@@ -261,6 +261,8 @@ def get_sessions():
             query_parts.append(f'ORDER BY measurement_count {order_clause}, s.id DESC')
         elif sort_by == 'duration':
             query_parts.append(f'ORDER BY (julianday(COALESCE(s.ended_at, datetime(\'now\'))) - julianday(s.started_at)) {order_clause}, s.id DESC')
+        elif sort_by == 'operator_name':
+            query_parts.append(f'ORDER BY s.operator_name {order_clause}, s.id DESC')
         else:  # started_at
             query_parts.append(f'ORDER BY s.started_at {order_clause}, s.id DESC')
         
@@ -335,7 +337,7 @@ def get_sessions():
 @app.route('/api/operators', methods=['GET'])
 def get_operators():
     """
-    Get list of distinct operator names from all sessions.
+    Get list of distinct operator names from all sessions and config.
     
     Returns:
         {
@@ -343,6 +345,7 @@ def get_operators():
         }
     """
     try:
+        # Get operators from sessions database
         conn = sqlite3.connect(str(db.path))
         conn.row_factory = sqlite3.Row
         
@@ -354,11 +357,90 @@ def get_operators():
         """).fetchall()
         conn.close()
         
-        operator_list = [row['operator_name'] for row in operators]
+        operator_set = set(row['operator_name'] for row in operators)
+        
+        # Also include the default operator from config file if it exists
+        try:
+            import tomllib
+            config_path = ROOT / 'config' / 'app.toml'
+            with open(config_path, 'rb') as f:
+                config_data = tomllib.load(f)
+                default_op = config_data.get('acquisition', {}).get('default_operator', '')
+                if default_op and default_op.strip():
+                    operator_set.add(default_op.strip())
+        except Exception as e:
+            logger.warning(f"Could not read default operator from config: {e}")
+        
+        operator_list = sorted(list(operator_set))
         return jsonify({'operators': operator_list})
     
     except Exception as e:
         logger.error(f"Error fetching operators: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/config/default-operator', methods=['PATCH'])
+def update_default_operator():
+    """
+    Update the default operator name in the backend config file.
+    This operator will be used for all new sessions.
+    
+    Request body:
+        {
+            "operator_name": "Alice"
+        }
+    
+    Returns:
+        {
+            "success": true,
+            "operator_name": "Alice"
+        }
+    """
+    try:
+        import re
+        
+        data = request.get_json()
+        operator_name = data.get('operator_name', '').strip()
+        
+        # Load current config
+        config_path = ROOT / 'config' / 'app.toml'
+        with open(config_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        
+        # Escape special characters in operator name for TOML
+        escaped_name = operator_name.replace('"', '\\"')
+        
+        # Pattern to match default_operator line in [acquisition] section
+        pattern = r'(^\[acquisition\].*?^default_operator\s*=\s*")([^"]*)'
+        
+        def replacer(match):
+            return match.group(1) + escaped_name
+        
+        # Try to replace existing default_operator line
+        new_content, count = re.subn(pattern, replacer, content, flags=re.MULTILINE | re.DOTALL)
+        
+        if count == 0:
+            # If not found, try to add it after [acquisition] section header
+            pattern2 = r'(^\[acquisition\]\s*\n)'
+            replacement = f'\\1default_operator = "{escaped_name}"  # Default operator name for new sessions\n'
+            new_content, count2 = re.subn(pattern2, replacement, content, flags=re.MULTILINE)
+            
+            if count2 == 0:
+                # If [acquisition] section doesn't exist, add it at the end
+                new_content = content.rstrip() + f'\n\n[acquisition]\ndefault_operator = "{escaped_name}"\n'
+        
+        # Write back to file
+        with open(config_path, 'w', encoding='utf-8') as f:
+            f.write(new_content)
+        
+        logger.info(f"Updated default operator in config to '{operator_name}'")
+        
+        return jsonify({
+            'success': True,
+            'operator_name': operator_name
+        })
+    except Exception as e:
+        logger.error(f"Error updating default operator config: {e}", exc_info=True)
         return jsonify({'error': str(e)}), 500
 
 
@@ -451,6 +533,7 @@ def get_session_details(session_id: int):
                 s.started_at,
                 s.ended_at,
                 s.note,
+                s.operator_name,
                 i.serial AS instrument_serial,
                 i.description AS instrument_description,
                 i.model AS instrument_model
@@ -501,6 +584,7 @@ def get_session_details(session_id: int):
             'started_at': session_row['started_at'],
             'ended_at': session_row['ended_at'],
             'note': session_row['note'],
+            'operator_name': session_row['operator_name'],
             'instrument': {
                 'serial': session_row['instrument_serial'],
                 'description': session_row['instrument_description'],
@@ -1332,12 +1416,12 @@ def get_session_evaluation(session_id: int):
                 else:  # last_marker
                     anchor_time = marker_timestamps[-1]
             else:
-                # Fallback: if no markers, use first/last measurement
+                # Fallback: if no markers, use first/last measurement (using created_at for consistency)
                 if measurement_rows:
                     if anchor == 'first_marker':
-                        anchor_time = measurement_rows[0]['timestamp']
+                        anchor_time = measurement_rows[0]['created_at']
                     else:  # last_marker
-                        anchor_time = measurement_rows[-1]['timestamp']
+                        anchor_time = measurement_rows[-1]['created_at']
         
         # Convert measurements to series format
         series = []
@@ -1347,13 +1431,13 @@ def get_session_evaluation(session_id: int):
         for row in measurement_rows:
             payload = json.loads(row['payload_json']) if row['payload_json'] else {}
             
-            # Calculate offset from anchor
+            # Calculate offset from anchor using created_at (PC capture time) not measurement_timestamp (device time)
             offset_seconds = None
-            if row['timestamp'] and anchor_time:
+            if row['created_at'] and anchor_time:
                 try:
                     from datetime import datetime
                     # Handle various timestamp formats
-                    ts_str = row['timestamp']
+                    ts_str = row['created_at']
                     anchor_str = anchor_time
                     
                     # Normalize timestamps: replace Z with +00:00 for fromisoformat
@@ -1371,13 +1455,11 @@ def get_session_evaluation(session_id: int):
                     try:
                         from datetime import datetime
                         # Strip any timezone info and parse as naive datetime
-                        ts_clean = row['timestamp'].replace('Z', '').split('+')[0].split('-')[0:3]
-                        anchor_clean = anchor_time.replace('Z', '').split('+')[0].split('-')[0:3]
-                        ts = datetime.fromisoformat(row['timestamp'].replace('Z', '').split('+')[0])
+                        ts = datetime.fromisoformat(row['created_at'].replace('Z', '').split('+')[0])
                         anchor_ts = datetime.fromisoformat(anchor_time.replace('Z', '').split('+')[0])
                         offset_seconds = round((ts - anchor_ts).total_seconds())
                     except:
-                        print(f"Failed to parse timestamps: {row['timestamp']} or {anchor_time}")
+                        print(f"Failed to parse timestamps: {row['created_at']} or {anchor_time}")
                         pass
             
             point = {

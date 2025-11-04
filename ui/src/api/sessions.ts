@@ -9,6 +9,21 @@ export async function fetchOperators(): Promise<string[]> {
   return data.operators || [];
 }
 
+export async function updateDefaultOperator(operatorName: string): Promise<void> {
+  const response = await fetch(buildApiUrl('/api/config/default-operator'), {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ operator_name: operatorName }),
+  });
+  
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to update default operator');
+  }
+}
+
 export async function updateActiveSessionOperator(operatorName: string): Promise<void> {
   const response = await fetch(buildApiUrl('/api/sessions/active/operator'), {
     method: 'PATCH',

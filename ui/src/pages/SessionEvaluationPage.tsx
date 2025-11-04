@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
+  Autocomplete,
   Box,
   Button,
   Card,
@@ -38,7 +39,7 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import { DatePicker, LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { useQueries, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
+import { useQueries, useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
 import { Line, LineChart, CartesianGrid, ResponsiveContainer, Tooltip as RechartsTooltip, XAxis, YAxis, ReferenceDot } from 'recharts';
 import { toPng } from 'html-to-image';
 
@@ -47,6 +48,7 @@ import {
   deleteSession,
   deleteSessionMarker,
   downloadSessionEvaluationJson,
+  fetchOperators,
   fetchRecentSessions,
   fetchSessionMarkers,
   renameSession,
@@ -287,13 +289,20 @@ export default function SessionEvaluationPage() {
   const [startDateFilter, setStartDateFilter] = useState<Date | null>(null);
   const [endDateFilter, setEndDateFilter] = useState<Date | null>(null);
   const [chartTypeFilter, setChartTypeFilter] = useState<string>('all');
-  const [sortBy, setSortBy] = useState<'started_at' | 'measurement_count' | 'duration'>('started_at');
+  const [sortBy, setSortBy] = useState<'started_at' | 'measurement_count' | 'duration' | 'operator_name'>('started_at');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   // Session data
   const [sessions, setSessions] = useState<SessionSummary[]>([]);
   const [sessionsLoading, setSessionsLoading] = useState(true);
   const [sessionsError, setSessionsError] = useState<string | null>(null);
+
+  // Fetch operators list
+  const { data: operators = [] } = useQuery({
+    queryKey: ['operators'],
+    queryFn: fetchOperators,
+    staleTime: 60000, // Cache for 1 minute
+  });
 
   // Session selector
   const [sessionToAdd, setSessionToAdd] = useState<number | ''>('');
@@ -497,8 +506,8 @@ export default function SessionEvaluationPage() {
       return { min, max };
     }
     
-    let min = 0;
-    let max = 0;
+    let min = Infinity;
+    let max = -Infinity;
     chartData.forEach(point => {
       if (point.offset_seconds !== undefined && point.offset_seconds !== null) {
         if (point.offset_seconds < min) min = point.offset_seconds;
@@ -506,8 +515,15 @@ export default function SessionEvaluationPage() {
       }
     });
     
+    // If no data, default to 0
+    if (min === Infinity) min = 0;
+    if (max === -Infinity) max = 0;
+    
     // Adjust domain based on anchor mode
-    if (anchor === 'first_marker') {
+    if (anchor === 'start') {
+      // Session start always at X=0
+      min = 0;
+    } else if (anchor === 'first_marker') {
       // First marker at X=0 (left edge) - only show data from marker onwards
       min = 0;
     } else if (anchor === 'last_marker') {
@@ -1071,22 +1087,6 @@ export default function SessionEvaluationPage() {
                             {isHidden ? <VisibilityOffIcon fontSize="small" /> : <VisibilityIcon fontSize="small" />}
                           </IconButton>
                         </Tooltip>
-                        <Tooltip title="Rename session">
-                          <IconButton 
-                            size="small" 
-                            onClick={() => handleRenameOpen(session.id)}
-                          >
-                            <EditIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Edit operator">
-                          <IconButton 
-                            size="small" 
-                            onClick={() => handleOperatorOpen(session.id)}
-                          >
-                            <PersonIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
                         <Tooltip title="Add marker">
                           <IconButton 
                             size="small" 
@@ -1096,21 +1096,12 @@ export default function SessionEvaluationPage() {
                             <AddLocationIcon fontSize="small" />
                           </IconButton>
                         </Tooltip>
-                        <Tooltip title="Remove from overlay">
+                        <Tooltip title="Remove from workspace">
                           <IconButton 
                             size="small" 
                             onClick={() => handleRemoveSession(session.id)}
                           >
                             <RemoveCircleOutlineIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Delete from database">
-                          <IconButton 
-                            size="small" 
-                            color="error"
-                            onClick={() => handleDeleteOpen(session.id)}
-                          >
-                            <DeleteIcon fontSize="small" />
                           </IconButton>
                         </Tooltip>
                       </Stack>
@@ -1461,7 +1452,7 @@ export default function SessionEvaluationPage() {
         <Card>
           <CardContent>
             <Typography variant="subtitle1" fontWeight={600} gutterBottom>
-              Add Session to Overlay
+              Saved Sessions
             </Typography>
             
             {/* Sessions List - Simple checkbox list */}
@@ -1490,7 +1481,11 @@ export default function SessionEvaluationPage() {
                     mb: 1,
                   }}
                 >
-                  <Box sx={{ width: 42 }} /> {/* Checkbox spacing */}
+                  <Box sx={{ width: 80, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Typography variant="caption" fontWeight={600} color="text.secondary">
+                      Workspace
+                    </Typography>
+                  </Box>
                   <Box
                     sx={{
                       flex: 1,
@@ -1588,6 +1583,33 @@ export default function SessionEvaluationPage() {
                           </Typography>
                         </Box>
                       </Box>
+                      <Stack direction="row" spacing={0.5} sx={{ ml: 1 }}>
+                        <Tooltip title="Rename session">
+                          <IconButton 
+                            size="small" 
+                            onClick={() => handleRenameOpen(session.id)}
+                          >
+                            <EditIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Edit operator">
+                          <IconButton 
+                            size="small" 
+                            onClick={() => handleOperatorOpen(session.id)}
+                          >
+                            <PersonIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Delete session">
+                          <IconButton 
+                            size="small" 
+                            color="error"
+                            onClick={() => handleDeleteOpen(session.id)}
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      </Stack>
                     </Box>
                   );
                 })}
@@ -1606,24 +1628,35 @@ export default function SessionEvaluationPage() {
             
             <LocalizationProvider dateAdapter={AdapterDateFns}>
               <Stack spacing={2}>
-                <TextField
+                <Autocomplete
                   size="small"
-                  label="Operator Name"
+                  options={operators}
                   value={operatorFilter}
-                  onChange={(e) => setOperatorFilter(e.target.value)}
-                  placeholder="Filter by operator..."
+                  onChange={(_, newValue) => setOperatorFilter(newValue || '')}
+                  freeSolo
+                  forcePopupIcon
+                  openOnFocus={false}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="Operator Name"
+                      placeholder="Filter by operator..."
+                    />
+                  )}
                 />
                 
                 <DatePicker
-                  label="Start Date"
+                  label="Started after..."
                   value={startDateFilter}
                   onChange={(date) => setStartDateFilter(date)}
+                  format="dd/MM/yyyy"
                   slotProps={{ textField: { size: 'small', fullWidth: true } }}
                 />
                 <DatePicker
-                  label="End Date"
+                  label="Ended before..."
                   value={endDateFilter}
                   onChange={(date) => setEndDateFilter(date)}
+                  format="dd/MM/yyyy"
                   slotProps={{ textField: { size: 'small', fullWidth: true } }}
                 />
                 
@@ -1638,7 +1671,7 @@ export default function SessionEvaluationPage() {
                     <MenuItem value="ph">pH</MenuItem>
                     <MenuItem value="redox">Redox</MenuItem>
                     <MenuItem value="conductivity">Conductivity</MenuItem>
-                    <MenuItem value="most_data">Most Data Points</MenuItem>
+                    <MenuItem value="most_data">Main Parameter</MenuItem>
                   </Select>
                 </FormControl>
                 
@@ -1655,6 +1688,8 @@ export default function SessionEvaluationPage() {
                   >
                     <MenuItem value="started_at_desc">Date (Newest First)</MenuItem>
                     <MenuItem value="started_at_asc">Date (Oldest First)</MenuItem>
+                    <MenuItem value="operator_name_asc">Operator Name (A-Z)</MenuItem>
+                    <MenuItem value="operator_name_desc">Operator Name (Z-A)</MenuItem>
                     <MenuItem value="measurement_count_desc">Most Measurements</MenuItem>
                     <MenuItem value="duration_desc">Longest Duration</MenuItem>
                   </Select>

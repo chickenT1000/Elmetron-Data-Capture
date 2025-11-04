@@ -19,7 +19,7 @@ status_interval_s = 30.0
 max_runtime_s = 0.0
 quiet = false
 startup_commands = []
-default_operator = ""  # Default operator name for new sessions (empty = no operator)
+default_operator = "Tomek"  # Default operator name for new sessions (empty = no operator)
 
 [storage]
 database_path = "data/elmetron.sqlite"
