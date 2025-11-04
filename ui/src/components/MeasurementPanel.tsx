@@ -7,15 +7,24 @@ import {
   CardContent,
   Chip,
   CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   Divider,
+  IconButton,
   Slider,
   Stack,
   TextField,
+  Tooltip,
   Typography,
 } from '@mui/material';
 import CheckIcon from '@mui/icons-material/Check';
 import CloseIcon from '@mui/icons-material/Close';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import AddLocationIcon from '@mui/icons-material/AddLocation';
+import DeleteIcon from '@mui/icons-material/Delete';
+import EditIcon from '@mui/icons-material/Edit';
 import SensorsIcon from '@mui/icons-material/Sensors';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
@@ -131,6 +140,7 @@ export const MeasurementPanel: React.FC<MeasurementPanelProps> = ({
     name: null as string | null,
     display_name: 'Loading...',
     started_at: null as string | null,
+    ended_at: null as string | null,
     operator_name: null as string | null,
   });
   
@@ -141,6 +151,23 @@ export const MeasurementPanel: React.FC<MeasurementPanelProps> = ({
     loading: false,
     error: null,
   });
+  
+  // Stop recording confirmation state
+  const [stopConfirmPending, setStopConfirmPending] = useState(false);
+  
+  // Marker dialog state
+  const [markerDialogOpen, setMarkerDialogOpen] = useState(false);
+  const [markerNote, setMarkerNote] = useState('');
+  const [markerOffsetSeconds, setMarkerOffsetSeconds] = useState(0);
+  const [markerLoading, setMarkerLoading] = useState(false);
+  const [markerError, setMarkerError] = useState<string | null>(null);
+  const [editingMarkerId, setEditingMarkerId] = useState<number | null>(null);
+  const [sessionMarkers, setSessionMarkers] = useState<Array<{
+    id: number;
+    marker_number: number;
+    offset_seconds: number;
+    note: string | null;
+  }>>([]);
 
   // Force re-render every second to update session duration
   const [, forceUpdate] = useState(0);
@@ -169,6 +196,7 @@ export const MeasurementPanel: React.FC<MeasurementPanelProps> = ({
             name: sessionData.note,
             display_name: sessionData.note || `Session ${sessionData.id}`,
             started_at: sessionData.started_at,
+            ended_at: sessionData.ended_at,
             operator_name: sessionData.operator_name,
           });
         } else {
@@ -179,6 +207,7 @@ export const MeasurementPanel: React.FC<MeasurementPanelProps> = ({
             name: null,
             display_name: 'No active session',
             started_at: null,
+            ended_at: null,
             operator_name: null,
           });
         }
@@ -193,6 +222,26 @@ export const MeasurementPanel: React.FC<MeasurementPanelProps> = ({
     const interval = setInterval(fetchCurrentSession, 5000);
     return () => clearInterval(interval);
   }, []);
+
+  // Fetch markers for current session
+  useEffect(() => {
+    const fetchMarkers = async () => {
+      if (!currentSession.id) {
+        setSessionMarkers([]);
+        return;
+      }
+      
+      try {
+        const { fetchSessionMarkers } = await import('../api/sessions');
+        const markers = await fetchSessionMarkers(currentSession.id);
+        setSessionMarkers(markers);
+      } catch (error) {
+        console.error('Failed to fetch markers:', error);
+      }
+    };
+    
+    fetchMarkers();
+  }, [currentSession.id]);
 
   // Validation: sanitize and validate session name
   const validateSessionName = (name: string): { valid: boolean; error: string | null; sanitized: string } => {
@@ -334,6 +383,120 @@ export const MeasurementPanel: React.FC<MeasurementPanelProps> = ({
   // Handle canceling edit
   const handleEditCancel = () => {
     setEditState({ mode: 'none', editValue: '', loading: false, error: null });
+  };
+
+  // Handle adding marker
+  const handleAddMarkerClick = () => {
+    if (!currentSession.id || !currentSession.started_at) {
+      toast.error('No active session');
+      return;
+    }
+    setEditingMarkerId(null);
+    setMarkerNote('');
+    // Calculate current offset for new marker
+    const now = new Date();
+    const sessionStart = new Date(currentSession.started_at);
+    const offsetSeconds = Math.floor((now.getTime() - sessionStart.getTime()) / 1000);
+    setMarkerOffsetSeconds(offsetSeconds);
+    setMarkerError(null);
+    setMarkerDialogOpen(true);
+  };
+
+  const handleEditMarkerClick = (marker: { id: number; offset_seconds: number; note: string | null }) => {
+    setEditingMarkerId(marker.id);
+    setMarkerNote(marker.note || '');
+    setMarkerOffsetSeconds(marker.offset_seconds);
+    setMarkerError(null);
+    setMarkerDialogOpen(true);
+  };
+
+  const handleMarkerConfirm = async () => {
+    if (!currentSession.id || !currentSession.started_at) {
+      setMarkerError('No active session');
+      return;
+    }
+
+    // Validate offset
+    if (markerOffsetSeconds < 0) {
+      setMarkerError('Marker time cannot be before session start');
+      return;
+    }
+
+    setMarkerLoading(true);
+    setMarkerError(null);
+
+    try {
+      if (editingMarkerId) {
+        // Update existing marker
+        const { updateSessionMarker } = await import('../api/sessions');
+        await updateSessionMarker(currentSession.id, editingMarkerId, markerOffsetSeconds, markerNote || null);
+        toast.success('Marker updated successfully', {
+          position: 'bottom-right',
+          autoClose: 2000,
+        });
+      } else {
+        // Create marker
+        const { createSessionMarker } = await import('../api/sessions');
+        await createSessionMarker(currentSession.id, markerOffsetSeconds, markerNote || null);
+        toast.success('Marker added successfully', {
+          position: 'bottom-right',
+          autoClose: 2000,
+        });
+      }
+
+      // Refresh markers
+      const { fetchSessionMarkers } = await import('../api/sessions');
+      const markers = await fetchSessionMarkers(currentSession.id);
+      setSessionMarkers(markers);
+
+      setMarkerDialogOpen(false);
+      setMarkerNote('');
+      setMarkerOffsetSeconds(0);
+      setEditingMarkerId(null);
+    } catch (error) {
+      console.error('Failed to save marker:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to save marker';
+      setMarkerError(errorMessage);
+      toast.error(errorMessage, {
+        position: 'bottom-right',
+        autoClose: 5000,
+      });
+    } finally {
+      setMarkerLoading(false);
+    }
+  };
+
+  const handleMarkerCancel = () => {
+    setMarkerDialogOpen(false);
+    setMarkerNote('');
+    setMarkerOffsetSeconds(0);
+    setMarkerError(null);
+    setEditingMarkerId(null);
+  };
+
+  const handleDeleteMarker = async (markerId: number) => {
+    if (!currentSession.id) return;
+
+    try {
+      const { deleteSessionMarker } = await import('../api/sessions');
+      await deleteSessionMarker(currentSession.id, markerId);
+
+      // Refresh markers
+      const { fetchSessionMarkers } = await import('../api/sessions');
+      const markers = await fetchSessionMarkers(currentSession.id);
+      setSessionMarkers(markers);
+
+      toast.success('Marker deleted', {
+        position: 'bottom-right',
+        autoClose: 2000,
+      });
+    } catch (error) {
+      console.error('Failed to delete marker:', error);
+      toast.error('Failed to delete marker', {
+        position: 'bottom-right',
+        autoClose: 5000,
+      });
+    }
   };
 
   // Handle keyboard shortcuts
@@ -509,8 +672,8 @@ export const MeasurementPanel: React.FC<MeasurementPanelProps> = ({
                     <Typography variant="caption" color="text.secondary">
                       Session length: {(() => {
                         const start = new Date(currentSession.started_at).getTime();
-                        const now = Date.now();
-                        const diffMs = now - start;
+                        const end = currentSession.ended_at ? new Date(currentSession.ended_at).getTime() : Date.now();
+                        const diffMs = end - start;
                         const hours = Math.floor(diffMs / 3600000);
                         const minutes = Math.floor((diffMs % 3600000) / 60000);
                         const seconds = Math.floor((diffMs % 60000) / 1000);
@@ -524,6 +687,70 @@ export const MeasurementPanel: React.FC<MeasurementPanelProps> = ({
                       <Typography variant="caption" color="text.secondary">
                         Operator: {currentSession.operator_name}
                       </Typography>
+                    )}
+                    
+                    {/* Markers List */}
+                    {sessionMarkers.length > 0 && (
+                      <Box sx={{ mt: 1, pt: 1, borderTop: '1px solid', borderColor: 'divider' }}>
+                        <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ mb: 0.5, display: 'block' }}>
+                          Markers:
+                        </Typography>
+                        <Stack spacing={0.5}>
+                          {sessionMarkers.map((marker) => {
+                            const markerTime = new Date(new Date(currentSession.started_at!).getTime() + marker.offset_seconds * 1000);
+                            return (
+                              <Box 
+                                key={marker.id} 
+                                sx={{ 
+                                  display: 'flex', 
+                                  alignItems: 'center', 
+                                  justifyContent: 'space-between',
+                                  gap: 0.5,
+                                }}
+                              >
+                                <Typography variant="caption" color="text.secondary" sx={{ flex: 1 }}>
+                                  #{marker.marker_number} - {formatTimestamp(markerTime.toISOString())}
+                                  {marker.note && ` - ${marker.note}`}
+                                </Typography>
+                                <Box sx={{ display: 'flex', gap: 0.5 }}>
+                                  <Tooltip title="Edit marker note">
+                                    <IconButton
+                                      size="small"
+                                      onClick={() => handleEditMarkerClick(marker)}
+                                      sx={{ 
+                                        padding: '2px',
+                                        color: 'text.secondary',
+                                        '&:hover': { 
+                                          backgroundColor: 'action.hover',
+                                          color: 'primary.main'
+                                        }
+                                      }}
+                                    >
+                                      <EditIcon sx={{ fontSize: 14 }} />
+                                    </IconButton>
+                                  </Tooltip>
+                                  <Tooltip title="Delete marker">
+                                    <IconButton
+                                      size="small"
+                                      onClick={() => handleDeleteMarker(marker.id)}
+                                      sx={{ 
+                                        padding: '2px',
+                                        color: 'text.secondary',
+                                        '&:hover': { 
+                                          backgroundColor: 'action.hover',
+                                          color: 'error.main'
+                                        }
+                                      }}
+                                    >
+                                      <DeleteIcon sx={{ fontSize: 14 }} />
+                                    </IconButton>
+                                  </Tooltip>
+                                </Box>
+                              </Box>
+                            );
+                          })}
+                        </Stack>
+                      </Box>
                     )}
                   </Stack>
                 )}
@@ -541,7 +768,24 @@ export const MeasurementPanel: React.FC<MeasurementPanelProps> = ({
             
             <Stack spacing={2} sx={{ mt: 1.5 }}>
               {/* Session Management - Inline Editing */}
-              {/* First Row: Rename button or input */}
+              {/* First Row: Add Marker button */}
+              <Button
+                variant="outlined"
+                fullWidth
+                onClick={handleAddMarkerClick}
+                disabled={editState.mode !== 'none' || !currentSession.id}
+                startIcon={<AddLocationIcon />}
+                sx={{ 
+                  textTransform: 'none',
+                  height: '36px',
+                }}
+              >
+                <Typography variant="h5" fontWeight={500}>
+                  Add Marker
+                </Typography>
+              </Button>
+
+              {/* Second Row: Rename button or input */}
               {editState.mode === 'renaming' ? (
                 <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'stretch' }}>
                   <TextField
@@ -627,7 +871,7 @@ export const MeasurementPanel: React.FC<MeasurementPanelProps> = ({
                 </Button>
               )}
 
-              {/* Second Row: Start New button or input */}
+              {/* Third Row: Start New button or input */}
               {editState.mode === 'creating' ? (
                 <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'stretch' }}>
                   <TextField
@@ -713,24 +957,68 @@ export const MeasurementPanel: React.FC<MeasurementPanelProps> = ({
                 </Button>
               )}
 
-              {/* Recording Toggle */}
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <FiberManualRecordIcon 
-                    color={recordingEnabled ? 'success' : 'default'} 
-                    sx={{ fontSize: 16 }} 
-                  />
-                  <Typography variant="h5" color="text.secondary" fontWeight={500}>
-                    Recording
+              {/* Stop Recording Button */}
+              {recordingEnabled && currentSession.id && (
+                <Button
+                  variant="outlined"
+                  fullWidth
+                  onClick={async () => {
+                    if (!stopConfirmPending) {
+                      // First click - ask for confirmation
+                      setStopConfirmPending(true);
+                      // Auto-reset after 3 seconds
+                      setTimeout(() => setStopConfirmPending(false), 3000);
+                    } else {
+                      // Second click - stop recording and end session
+                      try {
+                        const { stopSession } = await import('../api/sessions');
+                        await stopSession(currentSession.id!);
+                        onRecordingToggle();
+                        setStopConfirmPending(false);
+                        // Refresh session data
+                        const response = await fetch(`http://localhost:8050/api/sessions/${currentSession.id}`);
+                        const sessionData = await response.json();
+                        setCurrentSession(prev => ({
+                          ...prev,
+                          ended_at: sessionData.ended_at
+                        }));
+                      } catch (error) {
+                        console.error('Failed to stop session:', error);
+                        setStopConfirmPending(false);
+                      }
+                    }
+                  }}
+                  disabled={editState.mode !== 'none'}
+                  sx={{ 
+                    textTransform: 'none',
+                    height: '36px',
+                    borderColor: stopConfirmPending ? '#8B0000' : undefined,
+                    color: stopConfirmPending ? '#8B0000' : undefined,
+                    '&:hover': {
+                      borderColor: stopConfirmPending ? '#8B0000' : undefined,
+                    }
+                  }}
+                >
+                  <Typography variant="h5" fontWeight={500}>
+                    {stopConfirmPending ? 'Click Again to Confirm' : 'Stop Recording'}
                   </Typography>
+                </Button>
+              )}
+              
+              {/* Recording Status (when stopped) */}
+              {!recordingEnabled && (
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', py: 1 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <FiberManualRecordIcon 
+                      color="default" 
+                      sx={{ fontSize: 16 }} 
+                    />
+                    <Typography variant="h5" color="text.secondary" fontWeight={500}>
+                      Recording Stopped
+                    </Typography>
+                  </Box>
                 </Box>
-                <Switch 
-                  size="medium" 
-                  checked={recordingEnabled ?? false}
-                  onChange={onRecordingToggle}
-                  disabled={!isLiveMode}
-                />
-              </Box>
+              )}
 
               {/* Chart Time Range Slider */}
               <Box>
@@ -800,6 +1088,114 @@ export const MeasurementPanel: React.FC<MeasurementPanelProps> = ({
         </Box>
       ) : null}
       </Stack>
+
+      {/* Marker Dialog */}
+      <Dialog 
+        open={markerDialogOpen} 
+        onClose={handleMarkerCancel}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>{editingMarkerId ? 'Edit Marker' : 'Add Marker'}</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            {editingMarkerId 
+              ? 'Update the marker position and note.' 
+              : 'Place a marker at the specified time in this session.'}
+          </Typography>
+          
+          {/* Time Input */}
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>
+              Marker Time (from session start)
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
+              <TextField
+                size="small"
+                label="Hours"
+                type="number"
+                value={Math.floor(markerOffsetSeconds / 3600)}
+                onChange={(e) => {
+                  const hours = Math.max(0, parseInt(e.target.value) || 0);
+                  const minutes = Math.floor((markerOffsetSeconds % 3600) / 60);
+                  const seconds = markerOffsetSeconds % 60;
+                  setMarkerOffsetSeconds(hours * 3600 + minutes * 60 + seconds);
+                }}
+                disabled={markerLoading}
+                inputProps={{ min: 0, max: 99 }}
+                sx={{ width: '80px' }}
+              />
+              <TextField
+                size="small"
+                label="Minutes"
+                type="number"
+                value={Math.floor((markerOffsetSeconds % 3600) / 60)}
+                onChange={(e) => {
+                  const hours = Math.floor(markerOffsetSeconds / 3600);
+                  const minutes = Math.max(0, Math.min(59, parseInt(e.target.value) || 0));
+                  const seconds = markerOffsetSeconds % 60;
+                  setMarkerOffsetSeconds(hours * 3600 + minutes * 60 + seconds);
+                }}
+                disabled={markerLoading}
+                inputProps={{ min: 0, max: 59 }}
+                sx={{ width: '80px' }}
+              />
+              <TextField
+                size="small"
+                label="Seconds"
+                type="number"
+                value={markerOffsetSeconds % 60}
+                onChange={(e) => {
+                  const hours = Math.floor(markerOffsetSeconds / 3600);
+                  const minutes = Math.floor((markerOffsetSeconds % 3600) / 60);
+                  const seconds = Math.max(0, Math.min(59, parseInt(e.target.value) || 0));
+                  setMarkerOffsetSeconds(hours * 3600 + minutes * 60 + seconds);
+                }}
+                disabled={markerLoading}
+                inputProps={{ min: 0, max: 59 }}
+                sx={{ width: '80px' }}
+              />
+              {currentSession.started_at && (
+                <Typography variant="caption" color="text.secondary" sx={{ pt: 1.5, flex: 1 }}>
+                  {(() => {
+                    const markerTime = new Date(new Date(currentSession.started_at).getTime() + markerOffsetSeconds * 1000);
+                    return formatTimestamp(markerTime.toISOString());
+                  })()}
+                </Typography>
+              )}
+            </Box>
+          </Box>
+
+          {/* Note Input */}
+          <TextField
+            fullWidth
+            label="Note (optional)"
+            value={markerNote}
+            onChange={(e) => setMarkerNote(e.target.value)}
+            error={!!markerError}
+            helperText={markerError}
+            disabled={markerLoading}
+            multiline
+            rows={2}
+            placeholder="Enter a note for this marker..."
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleMarkerCancel} disabled={markerLoading}>
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleMarkerConfirm} 
+            variant="contained" 
+            disabled={markerLoading}
+            startIcon={markerLoading ? <CircularProgress size={16} /> : null}
+          >
+            {markerLoading 
+              ? (editingMarkerId ? 'Updating...' : 'Adding...') 
+              : (editingMarkerId ? 'Update Marker' : 'Add Marker')}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </>
   );
 };

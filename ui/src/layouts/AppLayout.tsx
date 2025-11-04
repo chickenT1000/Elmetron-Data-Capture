@@ -11,15 +11,21 @@ import {
   ListItemIcon,
   ListItemText,
   Box,
+  Button,
   CssBaseline,
   Divider,
   Tooltip,
   Switch,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
+import LanguageIcon from '@mui/icons-material/Language';
 import { appRoutes } from '../routes/navigation';
 import { useLiveStatus } from '../hooks/useLiveStatus';
 import { useHealthStatus } from '../hooks/useHealthStatus';
@@ -27,6 +33,27 @@ import { useHealthLogEvents } from '../hooks/useHealthLogEvents';
 import { useSettings } from '../contexts/SettingsContext';
 
 const drawerWidth = 240;
+
+// Language options
+const LANGUAGES = [
+  { code: 'en', name: 'English', nativeName: 'English' },
+  { code: 'es', name: 'Spanish', nativeName: 'Español' },
+  { code: 'zh', name: 'Chinese', nativeName: '中文' },
+  { code: 'hi', name: 'Hindi', nativeName: 'हिन्दी' },
+  { code: 'ar', name: 'Arabic', nativeName: 'العربية' },
+  { code: 'pt', name: 'Portuguese', nativeName: 'Português' },
+  { code: 'ru', name: 'Russian', nativeName: 'Русский' },
+  { code: 'ja', name: 'Japanese', nativeName: '日本語' },
+  { code: 'de', name: 'German', nativeName: 'Deutsch' },
+  { code: 'pl', name: 'Polish', nativeName: 'Polski' },
+];
+
+// Detect browser language
+const detectBrowserLanguage = (): string => {
+  const browserLang = navigator.language.split('-')[0]; // Get language code without region
+  const supported = LANGUAGES.find(lang => lang.code === browserLang);
+  return supported ? browserLang : 'en'; // Default to English
+};
 
 interface AppLayoutProps {
   onToggleTheme?: () => void;
@@ -36,6 +63,7 @@ interface AppLayoutProps {
 export function AppLayout({ onToggleTheme, isDarkMode = false }: AppLayoutProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [recordingEnabled, setRecordingEnabled] = useState(true); // Simple on/off, default ON
+  const [language, setLanguage] = useState<string>(detectBrowserLanguage());
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -262,19 +290,54 @@ export function AppLayout({ onToggleTheme, isDarkMode = false }: AppLayoutProps)
             </Box>
           </Tooltip>
 
-          {/* RIGHT: Operator + Theme Toggle */}
+          {/* RIGHT: Operator + Language + Theme Toggle */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <Tooltip title="Change operator name in Settings">
               <Typography variant="body2" color="text.secondary">
                 Operator: <Box component="span" color="text.primary">{settings.operatorName}</Box>
               </Typography>
             </Tooltip>
+            
+            {/* Divider */}
+            <Divider orientation="vertical" flexItem sx={{ mx: 1 }} />
+            
+            {/* Language Selector */}
+            <FormControl size="small" sx={{ minWidth: 120 }}>
+              <Select
+                value={language}
+                onChange={(e) => setLanguage(e.target.value)}
+                displayEmpty
+                renderValue={(selected) => {
+                  const lang = LANGUAGES.find(l => l.code === selected);
+                  return (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      <LanguageIcon fontSize="small" />
+                      <Typography variant="body2">{lang?.nativeName || 'Language'}</Typography>
+                    </Box>
+                  );
+                }}
+                sx={{ 
+                  '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
+                  '& .MuiSelect-select': { py: 0.5 }
+                }}
+              >
+                {LANGUAGES.map((lang) => (
+                  <MenuItem key={lang.code} value={lang.code}>
+                    {lang.nativeName}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            
             {onToggleTheme && (
-              <Tooltip title={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}>
-                <IconButton onClick={onToggleTheme} color="primary" size="small">
-                  {isDarkMode ? <Brightness7Icon /> : <Brightness4Icon />}
-                </IconButton>
-              </Tooltip>
+              <>
+                <Divider orientation="vertical" flexItem sx={{ mx: 1 }} />
+                <Tooltip title={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}>
+                  <IconButton onClick={onToggleTheme} color="primary" size="small">
+                    {isDarkMode ? <Brightness7Icon /> : <Brightness4Icon />}
+                  </IconButton>
+                </Tooltip>
+              </>
             )}
           </Box>
         </Toolbar>

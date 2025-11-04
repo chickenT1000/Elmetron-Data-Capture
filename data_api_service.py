@@ -848,6 +848,112 @@ def create_session_marker(session_id: int):
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/sessions/<int:session_id>/markers/<int:marker_id>', methods=['PATCH'])
+def update_session_marker(session_id: int, marker_id: int):
+    """
+    Update a manual marker's position and/or note.
+    
+    Request body:
+        {
+            "offset_seconds": 3600,  # optional - new position from session start
+            "note": "Updated marker note" or null  # optional
+        }
+    
+    Returns:
+        {
+            "id": 1,
+            "session_id": 1,
+            "marker_number": 1,
+            "event_timestamp": "2025-11-04T10:30:00Z",
+            "offset_seconds": 3600,
+            "note": "Updated marker note",
+            "created_at": "2025-11-04T10:30:00Z"
+        }
+    """
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Request body is required'}), 400
+        
+        note = data.get('note')
+        new_offset_seconds = data.get('offset_seconds')
+        
+        conn = sqlite3.connect(str(db.path))
+        conn.row_factory = sqlite3.Row
+        
+        # Verify marker exists and belongs to session
+        marker = conn.execute("""
+            SELECT id, event_timestamp, metadata, created_at 
+            FROM audit_events
+            WHERE id = ? AND session_id = ? AND category = 'marker'
+        """, (marker_id, session_id)).fetchone()
+        
+        if not marker:
+            conn.close()
+            return jsonify({'error': 'Marker not found'}), 404
+        
+        # Get session start time
+        session = conn.execute(
+            "SELECT started_at FROM sessions WHERE id = ?",
+            (session_id,)
+        ).fetchone()
+        
+        if not session:
+            conn.close()
+            return jsonify({'error': 'Session not found'}), 404
+        
+        from datetime import datetime, timedelta
+        session_start = datetime.fromisoformat(session['started_at'].replace('Z', '+00:00'))
+        
+        # Calculate new event timestamp if offset is provided
+        if new_offset_seconds is not None:
+            if new_offset_seconds < 0:
+                conn.close()
+                return jsonify({'error': 'offset_seconds cannot be negative'}), 400
+            
+            new_event_timestamp = (session_start + timedelta(seconds=new_offset_seconds)).isoformat()
+            offset_seconds = new_offset_seconds
+        else:
+            # Keep existing timestamp
+            new_event_timestamp = marker['event_timestamp']
+            marker_time = datetime.fromisoformat(marker['event_timestamp'].replace('Z', '+00:00'))
+            offset_seconds = int((marker_time - session_start).total_seconds())
+        
+        # Update marker
+        conn.execute(
+            "UPDATE audit_events SET event_timestamp = ?, metadata = ? WHERE id = ?",
+            (new_event_timestamp, json.dumps({'note': note}), marker_id)
+        )
+        conn.commit()
+        
+        # Get marker number (count markers before this one based on timestamp)
+        marker_number = conn.execute("""
+            SELECT COUNT(*) + 1 as marker_number
+            FROM audit_events
+            WHERE session_id = ? 
+              AND category = 'marker'
+              AND event_timestamp < ?
+        """, (session_id, new_event_timestamp)).fetchone()['marker_number']
+        
+        conn.close()
+        
+        logger.info(f"Updated marker {marker_id} in session {session_id} (offset: {offset_seconds}s)")
+        
+        return jsonify({
+            'id': marker_id,
+            'session_id': session_id,
+            'marker_number': marker_number,
+            'event_timestamp': new_event_timestamp,
+            'offset_seconds': offset_seconds,
+            'note': note,
+            'created_at': marker['created_at']
+        })
+    
+    except Exception as e:
+        logger.error(f"Error updating marker {marker_id}: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/sessions/<int:session_id>/markers/<int:marker_id>', methods=['DELETE'])
 def delete_session_marker(session_id: int, marker_id: int):
     """
@@ -1031,6 +1137,48 @@ def update_session_operator(session_id: int):
     
     except Exception as e:
         logger.error(f"Error updating operator for session {session_id}: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/sessions/<int:session_id>/stop', methods=['POST'])
+def stop_session(session_id: int):
+    """
+    Stop/end a session by setting its ended_at timestamp.
+    
+    Returns:
+        {"success": true, "ended_at": "2025-11-04T10:30:00Z"}
+    """
+    try:
+        from datetime import datetime
+        
+        conn = sqlite3.connect(str(db.path))
+        conn.row_factory = sqlite3.Row
+        
+        # Check if session exists
+        session = conn.execute("SELECT id, ended_at FROM sessions WHERE id = ?", (session_id,)).fetchone()
+        
+        if not session:
+            conn.close()
+            return jsonify({'error': 'Session not found'}), 404
+        
+        if session['ended_at']:
+            conn.close()
+            return jsonify({'error': 'Session already stopped'}), 400
+        
+        # Set ended_at to now
+        ended_at = datetime.utcnow().isoformat()
+        conn.execute(
+            "UPDATE sessions SET ended_at = ? WHERE id = ?",
+            (ended_at, session_id)
+        )
+        conn.commit()
+        conn.close()
+        
+        logger.info(f"Session {session_id} stopped at {ended_at}")
+        return jsonify({'success': True, 'ended_at': ended_at})
+    
+    except Exception as e:
+        logger.error(f"Error stopping session {session_id}: {e}", exc_info=True)
         return jsonify({'error': str(e)}), 500
 
 

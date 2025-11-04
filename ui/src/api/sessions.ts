@@ -39,6 +39,17 @@ export async function updateActiveSessionOperator(operatorName: string): Promise
   }
 }
 
+export async function stopSession(sessionId: number): Promise<void> {
+  const response = await fetch(buildApiUrl(`/api/sessions/${sessionId}/stop`), {
+    method: 'POST',
+  });
+  
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || `Failed to stop session: ${response.status}`);
+  }
+}
+
 export interface SessionSummary {
   id: number;
   started_at: string;
@@ -322,6 +333,31 @@ export async function addSessionMarker(
     const errorData = await response.json().catch(() => ({}));
     const error: Error & { status?: number } = new Error(
       errorData.error || `Failed to add marker: ${response.status}`,
+    );
+    error.status = response.status;
+    throw error;
+  }
+  return (await response.json()) as SessionMarker;
+}
+
+export async function updateSessionMarker(
+  sessionId: number,
+  markerId: number,
+  offsetSeconds: number,
+  note: string | null
+): Promise<SessionMarker> {
+  const response = await fetch(buildApiUrl(`/api/sessions/${sessionId}/markers/${markerId}`), {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    body: JSON.stringify({ offset_seconds: offsetSeconds, note }),
+  });
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    const error: Error & { status?: number } = new Error(
+      errorData.error || `Failed to update marker: ${response.status}`,
     );
     error.status = response.status;
     throw error;
