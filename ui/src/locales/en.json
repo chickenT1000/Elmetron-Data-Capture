@@ -1,0 +1,63 @@
+{
+  "app": {
+    "title": "Elmetron",
+    "subtitle": "Monitoring Suite"
+  },
+  "navigation": {
+    "liveDashboard": "Live Dashboard",
+    "sessionEvaluation": "Session Evaluation",
+    "calibrationCenter": "Calibration Center",
+    "exportsArchives": "Exports & Archives",
+    "serviceHealth": "Service Health",
+    "settings": "Settings"
+  },
+  "header": {
+    "mode": {
+      "offline": "Service Offline",
+      "live": "Live Mode",
+      "archive": "Archive Mode"
+    },
+    "modeTooltip": {
+      "offline": "Backend service is not running - app is non-functional. Start the launcher to restore functionality.",
+      "live": "Device is connected and streaming data",
+      "archive": "No device connected - can browse historical sessions"
+    },
+    "device": {
+      "noDevice": "No Device",
+      "connected": "Device connected: {{deviceLabel}}",
+      "notConnected": "No device connected"
+    },
+    "serviceHealth": "Service Health",
+    "serviceHealthTooltip": {
+      "critical": "🔴 Critical: {{message}}",
+      "warning": "⚠️ Warning: {{message}}",
+      "healthy": "✓ All services healthy and operating normally"
+    },
+    "recording": "Recording",
+    "recordingTooltip": {
+      "offline": "Backend offline - recording unavailable",
+      "on": "Recording ON - Data is being saved to database",
+      "off": "Recording OFF - Data will NOT be saved"
+    },
+    "operator": "Operator:",
+    "operatorTooltip": "Change operator name in Settings",
+    "theme": {
+      "switchToLight": "Switch to light mode",
+      "switchToDark": "Switch to dark mode"
+    },
+    "language": {
+      "tooltip": "Change language"
+    }
+  },
+  "warnings": {
+    "closeTab": "Closing this tab will disconnect the dashboard from the capture service. You can reopen it from the launcher."
+  },
+  "healthMessages": {
+    "backendOffline": "Backend service is offline - app is non-functional",
+    "watchdogAlert": "Watchdog alert detected - service may be hung",
+    "captureNotRunning": "Capture service not running",
+    "logConnectionFailed": "Log stream connection failed",
+    "deviceNotConnected": "Device not connected",
+    "logStreamIdle": "Log stream idle"
+  }
+}

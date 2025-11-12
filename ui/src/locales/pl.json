@@ -1,0 +1,63 @@
+{
+  "app": {
+    "title": "Elmetron",
+    "subtitle": "System Monitorowania"
+  },
+  "navigation": {
+    "liveDashboard": "Panel Na Żywo",
+    "sessionEvaluation": "Ocena Sesji",
+    "calibrationCenter": "Centrum Kalibracji",
+    "exportsArchives": "Eksporty i Archiwa",
+    "serviceHealth": "Stan Serwisu",
+    "settings": "Ustawienia"
+  },
+  "header": {
+    "mode": {
+      "offline": "Serwis Offline",
+      "live": "Tryb Na Żywo",
+      "archive": "Tryb Archiwum"
+    },
+    "modeTooltip": {
+      "offline": "Serwis backendowy nie jest uruchomiony - aplikacja nie działa. Uruchom launcher aby przywrócić funkcjonalność.",
+      "live": "Urządzenie jest podłączone i przesyła dane",
+      "archive": "Urządzenie nie jest podłączone - możesz przeglądać historyczne sesje"
+    },
+    "device": {
+      "noDevice": "Brak Urządzenia",
+      "connected": "Urządzenie podłączone: {{deviceLabel}}",
+      "notConnected": "Urządzenie nie jest podłączone"
+    },
+    "serviceHealth": "Stan Serwisu",
+    "serviceHealthTooltip": {
+      "critical": "🔴 Krytyczne: {{message}}",
+      "warning": "⚠️ Ostrzeżenie: {{message}}",
+      "healthy": "✓ Wszystkie serwisy działają prawidłowo"
+    },
+    "recording": "Nagrywanie",
+    "recordingTooltip": {
+      "offline": "Backend offline - nagrywanie niedostępne",
+      "on": "Nagrywanie WŁĄCZONE - Dane są zapisywane do bazy danych",
+      "off": "Nagrywanie WYŁĄCZONE - Dane NIE będą zapisywane"
+    },
+    "operator": "Operator:",
+    "operatorTooltip": "Zmień nazwę operatora w Ustawieniach",
+    "theme": {
+      "switchToLight": "Przełącz na jasny motyw",
+      "switchToDark": "Przełącz na ciemny motyw"
+    },
+    "language": {
+      "tooltip": "Zmień język"
+    }
+  },
+  "warnings": {
+    "closeTab": "Zamknięcie tej karty spowoduje rozłączenie panelu od serwisu przechwytywania. Możesz otworzyć go ponownie z launchera."
+  },
+  "healthMessages": {
+    "backendOffline": "Serwis backendowy jest offline - aplikacja nie działa",
+    "watchdogAlert": "Wykryto alert watchdog - serwis może być zawieszony",
+    "captureNotRunning": "Serwis przechwytywania nie działa",
+    "logConnectionFailed": "Połączenie ze strumieniem logów nieudane",
+    "deviceNotConnected": "Urządzenie nie jest podłączone",
+    "logStreamIdle": "Strumień logów bezczynny"
+  }
+}
