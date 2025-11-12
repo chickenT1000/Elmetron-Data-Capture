@@ -193,7 +193,7 @@ def get_sessions():
         has_ph: Filter sessions with pH measurements (true/false)
         has_redox: Filter sessions with redox measurements (true/false)
         has_conductivity: Filter sessions with conductivity measurements (true/false)
-        sort_by: Sort by field (started_at, measurement_count, duration) default: started_at
+        sort_by: Sort by field (started_at, measurement_count, duration, operator_name) default: started_at
         order: Sort order (asc, desc) default: desc
     
     Returns: List of sessions with counts per parameter type
@@ -232,7 +232,10 @@ def get_sessions():
                 (SELECT COUNT(*) FROM measurements m WHERE m.session_id = s.id AND (m.unit LIKE '%S/cm%' OR m.unit LIKE '%siemens%')) AS conductivity_count,
                 (SELECT COUNT(*) FROM raw_frames f WHERE f.session_id = s.id) AS frame_count,
                 (SELECT COUNT(*) FROM audit_events a WHERE a.session_id = s.id) AS audit_count,
-                (SELECT measurement_timestamp FROM measurements m WHERE m.session_id = s.id ORDER BY m.id DESC LIMIT 1) AS latest_measurement
+                (SELECT COUNT(*) FROM audit_events a WHERE a.session_id = s.id AND a.category = 'marker') AS marker_count,
+                (SELECT measurement_timestamp FROM measurements m WHERE m.session_id = s.id ORDER BY m.id DESC LIMIT 1) AS latest_measurement,
+                (SELECT MAX(created_at) FROM measurements m WHERE m.session_id = s.id) AS last_measurement_captured,
+                (SELECT MAX(created_at) FROM audit_events a WHERE a.session_id = s.id) AS last_event_captured
             FROM sessions s
             LEFT JOIN instruments i ON s.instrument_id = i.id
         """)
@@ -261,6 +264,8 @@ def get_sessions():
             query_parts.append(f'ORDER BY measurement_count {order_clause}, s.id DESC')
         elif sort_by == 'duration':
             query_parts.append(f'ORDER BY (julianday(COALESCE(s.ended_at, datetime(\'now\'))) - julianday(s.started_at)) {order_clause}, s.id DESC')
+        elif sort_by == 'operator_name':
+            query_parts.append(f'ORDER BY s.operator_name {order_clause}, s.id DESC')
         else:  # started_at
             query_parts.append(f'ORDER BY s.started_at {order_clause}, s.id DESC')
         
@@ -297,10 +302,26 @@ def get_sessions():
                     elif conductivity_count == max_count:
                         dominant = 'conductivity'
                 
+                # Calculate duration with fallback
+                # If ended_at is null, use last activity timestamp
+                ended_at = row['ended_at']
+                calculated_ended_at = ended_at
+                
+                if not ended_at:
+                    # Fallback: use latest activity timestamp
+                    last_measurement = row['last_measurement_captured']
+                    last_event = row['last_event_captured']
+                    
+                    # Find the most recent activity
+                    candidates = [t for t in [last_measurement, last_event] if t]
+                    if candidates:
+                        calculated_ended_at = max(candidates)
+                
                 sessions.append({
                     'id': row['id'],
                     'started_at': row['started_at'],
-                    'ended_at': row['ended_at'],
+                    'ended_at': ended_at,  # Original value (may be null)
+                    'calculated_ended_at': calculated_ended_at,  # For duration calculation
                     'note': row['note'],
                     'operator_name': row['operator_name'],
                     'instrument': {
@@ -315,6 +336,7 @@ def get_sessions():
                         'conductivity_measurements': conductivity_count,
                         'frames': int(row['frame_count'] or 0),
                         'audit_events': int(row['audit_count'] or 0),
+                        'markers': int(row['marker_count'] or 0),
                     },
                     'dominant_parameter': dominant,
                     'latest_measurement_at': row['latest_measurement'],
@@ -329,6 +351,178 @@ def get_sessions():
     
     except Exception as e:
         logger.error(f"Error fetching sessions: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/operators', methods=['GET'])
+def get_operators():
+    """
+    Get list of distinct operator names from all sessions and config.
+    
+    Returns:
+        {
+            "operators": ["Alice", "Bob", "Charlie"]
+        }
+    """
+    try:
+        # Get operators from sessions database
+        conn = sqlite3.connect(str(db.path))
+        conn.row_factory = sqlite3.Row
+        
+        operators = conn.execute("""
+            SELECT DISTINCT operator_name 
+            FROM sessions 
+            WHERE operator_name IS NOT NULL AND operator_name != ''
+            ORDER BY operator_name ASC
+        """).fetchall()
+        conn.close()
+        
+        operator_set = set(row['operator_name'] for row in operators)
+        
+        # Also include the default operator from config file if it exists
+        try:
+            import tomllib
+            config_path = ROOT / 'config' / 'app.toml'
+            with open(config_path, 'rb') as f:
+                config_data = tomllib.load(f)
+                default_op = config_data.get('acquisition', {}).get('default_operator', '')
+                if default_op and default_op.strip():
+                    operator_set.add(default_op.strip())
+        except Exception as e:
+            logger.warning(f"Could not read default operator from config: {e}")
+        
+        operator_list = sorted(list(operator_set))
+        return jsonify({'operators': operator_list})
+    
+    except Exception as e:
+        logger.error(f"Error fetching operators: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/config/default-operator', methods=['PATCH'])
+def update_default_operator():
+    """
+    Update the default operator name in the backend config file.
+    This operator will be used for all new sessions.
+    
+    Request body:
+        {
+            "operator_name": "Alice"
+        }
+    
+    Returns:
+        {
+            "success": true,
+            "operator_name": "Alice"
+        }
+    """
+    try:
+        import re
+        
+        data = request.get_json()
+        operator_name = data.get('operator_name', '').strip()
+        
+        # Load current config
+        config_path = ROOT / 'config' / 'app.toml'
+        with open(config_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        
+        # Escape special characters in operator name for TOML
+        escaped_name = operator_name.replace('"', '\\"')
+        
+        # Pattern to match default_operator line in [acquisition] section
+        pattern = r'(^\[acquisition\].*?^default_operator\s*=\s*")([^"]*)'
+        
+        def replacer(match):
+            return match.group(1) + escaped_name
+        
+        # Try to replace existing default_operator line
+        new_content, count = re.subn(pattern, replacer, content, flags=re.MULTILINE | re.DOTALL)
+        
+        if count == 0:
+            # If not found, try to add it after [acquisition] section header
+            pattern2 = r'(^\[acquisition\]\s*\n)'
+            replacement = f'\\1default_operator = "{escaped_name}"  # Default operator name for new sessions\n'
+            new_content, count2 = re.subn(pattern2, replacement, content, flags=re.MULTILINE)
+            
+            if count2 == 0:
+                # If [acquisition] section doesn't exist, add it at the end
+                new_content = content.rstrip() + f'\n\n[acquisition]\ndefault_operator = "{escaped_name}"\n'
+        
+        # Write back to file
+        with open(config_path, 'w', encoding='utf-8') as f:
+            f.write(new_content)
+        
+        logger.info(f"Updated default operator in config to '{operator_name}'")
+        
+        return jsonify({
+            'success': True,
+            'operator_name': operator_name
+        })
+    except Exception as e:
+        logger.error(f"Error updating default operator config: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/sessions/active/operator', methods=['PATCH'])
+def update_active_session_operator():
+    """
+    Update the operator name for the currently active session.
+    
+    Request body:
+        {
+            "operator_name": "Alice"
+        }
+    
+    Returns:
+        {
+            "success": true,
+            "session_id": 123,
+            "operator_name": "Alice"
+        }
+    """
+    try:
+        data = request.get_json()
+        operator_name = data.get('operator_name', '').strip()
+        
+        if not operator_name:
+            return jsonify({'error': 'operator_name is required'}), 400
+        
+        conn = sqlite3.connect(str(db.path))
+        
+        # Find the active session (most recent without ended_at)
+        cursor = conn.execute("""
+            SELECT id FROM sessions 
+            WHERE ended_at IS NULL 
+            ORDER BY started_at DESC 
+            LIMIT 1
+        """)
+        row = cursor.fetchone()
+        
+        if not row:
+            conn.close()
+            return jsonify({'error': 'No active session found'}), 404
+        
+        session_id = row[0]
+        
+        # Update the operator name
+        conn.execute("""
+            UPDATE sessions 
+            SET operator_name = ? 
+            WHERE id = ?
+        """, (operator_name, session_id))
+        conn.commit()
+        conn.close()
+        
+        logger.info(f"Updated active session {session_id} operator to '{operator_name}'")
+        
+        return jsonify({
+            'success': True,
+            'session_id': session_id,
+            'operator_name': operator_name
+        })
+    except Exception as e:
+        logger.error(f"Error updating active session operator: {e}", exc_info=True)
         return jsonify({'error': str(e)}), 500
 
 
@@ -359,6 +553,7 @@ def get_session_details(session_id: int):
                 s.started_at,
                 s.ended_at,
                 s.note,
+                s.operator_name,
                 i.serial AS instrument_serial,
                 i.description AS instrument_description,
                 i.model AS instrument_model
@@ -409,6 +604,7 @@ def get_session_details(session_id: int):
             'started_at': session_row['started_at'],
             'ended_at': session_row['ended_at'],
             'note': session_row['note'],
+            'operator_name': session_row['operator_name'],
             'instrument': {
                 'serial': session_row['instrument_serial'],
                 'description': session_row['instrument_description'],
@@ -526,13 +722,13 @@ def get_session_markers(session_id: int):
             SELECT 
                 id,
                 session_id,
-                event_timestamp,
+                created_at AS event_timestamp,
                 message,
                 payload_json,
                 created_at
             FROM audit_events
-            WHERE session_id = ? AND event_type = 'manual_marker'
-            ORDER BY event_timestamp ASC
+            WHERE session_id = ? AND category = 'marker'
+            ORDER BY created_at ASC
         """, (session_id,)).fetchall()
         
         conn.close()
@@ -603,7 +799,7 @@ def create_session_marker(session_id: int):
         marker_count = conn.execute("""
             SELECT COUNT(*) as count 
             FROM audit_events 
-            WHERE session_id = ? AND event_type = 'manual_marker'
+            WHERE session_id = ? AND category = 'marker'
         """, (session_id,)).fetchone()['count']
         
         if marker_count >= 99:
@@ -620,14 +816,13 @@ def create_session_marker(session_id: int):
         cursor = conn.cursor()
         cursor.execute("""
             INSERT INTO audit_events 
-            (session_id, level, category, message, event_type, event_timestamp, payload_json)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            (session_id, level, category, message, created_at, payload_json)
+            VALUES (?, ?, ?, ?, ?, ?)
         """, (
             session_id,
             'info',
             'marker',
             f'Manual marker added',
-            'manual_marker',
             event_timestamp,
             json.dumps(payload)
         ))
@@ -667,7 +862,7 @@ def delete_session_marker(session_id: int, marker_id: int):
         # Verify marker exists and belongs to session
         marker = conn.execute("""
             SELECT id FROM audit_events
-            WHERE id = ? AND session_id = ? AND event_type = 'manual_marker'
+            WHERE id = ? AND session_id = ? AND category = 'marker'
         """, (marker_id, session_id)).fetchone()
         
         if not marker:
@@ -1188,10 +1383,10 @@ def get_session_evaluation(session_id: int):
         
         # Get markers for anchor calculation (before closing connection)
         markers_rows = conn.execute("""
-            SELECT event_timestamp, payload_json
+            SELECT created_at AS event_timestamp, payload_json
             FROM audit_events
-            WHERE session_id = ? AND event_type = 'manual_marker'
-            ORDER BY event_timestamp ASC
+            WHERE session_id = ? AND category = 'marker'
+            ORDER BY created_at ASC
         """, (session_id,)).fetchall()
         
         conn.close()
@@ -1241,12 +1436,12 @@ def get_session_evaluation(session_id: int):
                 else:  # last_marker
                     anchor_time = marker_timestamps[-1]
             else:
-                # Fallback: if no markers, use first/last measurement
+                # Fallback: if no markers, use first/last measurement (using created_at for consistency)
                 if measurement_rows:
                     if anchor == 'first_marker':
-                        anchor_time = measurement_rows[0]['timestamp']
+                        anchor_time = measurement_rows[0]['created_at']
                     else:  # last_marker
-                        anchor_time = measurement_rows[-1]['timestamp']
+                        anchor_time = measurement_rows[-1]['created_at']
         
         # Convert measurements to series format
         series = []
@@ -1256,13 +1451,13 @@ def get_session_evaluation(session_id: int):
         for row in measurement_rows:
             payload = json.loads(row['payload_json']) if row['payload_json'] else {}
             
-            # Calculate offset from anchor
+            # Calculate offset from anchor using created_at (PC capture time) not measurement_timestamp (device time)
             offset_seconds = None
-            if row['timestamp'] and anchor_time:
+            if row['created_at'] and anchor_time:
                 try:
                     from datetime import datetime
                     # Handle various timestamp formats
-                    ts_str = row['timestamp']
+                    ts_str = row['created_at']
                     anchor_str = anchor_time
                     
                     # Normalize timestamps: replace Z with +00:00 for fromisoformat
@@ -1280,13 +1475,11 @@ def get_session_evaluation(session_id: int):
                     try:
                         from datetime import datetime
                         # Strip any timezone info and parse as naive datetime
-                        ts_clean = row['timestamp'].replace('Z', '').split('+')[0].split('-')[0:3]
-                        anchor_clean = anchor_time.replace('Z', '').split('+')[0].split('-')[0:3]
-                        ts = datetime.fromisoformat(row['timestamp'].replace('Z', '').split('+')[0])
+                        ts = datetime.fromisoformat(row['created_at'].replace('Z', '').split('+')[0])
                         anchor_ts = datetime.fromisoformat(anchor_time.replace('Z', '').split('+')[0])
                         offset_seconds = round((ts - anchor_ts).total_seconds())
                     except:
-                        print(f"Failed to parse timestamps: {row['timestamp']} or {anchor_time}")
+                        print(f"Failed to parse timestamps: {row['created_at']} or {anchor_time}")
                         pass
             
             point = {

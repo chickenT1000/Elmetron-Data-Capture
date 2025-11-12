@@ -1,5 +1,5 @@
-﻿import { useState } from 'react';
-import { Outlet, useLocation, useNavigate } from 'react-router-dom';
+﻿import { useEffect, useState } from 'react';
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   AppBar,
   Toolbar,
@@ -14,7 +14,8 @@ import {
   CssBaseline,
   Divider,
   Tooltip,
-  Switch,
+  Select,
+  MenuItem,
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
@@ -25,6 +26,7 @@ import { useLiveStatus } from '../hooks/useLiveStatus';
 import { useHealthStatus } from '../hooks/useHealthStatus';
 import { useHealthLogEvents } from '../hooks/useHealthLogEvents';
 import { useSettings } from '../contexts/SettingsContext';
+import { useTranslation } from 'react-i18next';
 
 const drawerWidth = 240;
 
@@ -38,8 +40,21 @@ export function AppLayout({ onToggleTheme, isDarkMode = false }: AppLayoutProps)
   const [recordingEnabled, setRecordingEnabled] = useState(true); // Simple on/off, default ON
   const location = useLocation();
   const navigate = useNavigate();
+  const { t, i18n } = useTranslation();
 
-  const { data: liveStatus } = useLiveStatus();
+  const handleLanguageChange = (lang: string) => {
+    i18n.changeLanguage(lang);
+    localStorage.setItem('language', lang);
+  };
+
+  // Update document title based on current route
+  useEffect(() => {
+    const route = appRoutes.find(r => r.path === location.pathname);
+    const pageTitle = route ? t(route.labelKey) : t('navigation.liveDashboard');
+    document.title = `Elmetron - ${pageTitle}`;
+  }, [location.pathname, t]);
+
+  const { data: liveStatus, isError: liveStatusError } = useLiveStatus();
   const { data: health } = useHealthStatus(3000);
   const { connectionState: logConnectionState } = useHealthLogEvents({ limit: 5, fallbackMs: 5000 });
   const { settings } = useSettings();
@@ -52,15 +67,27 @@ export function AppLayout({ onToggleTheme, isDarkMode = false }: AppLayoutProps)
     setRecordingEnabled((prev) => !prev);
   };
 
+  // Determine if backend is completely down
+  const backendDown = liveStatusError || !health;
+  
   // Determine mode
-  const mode = liveStatus?.mode ?? 'archive';
+  const mode = backendDown ? 'offline' : (liveStatus?.mode ?? 'archive');
   const isLiveMode = mode === 'live';
-  const modeColor = isLiveMode ? 'success' : 'default';
+  const isOffline = mode === 'offline';
+  
+  // Mode indicator color
+  const modeColor = isOffline ? 'error' : (isLiveMode ? 'success' : 'warning');
+  const modeLabel = isOffline ? t('header.mode.offline') : (isLiveMode ? t('header.mode.live') : t('header.mode.archive'));
+  const modeTooltip = isOffline 
+    ? t('header.modeTooltip.offline')
+    : (isLiveMode 
+      ? t('header.modeTooltip.live')
+      : t('header.modeTooltip.archive'));
 
   // Device info - only show device in Live mode
   const deviceLabel = isLiveMode && liveStatus?.instrument
     ? `${liveStatus.instrument.model} · ${liveStatus.instrument.serial}`
-    : 'No Device';
+    : t('header.device.noDevice');
   
   const deviceConnected = isLiveMode && (liveStatus?.device_connected ?? false);
   const deviceColor = deviceConnected ? 'success' : 'default';
@@ -68,13 +95,14 @@ export function AppLayout({ onToggleTheme, isDarkMode = false }: AppLayoutProps)
   // Service Health Aggregation
   // Comprehensive health check combining multiple indicators
   const getServiceHealth = (): { status: 'error' | 'warning' | 'success'; tooltip: string } => {
-    // CRITICAL (RED DOT) - Service is broken or critical failure
-    if (health?.watchdog_alert) {
-      return { status: 'error', tooltip: '🔴 Critical: Watchdog alert detected - service may be hung' };
+    // CRITICAL (RED DOT) - Backend is completely down
+    if (backendDown) {
+      return { status: 'error', tooltip: t('header.serviceHealthTooltip.critical', { message: t('healthMessages.backendOffline') }) };
     }
     
-    if (!health) {
-      return { status: 'error', tooltip: '🔴 Critical: Cannot reach health API - service may be down' };
+    // CRITICAL (RED DOT) - Service is broken or critical failure
+    if (health?.watchdog_alert) {
+      return { status: 'error', tooltip: t('header.serviceHealthTooltip.critical', { message: t('healthMessages.watchdogAlert') }) };
     }
 
     // WARNING (YELLOW DOT) - Service is running but has issues
@@ -82,36 +110,36 @@ export function AppLayout({ onToggleTheme, isDarkMode = false }: AppLayoutProps)
     
     // 1. Capture service not running
     if (health.state !== 'running') {
-      warnings.push('Capture service not running');
+      warnings.push(t('healthMessages.captureNotRunning'));
     }
     
     // 2. Log connection issues in Live Mode
     if (isLiveMode && logConnectionState === 'error') {
-      warnings.push('Log stream connection failed');
+      warnings.push(t('healthMessages.logConnectionFailed'));
     }
     
     // 3. No device connected in Live Mode (should be connected)
     if (isLiveMode && !deviceConnected) {
-      warnings.push('Device not connected');
+      warnings.push(t('healthMessages.deviceNotConnected'));
     }
     
     // 4. Log stream idle in Live Mode (expected to be streaming/polling)
     if (isLiveMode && logConnectionState !== 'streaming' && logConnectionState !== 'polling') {
-      warnings.push('Log stream idle');
+      warnings.push(t('healthMessages.logStreamIdle'));
     }
 
     // If we have warnings, return yellow dot
     if (warnings.length > 0) {
       return { 
         status: 'warning', 
-        tooltip: `⚠️ Warning: ${warnings.join(', ')}` 
+        tooltip: t('header.serviceHealthTooltip.warning', { message: warnings.join(', ') })
       };
     }
 
     // HEALTHY (GREEN DOT) - Everything is working
     return { 
       status: 'success', 
-      tooltip: '✓ All services healthy and operating normally' 
+      tooltip: t('header.serviceHealthTooltip.healthy')
     };
   };
 
@@ -121,12 +149,25 @@ export function AppLayout({ onToggleTheme, isDarkMode = false }: AppLayoutProps)
 
   const drawer = (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <Box sx={{ px: 2, py: 3 }}>
+      <Box
+        component={Link}
+        to="/"
+        sx={{
+          px: 2,
+          py: 3,
+          textDecoration: 'none',
+          color: 'inherit',
+          cursor: 'pointer',
+          '&:hover': {
+            backgroundColor: 'action.hover',
+          },
+        }}
+      >
         <Typography variant="h6" fontWeight={700} color="primary">
-          Elmetron
+          {t('app.title')}
         </Typography>
         <Typography variant="body2" color="text.secondary">
-          Monitoring Suite
+          {t('app.subtitle')}
         </Typography>
       </Box>
       <Divider />
@@ -145,7 +186,7 @@ export function AppLayout({ onToggleTheme, isDarkMode = false }: AppLayoutProps)
               <ListItemIcon>
                 <route.icon color={isActive ? 'primary' : 'inherit'} />
               </ListItemIcon>
-              <ListItemText primary={route.label} />
+              <ListItemText primary={t(route.labelKey)} />
             </ListItemButton>
           );
         })}
@@ -180,21 +221,21 @@ export function AppLayout({ onToggleTheme, isDarkMode = false }: AppLayoutProps)
             </IconButton>
             
             {/* Mode Indicator */}
-            <Tooltip title={isLiveMode ? "Device is connected and streaming data" : "No device connected, viewing historical data"}>
+            <Tooltip title={modeTooltip}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <FiberManualRecordIcon 
                   color={modeColor} 
                   sx={{ fontSize: 12 }} 
                 />
                 <Typography variant="body2" color="text.secondary">
-                  {isLiveMode ? 'Live Mode' : 'Archive Mode'}
+                  {modeLabel}
                 </Typography>
               </Box>
             </Tooltip>
           </Box>
           
           {/* Device Status */}
-          <Tooltip title={deviceConnected ? `Device connected: ${deviceLabel}` : "No device connected"}>
+          <Tooltip title={deviceConnected ? t('header.device.connected', { deviceLabel }) : t('header.device.notConnected')}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <FiberManualRecordIcon color={deviceColor} sx={{ fontSize: 12 }} />
               <Typography variant="body2" color="text.secondary">
@@ -211,33 +252,54 @@ export function AppLayout({ onToggleTheme, isDarkMode = false }: AppLayoutProps)
                 sx={{ fontSize: 12 }} 
               />
               <Typography variant="body2" color="text.secondary">
-                Service Health
+                {t('header.serviceHealth')}
               </Typography>
             </Box>
           </Tooltip>
 
           {/* Recording Indicator */}
-          <Tooltip title={recordingEnabled ? "Recording ON - Data is being saved to database" : "Recording OFF - Data will NOT be saved"}>
+          <Tooltip title={backendDown ? t('header.recordingTooltip.offline') : (recordingEnabled ? t('header.recordingTooltip.on') : t('header.recordingTooltip.off'))}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <FiberManualRecordIcon 
-                color={recordingEnabled ? 'success' : 'default'} 
+                color={backendDown ? 'default' : (recordingEnabled ? 'success' : 'default')} 
                 sx={{ fontSize: 12 }} 
               />
               <Typography variant="body2" color="text.secondary">
-                Recording
+                {t('header.recording')}
               </Typography>
             </Box>
           </Tooltip>
 
-          {/* RIGHT: Operator + Theme Toggle */}
+          {/* RIGHT: Operator + Language Selector + Theme Toggle */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Tooltip title="Change operator name in Settings">
+            <Tooltip title={t('header.operatorTooltip')}>
               <Typography variant="body2" color="text.secondary">
-                Operator: <Box component="span" color="text.primary">{settings.operatorName}</Box>
+                {t('header.operator')} <Box component="span" color="text.primary">{settings.operatorName}</Box>
               </Typography>
             </Tooltip>
+            
+            {/* Language Selector */}
+            <Tooltip title={t('header.language.tooltip')}>
+              <Select
+                value={i18n.language}
+                onChange={(e) => handleLanguageChange(e.target.value)}
+                size="small"
+                sx={{ 
+                  minWidth: 60,
+                  height: 32,
+                  '& .MuiSelect-select': {
+                    py: 0.5,
+                    px: 1,
+                  }
+                }}
+              >
+                <MenuItem value="en">EN</MenuItem>
+                <MenuItem value="pl">PL</MenuItem>
+              </Select>
+            </Tooltip>
+            
             {onToggleTheme && (
-              <Tooltip title={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}>
+              <Tooltip title={isDarkMode ? t('header.theme.switchToLight') : t('header.theme.switchToDark')}>
                 <IconButton onClick={onToggleTheme} color="primary" size="small">
                   {isDarkMode ? <Brightness7Icon /> : <Brightness4Icon />}
                 </IconButton>

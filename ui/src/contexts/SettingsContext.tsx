@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 
 const STORAGE_KEY = 'appSettings';
 
@@ -7,15 +7,33 @@ const OPERATOR_NAME_MAX_LENGTH = 50;
 const OPERATOR_NAME_MIN_LENGTH = 1;
 const OPERATOR_NAME_ALLOWED_PATTERN = /^[a-zA-Z0-9\s\-_.]+$/; // Alphanumeric, spaces, hyphens, underscores, periods
 
+export type AutoscalingMode = 'presets' | 'dynamic' | 'fixed';
+
+export interface CustomRanges {
+  ph: { min: number; max: number };
+  conductivity: { min: number; max: number };
+  redox: { min: number; max: number };
+  temperature: { min: number; max: number };
+}
+
 export interface AppSettings {
   gapThresholdSeconds: number;
   autoScalingEnabled: boolean;
+  autoscalingMode: AutoscalingMode;
+  customRanges: CustomRanges;
   operatorName: string;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
   gapThresholdSeconds: 15,
   autoScalingEnabled: true,
+  autoscalingMode: 'presets',
+  customRanges: {
+    ph: { min: 0, max: 14 },
+    conductivity: { min: 0, max: 10000 },
+    redox: { min: -2000, max: 2000 },
+    temperature: { min: 0, max: 50 },
+  },
   operatorName: 'User',
 };
 
@@ -92,11 +110,16 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
-        // Sanitize operator name on load
+        // Merge with defaults to ensure new fields exist
         const sanitized = {
           ...DEFAULT_SETTINGS,
           ...parsed,
           operatorName: sanitizeOperatorName(parsed.operatorName || DEFAULT_SETTINGS.operatorName),
+          autoscalingMode: parsed.autoscalingMode || DEFAULT_SETTINGS.autoscalingMode,
+          customRanges: parsed.customRanges ? {
+            ...DEFAULT_SETTINGS.customRanges,
+            ...parsed.customRanges,
+          } : DEFAULT_SETTINGS.customRanges,
         };
         return sanitized;
       }

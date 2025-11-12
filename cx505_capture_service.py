@@ -13,6 +13,7 @@ from elmetron.protocols import load_registry
 from elmetron.service import ServiceSupervisor
 from elmetron.service.runner import ServiceRunner
 from elmetron.storage import Database, SessionBuffer
+from elmetron.storage.database import AuditEvent
 
 
 def _apply_overrides(config: AppConfig, args: argparse.Namespace) -> AppConfig:
@@ -98,6 +99,17 @@ def main(argv: list[str] | None = None) -> int:
     database = Database(config.storage)
     database.connect()
     
+    # Log service startup
+    database.append_system_audit_event(
+        AuditEvent(
+            level='info',
+            category='system',
+            message='Capture service started',
+            payload={'config_file': str(config_path)}
+        ),
+        source='backend'
+    )
+    
     # Status file for Data API communication
     captures_dir = Path(__file__).resolve().parent / "captures"
     captures_dir.mkdir(exist_ok=True)
@@ -111,11 +123,30 @@ def main(argv: list[str] | None = None) -> int:
             database,
             delete_after_recovery=True
         )
-        if recovery_summary["recovered_sessions"] > 0:
-            print(f'[OK] Recovered {recovery_summary["recovered_measurements"]} '
-                  f'measurements from {recovery_summary["recovered_sessions"]} crashed session(s)')
-            for session_id in recovery_summary["session_ids"]:
-                print(f'   - Session {session_id}: {recovery_summary["sessions"][session_id]["measurements"]} measurements')
+        if recovery_summary.get("recovered_sessions", 0) > 0:
+            print(f'[OK] Recovered {recovery_summary.get("recovered_measurements", 0)} '
+                  f'measurements from {recovery_summary.get("recovered_sessions", 0)} crashed session(s)')
+            
+            # Print details if available
+            if "session_ids" in recovery_summary:
+                for session_id in recovery_summary["session_ids"]:
+                    if "sessions" in recovery_summary and session_id in recovery_summary["sessions"]:
+                        print(f'   - Session {session_id}: {recovery_summary["sessions"][session_id]["measurements"]} measurements')
+            
+            # Log crash recovery event (system-wide)
+            database.append_system_audit_event(
+                AuditEvent(
+                    level='warning',
+                    category='recovery',
+                    message=f'Recovered {recovery_summary.get("recovered_sessions", 0)} session(s) after crash',
+                    payload={
+                        'sessions_recovered': recovery_summary.get("recovered_sessions", 0),
+                        'measurements_recovered': recovery_summary.get("recovered_measurements", 0),
+                        'audit_events_recovered': recovery_summary.get("recovered_audit_events", 0)
+                    }
+                ),
+                source='backend'
+            )
         else:
             print('   No orphaned buffers found.')
     except Exception as exc:
@@ -130,6 +161,16 @@ def main(argv: list[str] | None = None) -> int:
     else:
         print('  (none)')
         print('  >> Please connect a compatible Elmetron CX-505 device and retry.')
+        
+        # Log no device found
+        database.append_system_audit_event(
+            AuditEvent(
+                level='error',
+                category='device',
+                message='No compatible device found at startup',
+            ),
+            source='backend'
+        )
         database.close()
         return 1
 

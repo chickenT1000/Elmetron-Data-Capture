@@ -1,9 +1,49 @@
 import { buildApiUrl } from '../config';
 
+export async function fetchOperators(): Promise<string[]> {
+  const response = await fetch(buildApiUrl('/api/operators'));
+  if (!response.ok) {
+    throw new Error(`Failed to fetch operators: ${response.status}`);
+  }
+  const data = await response.json();
+  return data.operators || [];
+}
+
+export async function updateDefaultOperator(operatorName: string): Promise<void> {
+  const response = await fetch(buildApiUrl('/api/config/default-operator'), {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ operator_name: operatorName }),
+  });
+  
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to update default operator');
+  }
+}
+
+export async function updateActiveSessionOperator(operatorName: string): Promise<void> {
+  const response = await fetch(buildApiUrl('/api/sessions/active/operator'), {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ operator_name: operatorName }),
+  });
+  
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || `Failed to update operator: ${response.status}`);
+  }
+}
+
 export interface SessionSummary {
   id: number;
   started_at: string;
   ended_at: string | null;
+  calculated_ended_at?: string | null;  // Fallback end time based on last activity
   note?: string | null;
   operator_name?: string | null;
   instrument?: {
@@ -18,6 +58,7 @@ export interface SessionSummary {
     conductivity_measurements?: number;
     frames?: number;
     audit_events?: number;
+    markers?: number;
   } | null;
   dominant_parameter?: 'ph' | 'redox' | 'conductivity' | 'none';
   metadata?: Record<string, unknown> | null;

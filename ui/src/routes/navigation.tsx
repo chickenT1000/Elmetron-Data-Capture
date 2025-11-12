@@ -8,15 +8,15 @@ import SettingsIcon from '@mui/icons-material/SettingsOutlined';
 
 export type AppRoute = {
   path: string;
-  label: string;
+  labelKey: string; // Translation key instead of direct label
   icon: SvgIconComponent;
 };
 
 export const appRoutes: AppRoute[] = [
-  { path: '/', label: 'Live Dashboard', icon: DashboardIcon },
-  { path: '/sessions', label: 'Session Evaluation', icon: TimelineIcon },
-  { path: '/calibrations', label: 'Calibration Center', icon: ScienceIcon },
-  { path: '/exports', label: 'Exports & Archives', icon: CloudUploadIcon },
-  { path: '/service', label: 'Service Health', icon: StackedLineChartIcon },
-  { path: '/settings', label: 'Settings', icon: SettingsIcon },
+  { path: '/', labelKey: 'navigation.liveDashboard', icon: DashboardIcon },
+  { path: '/sessions', labelKey: 'navigation.sessionEvaluation', icon: TimelineIcon },
+  { path: '/calibrations', labelKey: 'navigation.calibrationCenter', icon: ScienceIcon },
+  { path: '/exports', labelKey: 'navigation.exportsArchives', icon: CloudUploadIcon },
+  { path: '/service', labelKey: 'navigation.serviceHealth', icon: StackedLineChartIcon },
+  { path: '/settings', labelKey: 'navigation.settings', icon: SettingsIcon },
 ];

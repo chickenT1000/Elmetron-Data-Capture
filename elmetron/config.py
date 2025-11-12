@@ -216,6 +216,7 @@ class AcquisitionConfig:
     max_runtime_s: float = 0.0
     quiet: bool = False
     startup_commands: list[str] = field(default_factory=list)
+    default_operator: str = ""  # Default operator name for new sessions
     scheduled_commands: list[ScheduledCommandConfig] = field(default_factory=list)
     default_command_max_retries: int = 1
     default_command_retry_backoff_s: float = 1.0

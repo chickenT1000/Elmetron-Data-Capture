@@ -131,6 +131,7 @@ export const MeasurementPanel: React.FC<MeasurementPanelProps> = ({
     name: null as string | null,
     display_name: 'Loading...',
     started_at: null as string | null,
+    operator_name: null as string | null,
   });
   
   // Session editing state
@@ -158,7 +159,7 @@ export const MeasurementPanel: React.FC<MeasurementPanelProps> = ({
         const data = await response.json();
         
         if (data.current_session_id) {
-          // Fetch session details to get the name
+          // Fetch session details to get the name and operator
           const sessionResponse = await fetch(`http://localhost:8050/api/sessions/${data.current_session_id}`);
           const sessionData = await sessionResponse.json();
           
@@ -168,6 +169,7 @@ export const MeasurementPanel: React.FC<MeasurementPanelProps> = ({
             name: sessionData.note,
             display_name: sessionData.note || `Session ${sessionData.id}`,
             started_at: sessionData.started_at,
+            operator_name: sessionData.operator_name,
           });
         } else {
           // No active session
@@ -176,6 +178,8 @@ export const MeasurementPanel: React.FC<MeasurementPanelProps> = ({
             session_number: null,
             name: null,
             display_name: 'No active session',
+            started_at: null,
+            operator_name: null,
           });
         }
       } catch (error) {
@@ -516,6 +520,11 @@ export const MeasurementPanel: React.FC<MeasurementPanelProps> = ({
                     <Typography variant="caption" color="text.secondary">
                       Last update: {formatTimestamp(lastUpdatedIso)}
                     </Typography>
+                    {currentSession.operator_name && (
+                      <Typography variant="caption" color="text.secondary">
+                        Operator: {currentSession.operator_name}
+                      </Typography>
+                    )}
                   </Stack>
                 )}
               </Stack>

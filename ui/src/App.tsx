@@ -11,16 +11,18 @@ import { useConnectionMonitor } from './hooks/useConnectionMonitor';
 import { OfflineWarning } from './components/OfflineWarning';
 import { SettingsProvider } from './contexts/SettingsContext';
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 
 function App() {
   const connectionStatus = useConnectionMonitor();
   const [warningDismissed, setWarningDismissed] = useState(false);
+  const { t } = useTranslation();
 
   // Warn user before closing the tab
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       // Show warning when user tries to close the tab
-      const message = 'Closing this tab will disconnect the dashboard from the capture service. You can reopen it from the launcher.';
+      const message = t('warnings.closeTab');
       e.preventDefault();
       e.returnValue = message; // Standard for most browsers
       return message; // For older browsers
@@ -31,7 +33,7 @@ function App() {
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
-  }, []);
+  }, [t]);
 
   // Show warning when offline and not dismissed
   const showWarning = !connectionStatus.isOnline && !warningDismissed;
