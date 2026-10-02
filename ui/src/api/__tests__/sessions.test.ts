@@ -89,7 +89,7 @@ describe('sessions api', () => {
 
     const blob = await downloadSessionEvaluationJson(7, { anchor: 'start', filename: 'overlay.json' });
     expect(blob).toMatchObject({ type: 'application/json' });
-    const text = await new Promise<string>((resolve, reject) => {
+    const text = typeof blob.text === 'function' ? await blob.text() : await new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(String(reader.result));
       reader.onerror = reject;
