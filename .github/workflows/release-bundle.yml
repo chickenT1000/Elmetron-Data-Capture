@@ -7,6 +7,9 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   python:
     strategy:
@@ -50,6 +53,7 @@ jobs:
       - run: uv run python scripts/collect_licenses.py
       - run: uv run pyinstaller --noconfirm packaging/elmetron.spec
       - run: uv run python scripts/test_mcp.py --exe dist/Elmetron/elmetron-cli.exe --data-dir validation/mcp-ci
+      - run: uv run python scripts/test_desktop.py --exe dist/Elmetron/Elmetron.exe --data-dir validation/desktop-ci
       - name: Install pinned Inno compiler
         shell: pwsh
         run: |

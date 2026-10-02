@@ -14,6 +14,7 @@ on both operating system versions or on a physical CX-505.
 | Source MCP stdio client and legacy negotiation | Passed: eight read-only tools, two resources, OpenAPI and protocol 2025-11-25 negotiation |
 | Final local self-contained installer smoke | Install, demo with only Windows binaries on PATH, refusal to update while recording, update and uninstall preservation passed |
 | Final local packaged MCP stdio | Passed; no Python/Node required by the executable; all inventoried license texts present |
+| Windowless desktop launcher | Passed with Python/Node removed from PATH; correct data home and graceful backend shutdown |
 | Unicode PDF | Rendered and visually inspected; Polish text, wrapping, pagination and embedded font checked |
 | `npm audit` and locked runtime `pip-audit` | No known vulnerabilities reported at execution time |
 | Workflow YAML | Parsed successfully |
