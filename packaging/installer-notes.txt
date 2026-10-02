@@ -1,0 +1,14 @@
+Elmetron 1.0.0-beta.1
+
+Open Elmetron from the Start menu. Demo and archive work without a USB driver.
+For CX-505 capture install FTDI's official D2XX driver first.
+
+USER CONFIGURATION: %LOCALAPPDATA%\Elmetron\config\app.toml and protocols.toml.
+USER REPORT TEMPLATE: %LOCALAPPDATA%\Elmetron\config\templates\session_report.fmt.
+See the Configuration and customization guide in the Start menu.
+
+Data is stored outside the installation directory. Updates and uninstall preserve it.
+Before updating or uninstalling, stop capture and close the local service in the UI.
+Closing a browser tab alone does not stop capture.
+
+Beta: hardware acceptance and 24-hour soak are pending until reported in VALIDATION.md.

@@ -29,7 +29,7 @@ export const useConnectionMonitor = () => {
       try {
         const controller = new AbortController();
         const timeoutMs = 3000; // 3 second timeout per request
-        
+
         const timeoutHandle = setTimeout(() => controller.abort(), timeoutMs);
 
         const response = await fetch(`${API_BASE_URL}/health`, {
@@ -61,7 +61,7 @@ export const useConnectionMonitor = () => {
             });
           }
         }
-      } catch (error) {
+      } catch {
         // Connection failed (network error, timeout, etc.)
         if (isMounted) {
           setStatus((prev) => {

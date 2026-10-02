@@ -69,11 +69,18 @@ def test_apply_to_device_raises_when_profile_not_found_and_no_default():
         registry.apply_to_device(device)
 
 def test_command_definition_includes_retry_metadata():
-    registry = ProtocolRegistry.from_dict(DEFAULT_PROFILES)
-    profile = registry.get('cx505')
+    registry = ProtocolRegistry.from_dict({'test': {'commands': {'example': {
+        'write_hex': 'AA BB', 'category': 'calibration',
+        'default_max_retries': 2, 'default_retry_backoff_s': 1.5,
+        'calibration_label': 'ph7_buffer'}}}})
+    profile = registry.get('test')
     assert profile is not None
-    command = profile.commands['calibrate_ph7']
+    command = profile.commands['example']
     assert command.category == 'calibration'
     assert command.default_max_retries == 2
     assert command.default_retry_backoff_s == pytest.approx(1.5)
     assert command.calibration_label == 'ph7_buffer'
+
+
+def test_default_cx505_has_no_unverified_remote_commands():
+    assert not ProtocolRegistry.from_dict(DEFAULT_PROFILES).get('cx505').commands

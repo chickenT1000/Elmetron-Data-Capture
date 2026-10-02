@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Box,
@@ -7,10 +7,8 @@ import {
   CardContent,
   Chip,
   CircularProgress,
-  Divider,
   List,
   ListItem,
-  ListItemText,
   Skeleton,
   Stack,
   Typography,
@@ -23,8 +21,6 @@ import type { HealthLogConnectionState } from '../hooks/useHealthLogEvents';
 import { useLiveStatus } from '../hooks/useLiveStatus';
 import { fetchDiagnosticBundle } from '../api/health';
 import type {
-  CommandMetrics,
-  CommandScheduleEntry,
   DiagnosticBundleManifest,
   HealthLogEvent,
   HealthWatchdogEvent,
@@ -38,18 +34,18 @@ const formatDateTime = (value?: string | null): string => {
   if (!value) {
     return 'Never';
   }
-  
+
   // Normalize timestamp: replace space with T, ensure Z suffix for UTC timestamps
   let normalized = value.replace(' ', 'T');
   if (!normalized.includes('+') && !normalized.endsWith('Z')) {
     normalized += 'Z';  // Assume UTC if no timezone indicator
   }
-  
+
   const time = new Date(normalized);
   if (Number.isNaN(time.getTime())) {
     return value; // Return original if parsing fails
   }
-  
+
   return time.toLocaleString(undefined, {
     year: 'numeric',
     month: '2-digit',
@@ -61,48 +57,7 @@ const formatDateTime = (value?: string | null): string => {
   });
 };
 
-const formatAgeMinutes = (value?: number | null): string => {
-  if (value === null || value === undefined) {
-    return 'Unknown';
-  }
-  if (value < 1) {
-    return `${Math.round(value * 60)} s ago`;
-  }
-  if (value >= 60) {
-    const hours = value / 60;
-    if (hours >= 24) {
-      const days = hours / 24;
-      return `${days.toFixed(1)} d ago`;
-    }
-    return `${hours.toFixed(1)} h ago`;
-  }
-  return `${value.toFixed(1)} min ago`;
-};
 
-const statusColor = (status?: string):
-  | 'default'
-  | 'primary'
-  | 'secondary'
-  | 'error'
-  | 'info'
-  | 'success'
-  | 'warning' => {
-  switch ((status || '').toLowerCase()) {
-    case 'ok':
-    case 'running':
-      return 'success';
-    case 'stale':
-    case 'missing':
-      return 'warning';
-    case 'failed':
-    case 'error':
-      return 'error';
-    case 'unsupported':
-      return 'info';
-    default:
-      return 'default';
-  }
-};
 
 const levelColor = (level?: string): 'default' | 'success' | 'warning' | 'error' | 'info' => {
   switch ((level || '').toLowerCase()) {
@@ -173,7 +128,6 @@ const formatCountLabel = (
   return String(count) + ' ' + label;
 };
 
-const formatMaybeDate = (value?: string | null): string => (value ? formatDateTime(value) : 'Not scheduled');
 
 export default function ServiceHealthPage() {
   const { data: liveStatus } = useLiveStatus();
@@ -181,8 +135,6 @@ export default function ServiceHealthPage() {
 
   const {
     data,
-    isLoading,
-    isFetching,
     isError,
     error,
     refetch: refetchStatus,
@@ -192,10 +144,9 @@ export default function ServiceHealthPage() {
     data: logData,
     connectionState: logConnectionState,
     isLoading: logsLoading,
-    isFetching: logsFetching,
     error: logsErrorDetail,
     refetch: refetchLogs,
-  } = useHealthLogEvents({ 
+  } = useHealthLogEvents({
     limit: LOG_LIST_LIMIT,
     // Filter out DEBUG logs - show only INFO and above for typical users
     level: 'INFO'
@@ -213,24 +164,8 @@ export default function ServiceHealthPage() {
   const logConnectionChipColor = connectionStateColor(logConnectionState);
   const showLogAlert = logConnectionState === 'error' && Boolean(logsErrorDetail);
   const logAlertSeverity = 'error';
-  const logsRefreshing = logsFetching && !logsLoading && logConnectionState !== 'streaming';
   const watchdogHistory = (data?.watchdog_history ?? []) as HealthWatchdogEvent[];
-  const commandMetrics = (data?.command_metrics ?? {}) as CommandMetrics;
-  const scheduledCommands = commandMetrics.scheduled ?? [];
-  const queueDepth = commandMetrics.queue_depth ?? null;
-  const resultBacklog = commandMetrics.result_backlog ?? null;
-  const inflightCommands = commandMetrics.inflight ?? 0;
 
-  const logRotation = data?.log_rotation ?? null;
-  const logStatus = useMemo(() => {
-    if (!data) {
-      return undefined;
-    }
-    if (!logRotation) {
-      return 'disabled';
-    }
-    return logRotation.status || 'unknown';
-  }, [data, logRotation]);
 
   const watchdogDetail = data?.detail && data.detail !== data.watchdog_alert ? data.detail : undefined;
 
@@ -278,11 +213,6 @@ export default function ServiceHealthPage() {
     }
   };
 
-  const handleRefresh = () => {
-    void refetchStatus();
-    void refetchLogs();
-    setAutoRefreshCountdown(30); // Reset countdown after manual refresh
-  };
 
   // Auto-refresh every 30 seconds
   useEffect(() => {
@@ -299,30 +229,6 @@ export default function ServiceHealthPage() {
 
     return () => clearInterval(interval);
   }, [refetchStatus, refetchLogs]);
-
-  // In archive mode, don't show health monitoring at all
-  if (isArchiveMode) {
-    return (
-      <Stack spacing={3}>
-        <Card>
-          <CardContent>
-            <Typography variant="h5" fontWeight={600} gutterBottom>
-              Service Health & Diagnostics
-            </Typography>
-            <Alert severity="info" sx={{ mt: 2 }}>
-              <Typography variant="body1" gutterBottom>
-                <strong>Archive Mode</strong> - Live capture service not available
-              </Typography>
-              <Typography variant="body2">
-                The CX-505 device is not connected. Health monitoring requires an active capture service.
-                You can browse historical measurement sessions in the <strong>Sessions</strong> tab.
-              </Typography>
-            </Alert>
-          </CardContent>
-        </Card>
-      </Stack>
-    );
-  }
 
   return (
     <Stack spacing={3}>
@@ -420,7 +326,7 @@ export default function ServiceHealthPage() {
             </Box>
           </CardContent>
         ) : null}
-        
+
         {/* Diagnostic Bundle when no data (fallback) */}
         {!data ? (
           <CardContent sx={{ pt: 3 }}>
@@ -507,31 +413,31 @@ export default function ServiceHealthPage() {
                     if (event.level.toUpperCase() === 'DEBUG') {
                       return null;
                     }
-                    
+
                     // Compact single-row format: [LEVEL] category  message {payload}
                     const payloadText = event.payload ? ` ${JSON.stringify(event.payload)}` : '';
                     const fullText = `${event.message}${payloadText}`;
-                    
+
                     return (
                       <ListItem key={event.id} disableGutters sx={{ pb: index === logEvents.length - 1 ? 0 : 1 }}>
                         <Stack direction="row" spacing={1} alignItems="flex-start" sx={{ width: '100%' }}>
-                          <Chip 
-                            label={event.level.toUpperCase()} 
-                            size="small" 
-                            color={levelColor(event.level)} 
+                          <Chip
+                            label={event.level.toUpperCase()}
+                            size="small"
+                            color={levelColor(event.level)}
                             sx={{ minWidth: '80px', justifyContent: 'center', mt: 0.25 }}
                           />
-                          <Typography 
-                            variant="body2" 
+                          <Typography
+                            variant="body2"
                             fontWeight={600}
                             sx={{ minWidth: '120px', flexShrink: 0, pt: 0.5 }}
                           >
                             {event.category}
                           </Typography>
-                          <Typography 
-                            variant="body2" 
-                            color="text.secondary" 
-                            sx={{ 
+                          <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            sx={{
                               flexGrow: 1,
                               wordWrap: 'break-word',
                               overflowWrap: 'break-word',
@@ -541,9 +447,9 @@ export default function ServiceHealthPage() {
                           >
                             {fullText}
                           </Typography>
-                          <Typography 
-                            variant="caption" 
-                            color="text.secondary" 
+                          <Typography
+                            variant="caption"
+                            color="text.secondary"
                             sx={{ flexShrink: 0, whiteSpace: 'nowrap', pt: 0.5 }}
                           >
                             {formatDateTime(event.created_at)}
@@ -627,20 +533,3 @@ function Stat({ label, value }: { label: string; value: string }) {
     </Box>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

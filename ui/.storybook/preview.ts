@@ -1,4 +1,8 @@
 import type { Preview } from '@storybook/react-vite';
+import { createElement } from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+const queryClient = new QueryClient({defaultOptions: {queries: {retry: false}}});
 
 const applyDeterministicGlobals = () => {
   const globalScope = globalThis as typeof globalThis & {
@@ -66,6 +70,7 @@ const applyDeterministicGlobals = () => {
 applyDeterministicGlobals();
 
 const preview: Preview = {
+  decorators: [(Story) => createElement(QueryClientProvider, {client: queryClient}, createElement(Story))],
   parameters: {
     controls: {
       matchers: {

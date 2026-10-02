@@ -36,7 +36,7 @@ const deterministicInitScript = `
 
     const style = document.createElement('style');
     style.innerHTML = '*, *::before, *::after { transition: none !important; animation: none !important; }';
-    document.head.appendChild(style);
+    if (document.head) document.head.appendChild(style);
   })();
 `;
 
@@ -82,10 +82,19 @@ const stories = [
 test.describe('Storybook visual', () => {
   for (const story of stories) {
     test(`${story.id} matches baseline`, async ({ page }) => {
+      const errors: string[] = [];
+      page.on('pageerror', error => errors.push(error.message));
+      await page.route('**/api/**/status', route => route.fulfill({json: {
+        state: story.id.includes('offline') || story.id.includes('error') ? 'stopped' : 'running',
+        mode: 'demo', live_capture_active: !story.id.includes('offline'),
+        device_connected: false, current_session_id: null, last_update: null,
+      }}));
       await page.goto(`/iframe.html?id=${story.id}&args=&viewMode=story`);
       await page.setViewportSize({ width: 1280, height: 720 });
       await page.waitForLoadState('networkidle');
       await page.waitForTimeout(200);
+      await expect(page.getByText('The component failed to render properly')).not.toBeVisible();
+      expect(errors).toEqual([]);
       await expect(page).toHaveScreenshot(story.name, {
         maxDiffPixels: 150,
       });

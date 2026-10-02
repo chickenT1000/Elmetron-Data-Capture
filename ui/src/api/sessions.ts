@@ -17,7 +17,7 @@ export async function updateDefaultOperator(operatorName: string): Promise<void>
     },
     body: JSON.stringify({ operator_name: operatorName }),
   });
-  
+
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.error || 'Failed to update default operator');
@@ -32,7 +32,7 @@ export async function updateActiveSessionOperator(operatorName: string): Promise
     },
     body: JSON.stringify({ operator_name: operatorName }),
   });
-  
+
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.error || `Failed to update operator: ${response.status}`);
@@ -72,6 +72,9 @@ export interface SessionEvaluationPoint {
   captured_at: string | null;
   offset_seconds: number | null;
   value: number | null;
+  parameter?: string;
+  original_value?: number | null;
+  original_unit?: string | null;
   unit: string | null;
   temperature: number | null;
   temperature_unit: string | null;
@@ -109,23 +112,25 @@ export interface SessionEvaluationResponse {
 
 export interface SessionFilters {
   limit?: number;
+  cursor?: number;
   operator?: string;
   start_date?: string;
   end_date?: string;
   has_ph?: boolean;
   has_redox?: boolean;
   has_conductivity?: boolean;
-  sort_by?: 'started_at' | 'measurement_count' | 'duration';
+  sort_by?: 'started_at' | 'measurement_count' | 'duration' | 'operator_name';
   order?: 'asc' | 'desc';
 }
 
-export async function fetchRecentSessions(
+export async function fetchSessionPage(
   filters: SessionFilters = {}
-): Promise<SessionSummary[]> {
+): Promise<{ sessions: SessionSummary[]; next_cursor: number | null }> {
   const { limit = 10, ...rest } = filters;
-  const params = new URLSearchParams({ limit: String(limit) });
-  
+  const params = new URLSearchParams({ limit: String(limit), sort_by: 'started_at', order: 'desc' });
+
   // Add optional filters
+  if (rest.cursor) params.set('cursor', String(rest.cursor));
   if (rest.operator) params.set('operator', rest.operator);
   if (rest.start_date) params.set('start_date', rest.start_date);
   if (rest.end_date) params.set('end_date', rest.end_date);
@@ -134,7 +139,7 @@ export async function fetchRecentSessions(
   if (rest.has_conductivity !== undefined) params.set('has_conductivity', String(rest.has_conductivity));
   if (rest.sort_by) params.set('sort_by', rest.sort_by);
   if (rest.order) params.set('order', rest.order);
-  
+
   const response = await fetch(buildApiUrl(`/api/sessions?${params.toString()}`), {
     method: 'GET',
     headers: {
@@ -148,8 +153,20 @@ export async function fetchRecentSessions(
     error.status = response.status;
     throw error;
   }
-  const payload = (await response.json()) as { sessions?: SessionSummary[] };
-  return payload.sessions ?? [];
+  const payload = (await response.json()) as { sessions?: SessionSummary[]; next_cursor?: number | null };
+  return { sessions: payload.sessions ?? [], next_cursor: payload.next_cursor ?? null };
+}
+
+export async function fetchRecentSessions(filters: SessionFilters = {}): Promise<SessionSummary[]> {
+  const records: SessionSummary[] = [];
+  let cursor: number | null = filters.cursor ?? 0;
+  do {
+    const page = await fetchSessionPage({ ...filters, cursor });
+    records.push(...page.sessions);
+    if ((filters.limit ?? 10) < 1000 || page.next_cursor == null) break;
+    cursor = page.next_cursor;
+  } while (cursor != null);
+  return records;
 }
 
 export async function fetchSessionEvaluation(
@@ -304,10 +321,11 @@ export async function addSessionMarker(
   sessionId: number,
   eventTimestamp: string,
   offsetSeconds: number,
-  note?: string
+  note?: string,
+  markerId?: number
 ): Promise<SessionMarker> {
-  const response = await fetch(buildApiUrl(`/api/sessions/${sessionId}/markers`), {
-    method: 'POST',
+  const response = await fetch(buildApiUrl(`/api/sessions/${sessionId}/markers${markerId ? `/${markerId}` : ''}`), {
+    method: markerId ? 'PATCH' : 'POST',
     headers: {
       'Content-Type': 'application/json',
       Accept: 'application/json',

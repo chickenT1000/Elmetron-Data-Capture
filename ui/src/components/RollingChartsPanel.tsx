@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { Box, Typography, Paper, Alert, Card, CardContent } from '@mui/material';
+import { Box, Alert, Card, CardContent } from '@mui/material';
 import { MeasurementChart } from './MeasurementChart';
 import { useRecentMeasurements } from '../hooks/useRecentMeasurements';
-import { useSettings } from '../contexts/SettingsContext';
+import { useSettings } from '../contexts/settings';
 
 interface RollingChartsPanelProps {
   windowMinutes?: number;
@@ -11,7 +11,7 @@ interface RollingChartsPanelProps {
 export const RollingChartsPanel: React.FC<RollingChartsPanelProps> = ({
   windowMinutes = 10,
 }) => {
-  const { data, loading, error, sessionId } = useRecentMeasurements(
+  const { data, loading, error } = useRecentMeasurements(
     windowMinutes,
     2000, // Poll every 2 seconds
     true
@@ -19,12 +19,9 @@ export const RollingChartsPanel: React.FC<RollingChartsPanelProps> = ({
 
   // Chart settings (gap threshold, auto-scaling, etc.)
   const { settings } = useSettings();
-  
+
   // Debug: log the actual threshold value
-  console.log('[RollingChartsPanel] Settings:', {
-    gapThreshold: settings.gapThresholdSeconds,
-    autoScaling: settings.autoScalingEnabled
-  });
+
 
   // Shared hover state across all charts (in minutes ago)
   const [sharedHoverPosition, setSharedHoverPosition] = useState<number | null>(null);
@@ -54,12 +51,13 @@ export const RollingChartsPanel: React.FC<RollingChartsPanelProps> = ({
               color="#2196f3"
               unit="pH"
               loading={loading}
-              yAxisDomain={[0, 14]}
+              yAxisDomain={[settings.customRanges.ph.min, settings.customRanges.ph.max]}
               decimalPlaces={2}
               sharedHoverPosition={sharedHoverPosition}
               onHoverChange={setSharedHoverPosition}
               gapThresholdSeconds={settings.gapThresholdSeconds}
               autoScalingEnabled={settings.autoScalingEnabled}
+              autoscalingMode={settings.autoscalingMode}
               windowMinutes={windowMinutes}
             />
           </Box>
@@ -72,12 +70,13 @@ export const RollingChartsPanel: React.FC<RollingChartsPanelProps> = ({
               color="#ff9800"
               unit="mV"
               loading={loading}
-              yAxisDomain={[-2000, 2000]}
+              yAxisDomain={[settings.customRanges.redox.min, settings.customRanges.redox.max]}
               decimalPlaces={0}
               sharedHoverPosition={sharedHoverPosition}
               onHoverChange={setSharedHoverPosition}
               gapThresholdSeconds={settings.gapThresholdSeconds}
               autoScalingEnabled={settings.autoScalingEnabled}
+              autoscalingMode={settings.autoscalingMode}
               windowMinutes={windowMinutes}
             />
           </Box>
@@ -90,12 +89,13 @@ export const RollingChartsPanel: React.FC<RollingChartsPanelProps> = ({
               color="#4caf50"
               unit="µS/cm"
               loading={loading}
-              yAxisDomain={[0, 10000]}
+              yAxisDomain={[settings.customRanges.conductivity.min, settings.customRanges.conductivity.max]}
               decimalPlaces={0}
               sharedHoverPosition={sharedHoverPosition}
               onHoverChange={setSharedHoverPosition}
               gapThresholdSeconds={settings.gapThresholdSeconds}
               autoScalingEnabled={settings.autoScalingEnabled}
+              autoscalingMode={settings.autoscalingMode}
               windowMinutes={windowMinutes}
             />
           </Box>
@@ -108,12 +108,13 @@ export const RollingChartsPanel: React.FC<RollingChartsPanelProps> = ({
               color="#f44336"
               unit="°C"
               loading={loading}
-              yAxisDomain={[0, 50]}
+              yAxisDomain={[settings.customRanges.temperature.min, settings.customRanges.temperature.max]}
               decimalPlaces={1}
               sharedHoverPosition={sharedHoverPosition}
               onHoverChange={setSharedHoverPosition}
               gapThresholdSeconds={settings.gapThresholdSeconds}
               autoScalingEnabled={settings.autoScalingEnabled}
+              autoscalingMode={settings.autoscalingMode}
               windowMinutes={windowMinutes}
             />
           </Box>

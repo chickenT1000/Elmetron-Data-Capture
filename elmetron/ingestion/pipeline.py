@@ -8,7 +8,8 @@ from ..analytics.engine import AnalyticsEngine
 from ..config import IngestionConfig
 from ..storage.database import DeviceMetadata, SessionHandle
 
-import cx505_d2xx
+from ..protocols.cx505 import decode_frame
+from uuid import uuid4
 
 
 class FrameIngestor:
@@ -38,7 +39,7 @@ class FrameIngestor:
     def handle_frame(self, frame: bytes) -> Optional[Dict[str, Any]]:
         captured_at = datetime.utcnow()
         try:
-            decoded = cx505_d2xx._decode_frame(frame)  # pylint: disable=protected-access
+            decoded = decode_frame(frame)  # pylint: disable=protected-access
         except Exception as exc:  # pylint: disable=broad-except
             self._session.log_event(
                 'warning',
@@ -101,26 +102,16 @@ class FrameIngestor:
         else:
             analytics_payload = None
 
+        decoded['event_id'] = str(uuid4())
+        if self._session_buffer is not None:
+            # A durable journal entry precedes the SQLite transaction; errors are not hidden.
+            self._session_buffer.append_measurement(captured_at, frame, decoded, analytics_payload)
+            self._session_buffer.flush()
         storage_result = self._session.store_capture(
-            captured_at,
-            frame,
-            decoded,
-            derived_metrics=analytics_payload,
+            captured_at, frame, decoded, derived_metrics=analytics_payload,
         )
         decoded.setdefault('storage', {})
         decoded['storage']['frame_id'] = storage_result.frame_id
-
-        # Write to crash-resistant buffer
-        if self._session_buffer is not None:
-            try:
-                self._session_buffer.append_measurement(
-                    captured_at=captured_at,
-                    raw_frame=frame.hex(),
-                    decoded=decoded,
-                    derived_metrics=analytics_payload,
-                )
-            except Exception:  # pragma: no cover - defensive
-                pass  # Don't fail capture if buffer write fails
         decoded['storage']['measurement_id'] = storage_result.measurement_id
         decoded['storage']['session_id'] = self._session.id
         decoded['storage']['captured_at'] = captured_at.isoformat(timespec='milliseconds') + 'Z'

@@ -1,4 +1,5 @@
-﻿import React from 'react';
+import { installApiFetch } from './api/client';
+import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { ThemeProvider, CssBaseline } from '@mui/material';
@@ -11,6 +12,8 @@ import './i18n'; // Initialize i18n
 
 import App from './App';
 import theme from './theme';
+
+installApiFetch();
 
 const queryClient = new QueryClient();
 

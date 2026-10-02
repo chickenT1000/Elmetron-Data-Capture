@@ -1,4 +1,4 @@
-﻿"""Health/status API primitives for the acquisition service."""
+"""Health/status API primitives for the acquisition service."""
 from __future__ import annotations
 
 import json
@@ -246,7 +246,7 @@ class HealthMonitor:
 
     def recent_events(self, *, limit: int = 20, since_id: Optional[int] = None, level: Optional[str] = None) -> list[Dict[str, Any]]:
         """Return recent audit events for diagnostics dashboards.
-        
+
         Args:
             limit: Maximum number of events to return
             since_id: Only return events with id > since_id
@@ -256,7 +256,10 @@ class HealthMonitor:
         database = getattr(self._service, 'database', None)
         if database is None or not hasattr(database, 'recent_audit_events'):
             return []
-        return database.recent_audit_events(limit=limit, since_id=since_id, level=level)
+        kwargs = {'limit': limit, 'since_id': since_id}
+        if level is not None:
+            kwargs['level'] = level
+        return database.recent_audit_events(**kwargs)
 
     def snapshot(self) -> HealthStatus:
         start = time.perf_counter()
@@ -299,8 +302,3 @@ class HealthMonitor:
             'max_ms': round(maximum * 1000, 3),
             'samples': len(samples),
         }
-
-
-
-
-

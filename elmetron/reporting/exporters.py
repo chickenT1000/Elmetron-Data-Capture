@@ -222,19 +222,21 @@ def export_session_pdf(
     """Render a lightweight PDF summary for the capture session."""
 
     summary = load_session_summary(database_path, session_id)
-    records = list(iter_session_measurements(database_path, session_id))
+    from itertools import islice
+    # Custom templates may iterate the entire stream; default summary stays bounded.
+    recent = list(islice(iter_session_measurements(database_path, session_id), recent_limit))
     generated_at = datetime.utcnow().isoformat(timespec="seconds") + "Z"
-    recent = records[:recent_limit]
-    default_lines = _build_default_pdf_lines(session_id, summary, records, generated_at, recent_limit)
+    default_lines = _build_default_pdf_lines(session_id, summary, recent, generated_at, recent_limit)
     if template:
         context = {
             "session_id": session_id,
             "summary": summary or {},
-            "measurements": records,
+            "measurements": iter_session_measurements(database_path, session_id),
             "recent_measurements": recent,
             "generated_at": generated_at,
             "recent_limit": recent_limit,
             "default_lines": default_lines,
+            "default_text": '\n'.join(default_lines),
         }
         rendered = _render_template(template, context)
         lines = [line.rstrip("\n") for line in rendered.splitlines()]
@@ -360,8 +362,9 @@ def _build_default_pdf_lines(
         value = "n/a" if record.get("value") is None else f"{record['value']!r}"
         unit = record.get("unit") or ""
         lines.append(f" - {timestamp}: {value} {unit}")
-    if len(records) > recent_limit:
-        lines.append(f"... ({len(records) - recent_limit} more measurements)")
+    total = (summary or {}).get('measurements', len(records))
+    if total > recent_limit:
+        lines.append(f"... ({total - recent_limit} more measurements)")
     lines.append("")
     lines.append(f"Generated: {generated_at}")
     return lines
@@ -445,52 +448,39 @@ class _SafeFormatDict(dict):
 
 
 def _write_simple_pdf(lines: List[str], output: Path) -> Path:
-    """Write *lines* to *output* as a minimal text-based PDF."""
-
+    """Unicode-safe, wrapped, paginated report with an embedded redistributable font."""
+    from reportlab.pdfgen.canvas import Canvas
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+    from reportlab.lib.pagesizes import A4
+    from ..paths import RESOURCE_ROOT
     output.parent.mkdir(parents=True, exist_ok=True)
-    escaped_lines = [_escape_pdf_text(line) for line in lines]
-    content_parts = [
-        "BT",
-        "/F1 12 Tf",
-        "14 TL",
-        "72 720 Td",
-    ]
-    first = True
-    for line in escaped_lines:
-        if first:
-            content_parts.append(f"({line}) Tj")
-            first = False
-            continue
-        content_parts.append("T*")
-        content_parts.append(f"({line}) Tj")
-    content_parts.append("ET")
-    content_stream = "\n".join(content_parts).encode("utf-8")
-    objects = [
-        b"1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj\n",
-        b"2 0 obj << /Type /Pages /Count 1 /Kids [3 0 R] >> endobj\n",
-        b"3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >> endobj\n",
-        b"4 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> endobj\n",
-        b"",  # placeholder for stream object
-    ]
-    stream_header = f"5 0 obj << /Length {len(content_stream)} >> stream\n".encode("utf-8")
-    stream_footer = b"\nendstream\nendobj\n"
-    objects[4] = stream_header + content_stream + stream_footer
-    pdf = bytearray(b"%PDF-1.4\n")
-    offsets = [0]
-    for obj in objects:
-        offsets.append(len(pdf))
-        pdf.extend(obj)
-    xref_position = len(pdf)
-    pdf.extend(f"xref\n0 {len(offsets)}\n".encode("utf-8"))
-    pdf.extend(b"0000000000 65535 f \n")
-    for offset in offsets[1:]:
-        pdf.extend(f"{offset:010d} 00000 n \n".encode("utf-8"))
-    pdf.extend(
-        (
-            f"trailer\n<< /Size {len(offsets)} /Root 1 0 R >>\nstartxref\n{xref_position}\n%%EOF\n"
-        ).encode("utf-8")
-    )
-    output.write_bytes(pdf)
+    font = 'ElmetronSans'
+    if font not in pdfmetrics.getRegisteredFontNames():
+        pdfmetrics.registerFont(TTFont(font, str(RESOURCE_ROOT/'assets/fonts/DejaVuSans.ttf')))
+    canvas = Canvas(str(output),pagesize=A4,pageCompression=0)
+    canvas.setTitle('Elmetron session report')
+    width,height = A4
+    page,y=1,height-54
+    def footer():
+        canvas.setFont(font,8)
+        canvas.drawString(48,28,'Elmetron - session summary; full data in CSV / JSON / XML')
+        canvas.drawRightString(width-48,28,str(page))
+    canvas.setFont(font,10)
+    for line in lines:
+        chunks=[];current=''
+        for character in str(line):
+            candidate=current+character
+            if pdfmetrics.stringWidth(candidate,font,10)>width-96:
+                chunks.append(current);current=character
+            else:
+                current=candidate
+        chunks.append(current)
+        for chunk in chunks:
+            if y<55:
+                footer();canvas.showPage();page+=1;y=height-54;canvas.setFont(font,10)
+            canvas.drawString(48,y,chunk);y-=15
+    footer();canvas.save()
     return output
 
 

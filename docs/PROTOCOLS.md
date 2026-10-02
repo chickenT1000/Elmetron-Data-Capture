@@ -1,3 +1,5 @@
+> Historical reference: this document describes the earlier experimental service. For the supported beta use README.md and docs/RELEASE_SPEC.md. Startup/scheduled remote commands and Windows service installation are outside beta scope.
+
 # Protocol Registry Schema
 
 This project reads device communication profiles from either `DEFAULT_PROFILES` (in code) or an external registry file (`config/protocols.toml`). Each profile entry is keyed by an identifier (e.g. `cx505`) and may contain the fields below:

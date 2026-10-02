@@ -1202,8 +1202,7 @@ class AcquisitionService:
                             }
                             self._current_session_buffer.create(datetime.utcnow(), device_metadata_dict)
                         except Exception as exc:
-                            print(f'Warning: Failed to create session buffer: {exc}')
-                            self._current_session_buffer = None
+                            raise RuntimeError(f'Cannot create durable capture journal: {exc}') from exc
                     analytics_engine = None
                     if getattr(self._config, 'analytics', None) and self._config.analytics.enabled:
                         analytics_engine = AnalyticsEngine(self._config.analytics)

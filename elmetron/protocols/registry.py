@@ -1,4 +1,4 @@
-﻿"""Protocol registry utilities for Elmetron devices."""
+"""Protocol registry utilities for Elmetron devices."""
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -148,19 +148,7 @@ DEFAULT_PROFILES: Dict[str, Dict[str, Any]] = {
         "read_timeout_ms": 500,
         "write_timeout_ms": 500,
         "chunk_size": 256,
-        "commands": {
-            "calibrate_ph7": {
-                "description": "Request pH 7 calibration (CX-505).",
-                "category": "calibration",
-                "write_hex": "02 43 41 4C 37 03",
-                "post_delay_s": 0.5,
-                "read_duration_s": 2.0,
-                "expect_hex": "01",
-                "default_max_retries": 2,
-                "default_retry_backoff_s": 1.5,
-                "calibration_label": "ph7_buffer"
-            }
-        },
+        "commands": {},
     },
     "cx705": {
         "description": "CX-705 dissolved oxygen meter (FTDI).",
@@ -249,7 +237,3 @@ def _load_yaml(path: Path) -> Dict[str, Any]:
         raise RuntimeError("PyYAML is required to parse YAML protocol registries") from exc
     with path.open("r", encoding="utf-8") as handle:
         return yaml.safe_load(handle) or {}
-
-
-
-

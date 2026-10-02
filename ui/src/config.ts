@@ -1,5 +1,5 @@
-﻿const DEFAULT_API_BASE_URL = 'http://127.0.0.1:8050';
-const DEFAULT_HEALTH_BASE_URL = 'http://127.0.0.1:8051';
+const DEFAULT_API_BASE_URL = '';
+const DEFAULT_HEALTH_BASE_URL = '';
 
 const normalizeBaseUrl = (value: string | undefined, fallback: string): string => {
   if (!value || !value.trim()) {
@@ -23,6 +23,6 @@ const buildUrl = (baseUrl: string, path: string): string => {
   return `${baseUrl}${normalizedPath}`;
 };
 
-export const buildApiUrl = (path: string): string => buildUrl(API_BASE_URL, path);
+export const buildApiUrl = (path: string): string => buildUrl(API_BASE_URL, path.replace(/^\/api(?!\/v1)/, '/api/v1'));
 
 export const buildHealthUrl = (path: string): string => buildUrl(HEALTH_BASE_URL, path);

@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "elmetron": {
+      "command": "C:\\Users\\YOUR_USER\\AppData\\Local\\Programs\\Elmetron\\elmetron-cli.exe",
+      "args": ["--data-dir", "C:\\Users\\YOUR_USER\\AppData\\Local\\Elmetron", "mcp"]
+    }
+  }
+}

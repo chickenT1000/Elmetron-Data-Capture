@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from datetime import datetime, timedelta
 
@@ -27,10 +27,10 @@ def test_recent_audit_events_returns_latest_first(tmp_path):
     events = database.recent_audit_events(limit=2)
 
     assert len(events) == 2
-    assert events[0]['message'] == 'Window stats'
-    assert events[0]['payload'] == {'bytes': 128}
-    assert events[1]['message'] == 'Capture hiccup'
-    assert events[1]['payload'] == {'code': 42}
+    assert events[0]['message'] == 'Capture hiccup'
+    assert events[0]['payload'] == {'code': 42}
+    assert events[1]['message'] == 'Session started'
+    assert not any(e['level'] == 'debug' for e in database.recent_audit_events(limit=100))
 
 
 def test_recent_audit_events_supports_since_id(tmp_path):

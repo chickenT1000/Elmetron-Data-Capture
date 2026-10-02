@@ -155,7 +155,7 @@ export const Errors: Story = {
           ...entry,
           queueDepth: entry.queueDepth ? entry.queueDepth + 4 : 4,
           inflight: entry.inflight ? entry.inflight + 2 : 2,
-          backlog: entry.backlog + 5,
+          backlog: (entry.backlog ?? 0) + 5,
         }))}
       />
       <LogFeed

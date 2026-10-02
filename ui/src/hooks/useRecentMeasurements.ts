@@ -36,7 +36,7 @@ export function useRecentMeasurements(
     const fetchData = async () => {
       try {
         const response = await fetch(buildApiUrl(`/api/measurements/recent?minutes=${windowMinutes}`));
-        
+
         if (!response.ok) {
           throw new Error(`Failed to fetch measurements: ${response.statusText}`);
         }
@@ -52,7 +52,7 @@ export function useRecentMeasurements(
         }
 
         // Transform measurements to add timestampMs for charting
-        const measurements: MeasurementDataPoint[] = result.measurements.map((m: any) => ({
+        const measurements: MeasurementDataPoint[] = result.measurements.map((m: Omit<MeasurementDataPoint, "timestampMs">) => ({
           timestamp: m.timestamp,
           timestampMs: new Date(m.timestamp).getTime(),
           ph: m.ph !== undefined && m.ph !== null ? Number(m.ph) : null,
@@ -67,10 +67,7 @@ export function useRecentMeasurements(
               : null,
         }));
 
-        console.log('[useRecentMeasurements] Processed measurements:', {
-          count: measurements.length,
-          sample: measurements.slice(0, 2),
-        });
+
         setData(measurements);
         setSessionId(result.session_id);
         setLoading(false);

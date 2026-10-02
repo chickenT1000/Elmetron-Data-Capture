@@ -1,4 +1,4 @@
-import { buildApiUrl, buildHealthUrl } from '../config';
+import { buildHealthUrl } from '../config';
 import JSZip from 'jszip';
 
 export interface LogRotationStatus {
@@ -204,6 +204,7 @@ export async function streamHealthLogsNdjson({
   let done = false;
 
   const textReader: ReadableStreamDefaultReader<string> = {
+    closed: byteReader.closed,
     async read() {
       if (done) {
         return { value: undefined, done: true };

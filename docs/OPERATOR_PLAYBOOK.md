@@ -1,3 +1,5 @@
+> Historical reference: this document describes the earlier experimental service. For the supported beta use README.md and docs/RELEASE_SPEC.md. Startup/scheduled remote commands and Windows service installation are outside beta scope.
+
 # Operator Playbook
 
 ## Prerequisites

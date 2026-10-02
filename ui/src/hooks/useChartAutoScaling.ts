@@ -125,6 +125,7 @@ interface UseChartAutoScalingOptions {
   data: MeasurementDataPoint[];
   dataKey: 'ph' | 'redox' | 'conductivity' | 'temperature';
   enabled?: boolean;
+  mode?: 'presets' | 'dynamic' | 'fixed';
   bufferPercent?: number; // Default 10%
 }
 
@@ -136,7 +137,7 @@ interface ChartScaleResult {
 
 /**
  * Hook for automatic chart Y-axis scaling with preset ranges
- * 
+ *
  * @param options Configuration options
  * @returns Optimal scale configuration with domain and ticks
  */
@@ -144,6 +145,7 @@ export function useChartAutoScaling({
   data,
   dataKey,
   enabled = true,
+  mode = 'presets',
   bufferPercent = 0.10,
 }: UseChartAutoScalingOptions): ChartScaleResult {
   return useMemo(() => {
@@ -201,6 +203,13 @@ export function useChartAutoScaling({
         break;
     }
 
+    if (mode === 'dynamic') {
+      const padding = Math.max(Math.abs(dataMin)*.01, .1);
+      if (bufferedMin === bufferedMax) { bufferedMin-=padding;bufferedMax+=padding; }
+      const ticks=Array.from({length:6},(_,i)=>bufferedMin+(bufferedMax-bufferedMin)*i/5);
+      const preset={min:bufferedMin,max:bufferedMax,ticks,label:'Dynamic'};
+      return {domain:[bufferedMin,bufferedMax] as [number,number],ticks,preset};
+    }
     // Find the smallest preset that fits the buffered data
     const presets = SCALE_PRESETS[dataKey];
     let selectedPreset = presets[presets.length - 1]; // Default to largest
@@ -217,5 +226,5 @@ export function useChartAutoScaling({
       ticks: selectedPreset.ticks,
       preset: selectedPreset,
     };
-  }, [data, dataKey, enabled, bufferPercent]);
+  }, [data, dataKey, enabled, bufferPercent, mode]);
 }

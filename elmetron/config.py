@@ -1,4 +1,4 @@
-﻿"""Configuration management for the Elmetron Data Acquisition and Analysis Suite."""
+"""Configuration management for the Elmetron Data Acquisition and Analysis Suite."""
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -310,8 +310,7 @@ class StorageConfig:
     ensure_directories: bool = True
     vacuum_on_start: bool = False
     retention_days: Optional[int] = 90
-    store_raw_frames: bool = False  # Disable to save space (only for debugging)
-    store_raw_frames: bool = False  # Disable to save space (only for debugging)
+    store_raw_frames: bool = True  # Original frames are retained for traceability.
 
     def __post_init__(self) -> None:
         if isinstance(self.database_path, str):
@@ -473,6 +472,28 @@ class AppConfig:
             'export': export_payload,
             'monitoring': monitoring_payload,
         }
+
+
+def validate_effective_config(config: AppConfig) -> None:
+    """Reject unusable transport bounds after registry defaults have been applied."""
+    import math
+    device = config.device
+    for name, minimum, maximum in [('index', 0, 65535), ('baud', 1, 12000000),
+                                    ('chunk_size', 1, 1048576), ('latency_timer_ms', 1, 255),
+                                    ('read_timeout_ms', 0, 60000), ('write_timeout_ms', 0, 60000)]:
+        value = getattr(device, name)
+        if isinstance(value, bool) or not isinstance(value, int) or not minimum <= value <= maximum:
+            raise ValueError(f'device.{name} must be an integer in {minimum}..{maximum}')
+    if device.data_bits not in (7, 8) or device.stop_bits not in (1, 1.5, 2) or device.parity not in ('N','E','O','M','S'):
+        raise ValueError('Invalid serial data bits, stop bits or parity')
+    for name in ('poll_interval_s', 'open_retry_backoff_s'):
+        value = getattr(device, name)
+        if value is not None and (not isinstance(value, (int,float)) or not math.isfinite(value) or value < 0):
+            raise ValueError(f'device.{name} must be finite and non-negative')
+    if device.poll_hex:
+        bytes.fromhex(device.poll_hex)
+    if not isinstance(config.storage.retention_days, int) or config.storage.retention_days < 0:
+        raise ValueError('storage.retention_days must be a non-negative integer')
 
 
 def load_config(path: Optional[Path]) -> AppConfig:

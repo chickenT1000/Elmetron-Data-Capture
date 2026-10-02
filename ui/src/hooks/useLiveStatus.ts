@@ -4,7 +4,10 @@ import { buildApiUrl } from '../config';
 export interface LiveStatusResponse {
   live_capture_active: boolean;
   device_connected: boolean;
-  mode: 'live' | 'archive';
+  mode: 'live' | 'archive' | 'demo';
+  state: string;
+  operator_name?: string | null;
+  detail?: string | null;
   current_session_id: number | null;
   last_update: string | null;
   instrument?: {
@@ -16,11 +19,11 @@ export interface LiveStatusResponse {
 
 const fetchLiveStatus = async (signal?: AbortSignal): Promise<LiveStatusResponse> => {
   const response = await fetch(buildApiUrl('/api/live/status'), { signal });
-  
+
   if (!response.ok) {
     throw new Error(`Failed to fetch live status: ${response.statusText}`);
   }
-  
+
   return response.json();
 };
 
