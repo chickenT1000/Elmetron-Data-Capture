@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import importlib
 import sys
@@ -54,7 +54,8 @@ def test_create_interface_simulated_generates_frames(tmp_path) -> None:
     total = interface.run_window(1.0, frame_handler=frames.append, log_path=str(tmp_path / "sim.log"))
     assert total > 0
     assert frames
-    assert frames[0].startswith(b"SIM:")
+    from elmetron.protocols.cx505 import decode_frame
+    assert decode_frame(frames[0])['measurement']['value_unit'] == 'pH'
     interface.close()
 
 
@@ -273,5 +274,3 @@ def test_cx505_interface_closes_handle_on_configuration_failure(monkeypatch) -> 
     assert device.serial == "SER123"
     assert len(configure_calls) == 2
     assert closed_handles == [handles[0]]
-
-

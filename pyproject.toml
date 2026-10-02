@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=80"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "elmetron-data-capture"
+version = "1.0.0b1"
+description = "Local CX-505 measurement capture, archives and read-only MCP"
+readme = "README.md"
+requires-python = ">=3.13"
+license = "GPL-3.0-only"
+dependencies = [
+  "Flask==3.1.3", "waitress==3.0.2", "tomlkit==0.15.1",
+  "reportlab==5.0.1", "Jinja2==3.1.6", "PyYAML==6.0.3", "mcp==2.2.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest==9.1.1",
+    "pyinstaller==6.22.3",
+    "pypdf>=6.0",
+    "jsonschema>=4.25",
+    "psutil>=7.2.2",
+]
+
+[project.scripts]
+elmetron-cli = "elmetron.cli.app:main"
+
+[tool.setuptools]
+py-modules = ["cx505_d2xx", "launcher", "elmetron_entry"]
+
+[tool.setuptools.packages.find]
+include = ["elmetron*"]
+
+[tool.setuptools.data-files]
+"share/elmetron/config" = ["config/app.toml", "config/protocols.toml"]
+"share/elmetron/config/templates" = ["config/templates/session_report.fmt", "config/templates/session_lims.xml.fmt"]
+"share/elmetron/assets/fonts" = ["assets/fonts/DejaVuSans.ttf", "assets/fonts/LICENSE.txt"]
+"share/elmetron" = ["LICENSE", "openapi.json"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+filterwarnings = ["ignore:datetime.datetime.utcnow:DeprecationWarning"]

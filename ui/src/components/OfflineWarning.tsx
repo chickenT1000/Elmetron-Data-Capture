@@ -1,7 +1,5 @@
 import { Box, Button, Modal, Paper, Typography } from '@mui/material';
-import { useEffect, useState } from 'react';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
-import CloseIcon from '@mui/icons-material/Close';
 
 export interface OfflineWarningProps {
   open: boolean;

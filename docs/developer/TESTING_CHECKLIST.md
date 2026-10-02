@@ -1,3 +1,5 @@
+> Historical reference: this document describes the earlier experimental service. For the supported beta use README.md and docs/RELEASE_SPEC.md. Startup/scheduled remote commands and Windows service installation are outside beta scope.
+
 # CX-505 Live Test Procedure Checklist
 
 This checklist guides the transition from the simulation bench harness to a live CX-505 capture rehearsal. The objective is to verify telemetry integrity, watchdog responsiveness, and logging completeness prior to the production run.

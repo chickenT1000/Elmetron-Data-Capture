@@ -1,4 +1,4 @@
-﻿import { Card, CardContent, Stack, Typography, Switch, FormControlLabel, TextField, Button } from '@mui/material';
+import { Card, CardContent, Stack, Typography, Switch, FormControlLabel, TextField, Button } from '@mui/material';
 
 export default function SettingsPage() {
   return (

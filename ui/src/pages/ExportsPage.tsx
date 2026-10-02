@@ -1,64 +1,36 @@
-﻿import { Box, Button, Card, CardContent, Checkbox, FormControlLabel, Stack, Typography } from '@mui/material';
-import CloudUploadIcon from '@mui/icons-material/CloudUpload';
-import ArchiveIcon from '@mui/icons-material/Archive';
+import { useState } from 'react';
+import { Alert, Button, Card, CardContent, MenuItem, Select, Stack, Typography } from '@mui/material';
+import { useTranslation } from 'react-i18next';
+import { useRecentSessions } from '../hooks/useRecentSessions';
+import { buildApiUrl } from '../config';
 
 export default function ExportsPage() {
-  return (
-    <Stack spacing={3}>
-      <Card>
-        <CardContent>
-          <Typography variant="h5" fontWeight={600} gutterBottom>
-            Exports & Archives
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Configure export jobs, bundle archives, and review previous outputs.
-          </Typography>
-        </CardContent>
-      </Card>
-      <Box
-        sx={{
-          display: 'grid',
-          gap: 3,
-          gridTemplateColumns: { xs: '1fr', md: '320px 1fr' },
-        }}
-      >
-        <Card sx={{ minHeight: 280 }}>
-          <CardContent>
-            <Typography variant="subtitle1" fontWeight={600} gutterBottom>
-              Session Selection
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Choose sessions or overlays to export. Filters for latest runs, tags, and date ranges will be available here.
-            </Typography>
-          </CardContent>
-        </Card>
-        <Card sx={{ minHeight: 280 }}>
-          <CardContent>
-            <Typography variant="subtitle1" fontWeight={600} gutterBottom>
-              Format & Archive Options
-            </Typography>
-            <Stack spacing={1.5}>
-              {['CSV (compact)', 'JSON (full payload)', 'XML (LIMS)', 'PDF Summary', 'PNG Overlay Image'].map((label) => (
-                <FormControlLabel key={label} control={<Checkbox defaultChecked />} label={label} />
-              ))}
-            </Stack>
-            <Box mt={2} display="flex" gap={2}>
-              <Button variant="outlined" startIcon={<ArchiveIcon />}>Bundle Archive</Button>
-              <Button startIcon={<CloudUploadIcon />}>Launch Export Job</Button>
-            </Box>
-          </CardContent>
-        </Card>
-      </Box>
-      <Card>
-        <CardContent>
-          <Typography variant="subtitle1" fontWeight={600} gutterBottom>
-            Job History & Artefacts
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Recent exports with status, manifest checksum, archive summary, and download links will display here.
-          </Typography>
-        </CardContent>
-      </Card>
-    </Stack>
-  );
+  const { i18n } = useTranslation(); const pl = i18n.language.startsWith('pl');
+  const { data: sessions = [] } = useRecentSessions(1000);
+  const [session, setSession] = useState<number | ''>(''); const [format, setFormat] = useState('csv');
+  const [busy, setBusy] = useState(false); const [error, setError] = useState('');
+  async function download() {
+    setBusy(true); setError('');
+    try {
+      const response = await fetch(buildApiUrl(`/api/sessions/${session}/export?format=${format}`));
+      if (!response.ok) throw new Error((await response.json()).error);
+      const url = URL.createObjectURL(await response.blob()); const link = document.createElement('a');
+      link.href = url; link.download = `session_${session}.${format}`; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (e) { setError(e instanceof Error ? e.message : String(e)); }
+    finally { setBusy(false); }
+  }
+  return <Card><CardContent><Stack spacing={3}>
+    <Typography variant="h5">{pl ? 'Eksport pomiarów' : 'Export measurements'}</Typography>
+    <Typography>{pl ? 'Eksport obejmuje wszystkie pomiary sesji, również punkty pominięte przy wyświetlaniu dużego wykresu. Obraz wykresu pobierzesz w zakładce Sesje.' : 'Exports include all session measurements, including points sampled out of large charts. Download chart images from Sessions.'}</Typography>
+    {!sessions.length && <Alert severity="info">{pl ? 'Archiwum jest puste. Uruchom rejestrację lub demonstrację.' : 'No sessions. Start capture or demonstration.'}</Alert>}
+    <Select value={session} displayEmpty onChange={e => setSession(Number(e.target.value))} inputProps={{ 'aria-label': pl ? 'Sesja' : 'Session' }}>
+      <MenuItem value="" disabled>{pl ? 'Wybierz sesję' : 'Select session'}</MenuItem>
+      {sessions.map(s => <MenuItem key={s.id} value={s.id}>{s.note || `#${s.id}`} — {s.started_at}</MenuItem>)}
+    </Select>
+    <Select value={format} onChange={e => setFormat(e.target.value)} inputProps={{ 'aria-label': pl ? 'Format' : 'Format' }}>
+      {['csv', 'json', 'xml', 'pdf', 'zip'].map(f => <MenuItem key={f} value={f}>{f.toUpperCase()}</MenuItem>)}
+    </Select>
+    <Button disabled={busy || !session} onClick={download}>{pl ? 'Pobierz eksport' : 'Download export'}</Button>
+    {error && <Alert severity="error">{error}</Alert>}
+  </Stack></CardContent></Card>;
 }

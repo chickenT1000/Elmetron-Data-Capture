@@ -1,4 +1,6 @@
-﻿# Release Automation Checklist
+> Historical reference: this document describes the earlier experimental service. For the supported beta use README.md and docs/RELEASE_SPEC.md. Startup/scheduled remote commands and Windows service installation are outside beta scope.
+
+# Release Automation Checklist
 
 Use this checklist when packaging a capture dataset for distribution via CI/CD or manual release.
 

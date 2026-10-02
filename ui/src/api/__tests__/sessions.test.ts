@@ -89,10 +89,15 @@ describe('sessions api', () => {
 
     const blob = await downloadSessionEvaluationJson(7, { anchor: 'start', filename: 'overlay.json' });
     expect(blob).toMatchObject({ type: 'application/json' });
-    const text = await blob.text();
+    const text = typeof blob.text === 'function' ? await blob.text() : await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = reject;
+      reader.readAsText(blob);
+    });
     expect(JSON.parse(text).session.id).toBe(7);
     const requestUrl = (fetchMock.mock.calls[0]?.[0] as string) ?? '';
-    expect(requestUrl).toContain('/sessions/7/evaluation/export');
+    expect(requestUrl).toContain('/api/v1/sessions/7/export');
     expect(requestUrl).toContain('filename=overlay.json');
   });
 });

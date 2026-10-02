@@ -1,46 +1,46 @@
-name: UI Visual Checks
-
+name: Browser acceptance
 on:
   pull_request:
-    paths:
-      - 'ui/**'
-      - '.github/workflows/ui-visual.yml'
-
+    paths: ['ui/**', 'elmetron/**', '.github/workflows/ui-visual.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
-  visual-tests:
-    name: Playwright Visual + Chromatic
-    runs-on: ubuntu-latest
-
+  browser:
+    runs-on: windows-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
-          node-version: 20
-          cache: 'npm'
+          python-version: '3.13'
+      - uses: astral-sh/setup-uv@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.23.3'
+          cache: npm
           cache-dependency-path: ui/package-lock.json
-
-      - name: Install dependencies
+      - run: uv sync --extra dev --locked
+      - run: npm ci
         working-directory: ui
-        run: npm ci
-
-      - name: Build Storybook
+      - run: npm run build
         working-directory: ui
-        run: npm run build-storybook
-
-      - name: Run Playwright visual tests
+      - run: npm run build-storybook
         working-directory: ui
         env:
-          PLAYWRIGHT_BROWSERS_PATH: 0
-        run: |
-          npx playwright install --with-deps
-          npm run test:ui
-
-      - name: Publish to Chromatic
-        if: ${{ secrets.CHROMATIC_PROJECT_TOKEN != '' }}
+          STORYBOOK_DISABLE_TELEMETRY: '1'
+      - run: npx playwright install chromium
         working-directory: ui
-        env:
-          CHROMATIC_PROJECT_TOKEN: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
-        run: npm run chromatic
+      - run: npm run test:acceptance
+        working-directory: ui
+      - run: npm run test:ui
+        working-directory: ui
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: browser-results
+          path: |
+            ui/test-results/
+            ui/playwright-report/

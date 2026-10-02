@@ -1,0 +1,17 @@
+Elmetron Data Capture
+Copyright (c) Elmetron Data Capture contributors
+Project source is licensed under GPL-3.0-only. See LICENSE.
+
+This independent community application is not an official Elmetron or FTDI product.
+Elmetron and CX-505 names identify compatible equipment.
+No certification under ISO 17025, GLP or 21 CFR Part 11 is claimed.
+
+Third-party software retains its own licenses. The Windows distribution includes
+Python and bundled libraries. See third_party/ for the dependency inventory and
+license texts. DejaVu Sans is distributed with assets/fonts/LICENSE.txt.
+FTDI D2XX is not redistributed; install the driver from FTDI's official website.
+PyInstaller's GPL exception permits distribution of generated executables under
+the application's license. Inno Setup is used as a build tool.
+
+Corresponding source, build scripts and configuration examples for this version:
+https://github.com/chickenT1000/Elmetron-Data-Capture

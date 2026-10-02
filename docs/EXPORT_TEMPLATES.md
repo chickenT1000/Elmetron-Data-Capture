@@ -1,4 +1,6 @@
-﻿# Export Templates Guide
+> Historical reference: this document describes the earlier experimental service. For the supported beta use README.md and docs/RELEASE_SPEC.md. Startup/scheduled remote commands and Windows service installation are outside beta scope.
+
+# Export Templates Guide
 
 The reporting CLI ships with ready-to-use templates stored under `config/templates/`. The defaults referenced by `config/app.toml` are:
 

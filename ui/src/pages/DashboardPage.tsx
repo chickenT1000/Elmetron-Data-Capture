@@ -1,5 +1,6 @@
-﻿import { useState } from 'react';
-import { Stack, Typography } from '@mui/material';
+import CaptureControls from '../components/CaptureControls';
+import { useState } from 'react';
+import { Stack } from '@mui/material';
 import { useOutletContext } from 'react-router-dom';
 import { useHealthStatus } from '../hooks/useHealthStatus';
 import { useHealthLogEvents, type HealthLogConnectionState } from '../hooks/useHealthLogEvents';
@@ -18,21 +19,8 @@ interface OutletContext {
 // Time range options in minutes
 const TIME_RANGE_OPTIONS = [1, 5, 10, 20, 30, 60, 120];
 
-const formatNumber = (value?: number | null, digits = 2): string => {
-  if (value === undefined || value === null || Number.isNaN(value)) {
-    return '-';
-  }
-  return value.toLocaleString(undefined, { maximumFractionDigits: digits });
-};
 
 
-const formatDurationMs = (value?: number | null): string => {
-  if (!value && value !== 0) return '-';
-  if (value >= 1000) {
-    return `${(value / 1000).toFixed(2)} s`;
-  }
-  return `${value.toFixed(1)} ms`;
-};
 
 const normaliseLogStream = (state: HealthLogConnectionState): 'streaming' | 'polling' | 'idle' => {
   if (state === 'streaming' || state === 'polling') {
@@ -47,7 +35,7 @@ export default function DashboardPage() {
   const { recordingEnabled, onRecordingToggle } = useOutletContext<OutletContext>();
   const { data: liveStatus } = useLiveStatus();
   const isArchiveMode = liveStatus?.mode === 'archive';
-  const isLiveMode = liveStatus?.mode === 'live';
+  const isLiveMode = liveStatus?.mode === 'live' || liveStatus?.mode === 'demo';
 
   // Chart time range state (index into TIME_RANGE_OPTIONS array)
   const [chartTimeRangeIndex, setChartTimeRangeIndex] = useState(2); // Default to 10 min (index 2)
@@ -116,8 +104,9 @@ export default function DashboardPage() {
 
   return (
     <Stack spacing={3} sx={{ pb: 3 }}>
-      <MeasurementPanel 
-        state={measurementState} 
+      <CaptureControls />
+      <MeasurementPanel
+        state={measurementState}
         recordingEnabled={recordingEnabled}
         onRecordingToggle={onRecordingToggle}
         isLiveMode={isLiveMode}

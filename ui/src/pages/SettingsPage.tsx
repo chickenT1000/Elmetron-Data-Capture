@@ -1,8 +1,8 @@
-import { Card, CardContent, Stack, Typography, Switch, FormControlLabel, TextField, Button, Box, Slider, Alert, Autocomplete, Radio, RadioGroup, FormControl, FormLabel, Grid } from '@mui/material';
-import { useSettings, validateOperatorName, type AutoscalingMode } from '../contexts/SettingsContext';
+import { Card, CardContent, Stack, Typography, FormControlLabel, TextField, Button, Box, Slider, Alert, Autocomplete, Radio, RadioGroup, FormControl, FormLabel, Grid } from '@mui/material';
+import { useSettings, validateOperatorName, type AutoscalingMode } from '../contexts/settings';
 import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { fetchOperators, updateActiveSessionOperator, updateDefaultOperator } from '../api/sessions';
+import { fetchOperators, updateDefaultOperator } from '../api/sessions';
 import SaveIcon from '@mui/icons-material/Save';
 import CancelIcon from '@mui/icons-material/Cancel';
 
@@ -12,7 +12,7 @@ export default function SettingsPage() {
   const [localSettings, setLocalSettings] = useState(settings);
   const [hasChanges, setHasChanges] = useState(false);
   const [operatorNameError, setOperatorNameError] = useState<string | null>(null);
-  
+
   // Fetch existing operator names
   const { data: operators = [] } = useQuery({
     queryKey: ['operators'],
@@ -31,7 +31,7 @@ export default function SettingsPage() {
   useEffect(() => {
     const changed = JSON.stringify(localSettings) !== JSON.stringify(settings);
     setHasChanges(changed);
-    
+
     // Validate operator name
     const error = validateOperatorName(localSettings.operatorName);
     setOperatorNameError(error);
@@ -44,29 +44,18 @@ export default function SettingsPage() {
       setOperatorNameError(error);
       return;
     }
-    
-    // Save settings to localStorage
-    updateSettings(localSettings);
-    
-    // Update the default operator in backend config (for new sessions)
+
     try {
-      await updateDefaultOperator(localSettings.operatorName);
-    } catch (err) {
-      console.error('Failed to update default operator config:', err);
-      // Continue anyway - settings were saved to localStorage
-    }
-    
-    // Update the active session's operator name (if exists)
-    try {
-      await updateActiveSessionOperator(localSettings.operatorName);
-    } catch (err) {
-      // Ignore 404 (no active session) - this is fine
-      // Log other errors but don't block settings save
-      if (err instanceof Error && !err.message.includes('404')) {
-        console.warn('Failed to update active session operator:', err);
+      for (const range of Object.values(localSettings.customRanges)) {
+        if (!Number.isFinite(range.min) || !Number.isFinite(range.max) || range.min>=range.max) throw new Error('Each range requires finite min < max');
       }
+      await updateDefaultOperator(localSettings.operatorName);
+      updateSettings(localSettings);
+    } catch (err) {
+      setOperatorNameError(err instanceof Error ? err.message : String(err));
+      return;
     }
-    
+
     // Invalidate operators cache to refetch after save
     // This ensures the dropdown shows the newly saved operator
     queryClient.invalidateQueries({ queryKey: ['operators'] });
@@ -79,18 +68,23 @@ export default function SettingsPage() {
 
   return (
     <Stack spacing={3} sx={{ position: 'relative' }}>
+      <Card><CardContent>
+        <Typography variant="h6">Elmetron 1.0.0-beta.1</Typography>
+        <Typography>GPL-3.0-only · CX-505 · <a href="https://github.com/chickenT1000/Elmetron-Data-Capture" target="_blank" rel="noreferrer">Source and documentation</a></Typography>
+        <Typography variant="body2">User configuration: %LOCALAPPDATA%\Elmetron\config\app.toml and protocols.toml. Stop capture before editing. See docs/CONFIGURATION.md in the installed resources.</Typography>
+      </CardContent></Card>
       {hasChanges && (
-        <Alert 
-          severity={operatorNameError ? "error" : "warning"} 
-          sx={{ 
+        <Alert
+          severity={operatorNameError ? "error" : "warning"}
+          sx={{
             position: 'fixed',
             top: 80,
             right: 24,
             zIndex: 1200,
             maxWidth: 500,
             boxShadow: 3,
-            display: 'flex', 
-            alignItems: 'center', 
+            display: 'flex',
+            alignItems: 'center',
             justifyContent: 'space-between',
             animation: 'slideInRight 0.3s ease-out',
             '@keyframes slideInRight': {
@@ -109,10 +103,10 @@ export default function SettingsPage() {
             {operatorNameError ? 'Fix validation errors before saving' : 'You have unsaved changes'}
           </Box>
           <Box sx={{ display: 'flex', gap: 1 }}>
-            <Button 
-              size="small" 
-              variant="contained" 
-              startIcon={<SaveIcon />} 
+            <Button
+              size="small"
+              variant="contained"
+              startIcon={<SaveIcon />}
               onClick={handleSave}
               disabled={!!operatorNameError}
             >
@@ -131,7 +125,7 @@ export default function SettingsPage() {
             Operator Name
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Set the default operator name that appears in the header and is associated with new sessions.
+            Set the default operator for future sessions. Use session editing to change the operator of an existing session.
             Select from existing operators or type a new name.
           </Typography>
           <Typography variant="caption" color="text.secondary" sx={{ mb: 2, display: 'block' }}>
@@ -161,9 +155,9 @@ export default function SettingsPage() {
                 size="small"
                 error={!!operatorNameError}
                 helperText={
-                  operatorNameError 
-                    ? operatorNameError 
-                    : operators.length > 0 
+                  operatorNameError
+                    ? operatorNameError
+                    : operators.length > 0
                       ? `${localSettings.operatorName.length}/50 characters - ${operators.length} existing operator(s) available. Click arrow to see list.`
                       : `${localSettings.operatorName.length}/50 characters - Click 'Save Changes' to apply`
                 }
@@ -185,35 +179,35 @@ export default function SettingsPage() {
           <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
             Configure chart scaling and display options for the Live Dashboard.
           </Typography>
-          
+
           <FormControl component="fieldset">
             <FormLabel component="legend" sx={{ mb: 1 }}>Charts Scaling Mode</FormLabel>
             <RadioGroup
               value={localSettings.autoscalingMode}
               onChange={(e) => setLocalSettings({ ...localSettings, autoscalingMode: e.target.value as AutoscalingMode })}
             >
-              <FormControlLabel 
-                value="presets" 
-                control={<Radio />} 
-                label="Autoscaling Presets (Recommended)" 
+              <FormControlLabel
+                value="presets"
+                control={<Radio />}
+                label="Autoscaling Presets (Recommended)"
               />
               <Typography variant="caption" color="text.secondary" sx={{ ml: 4, mb: 1, display: 'block' }}>
                 Charts automatically select from optimized preset ranges (e.g., pH: 0-14, 6-8, 4-10). Clean grid lines and stable visualization.
               </Typography>
-              
-              <FormControlLabel 
-                value="dynamic" 
-                control={<Radio />} 
-                label="Dynamic Autoscaling" 
+
+              <FormControlLabel
+                value="dynamic"
+                control={<Radio />}
+                label="Dynamic Autoscaling"
               />
               <Typography variant="caption" color="text.secondary" sx={{ ml: 4, mb: 1, display: 'block' }}>
                 Charts fit data exactly with 10% buffer. More adaptive but may show unconventional ranges.
               </Typography>
-              
-              <FormControlLabel 
-                value="fixed" 
-                control={<Radio />} 
-                label="Fixed Ranges (Custom)" 
+
+              <FormControlLabel
+                value="fixed"
+                control={<Radio />}
+                label="Fixed Ranges (Custom)"
               />
               <Typography variant="caption" color="text.secondary" sx={{ ml: 4, mb: 2, display: 'block' }}>
                 Manually set exact min/max ranges for each parameter. Charts never change scale.
@@ -227,7 +221,7 @@ export default function SettingsPage() {
                 Custom Range Settings
               </Typography>
               <Grid container spacing={2} sx={{ mt: 1 }}>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <Typography variant="caption" fontWeight={600} display="block" gutterBottom>
                     pH
                   </Typography>
@@ -264,7 +258,7 @@ export default function SettingsPage() {
                   </Box>
                 </Grid>
 
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <Typography variant="caption" fontWeight={600} display="block" gutterBottom>
                     Conductivity (µS/cm)
                   </Typography>
@@ -301,7 +295,7 @@ export default function SettingsPage() {
                   </Box>
                 </Grid>
 
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <Typography variant="caption" fontWeight={600} display="block" gutterBottom>
                     Redox (mV)
                   </Typography>
@@ -338,7 +332,7 @@ export default function SettingsPage() {
                   </Box>
                 </Grid>
 
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <Typography variant="caption" fontWeight={600} display="block" gutterBottom>
                     Temperature (°C)
                   </Typography>
@@ -377,7 +371,7 @@ export default function SettingsPage() {
               </Grid>
             </Box>
           )}
-          
+
           {/* Line Connection Threshold */}
           <Box sx={{ mt: 4 }}>
             <Typography variant="subtitle2" gutterBottom>

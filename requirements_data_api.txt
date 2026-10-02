@@ -1,3 +1,2 @@
-# Requirements for Data API Service
-flask>=3.0.0
-flask-cors>=4.0.0
+# Compatibility entry point; the release uses the unified, hashed dependency lock.
+-r requirements.txt

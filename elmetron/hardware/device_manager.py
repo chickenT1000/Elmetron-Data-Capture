@@ -1,4 +1,4 @@
-﻿"""Hardware interface layer for Elmetron meters across multiple transports."""
+"""Hardware interface layer for Elmetron meters across multiple transports."""
 from __future__ import annotations
 
 import time
@@ -467,6 +467,7 @@ class SimulatedInterface(DeviceInterface):
         frames: list[bytes] = []
         total = 0
         for _ in range(samples):
+            time.sleep(max(duration_s, 0) / samples)
             frame = self._generate_frame()
             frames.append(frame)
             total += len(frame)
@@ -489,9 +490,12 @@ class SimulatedInterface(DeviceInterface):
         self.close()
 
     def _generate_frame(self) -> bytes:
+        from datetime import datetime
+        import math
         self._frame_counter += 1
-        value = 700 + (self._frame_counter % 50)
-        timestamp = int(time.time())
-        payload = f"SIM:{self._frame_counter:04d}:{value:03d}:{timestamp}".encode("ascii")
-        return payload[:64]
-
+        now = datetime.now()
+        value = 7 + math.sin(self._frame_counter / 10) * 0.15
+        text = (f"\x01#CX-505 S/N SIM-DEVICE#READY#RANGE#PH\x17\x02"
+                f"#{self._frame_counter:04d}# {value:.3f} pH# 24.7 C# "
+                f"{now:%d-%m-%Y}# {now:%H:%M:%S}\x1e\x03\r\n")
+        return text.encode('ascii')

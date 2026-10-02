@@ -1,0 +1,2 @@
+third_party/licenses/** -text whitespace=-blank-at-eol,-blank-at-eof
+assets/fonts/LICENSE.txt -text whitespace=-blank-at-eol,-blank-at-eof

@@ -9,7 +9,6 @@ export default defineConfig({
     setupFiles: ['./src/test/setup.ts'],
     globals: true,
     css: false,
-    exclude: [...configDefaults.exclude, 'playwright/**'],
+    exclude: [...configDefaults.exclude, 'playwright/**', 'acceptance/**'],
   },
 })
-

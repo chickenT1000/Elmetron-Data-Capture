@@ -1,3 +1,5 @@
+# USER CONFIG: edit the copy in your data home with capture stopped.
+# See docs/CONFIGURATION.md for profile precedence and relative paths.
 [device]
 profile = "cx505"
 use_profile_defaults = true
@@ -19,7 +21,7 @@ status_interval_s = 30.0
 max_runtime_s = 0.0
 quiet = false
 startup_commands = []
-default_operator = "Tomek2"  # Default operator name for new sessions (empty = no operator)
+default_operator = ""  # Default operator name for new sessions (empty = no operator)
 
 [storage]
 database_path = "data/elmetron.sqlite"

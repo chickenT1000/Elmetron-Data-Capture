@@ -1,3 +1,5 @@
+import { useLiveStatus } from '../hooks/useLiveStatus';
+import { buildApiUrl } from '../config';
 import React, { useState, useEffect } from 'react';
 import {
   Alert,
@@ -5,9 +7,7 @@ import {
   Button,
   Card,
   CardContent,
-  Chip,
   CircularProgress,
-  Divider,
   Slider,
   Stack,
   TextField,
@@ -47,13 +47,6 @@ const formatTimestamp = (value?: string | null): string => {
   });
 };
 
-const formatTemperature = (value?: number | null, unit?: string | null): string => {
-  if (value === undefined || value === null || Number.isNaN(value)) {
-    return '—';
-  }
-  const display = value.toLocaleString(undefined, { maximumFractionDigits: 2 });
-  return unit ? `${display} ${unit}` : display;
-};
 
 const renderMetricCard = (metric: MetricIndicatorState) => {
   const icon = (() => {
@@ -114,16 +107,17 @@ interface SessionEditState {
   error: string | null;
 }
 
-export const MeasurementPanel: React.FC<MeasurementPanelProps> = ({ 
-  state, 
-  metrics, 
-  recordingEnabled, 
-  onRecordingToggle, 
+export const MeasurementPanel: React.FC<MeasurementPanelProps> = ({
+  state,
+  metrics,
+  recordingEnabled,
+  onRecordingToggle,
   isLiveMode,
   chartTimeRangeIndex = 2,
   onChartTimeRangeChange,
   timeRangeOptions = [1, 5, 10, 20, 30, 60, 120]
 }) => {
+  const { data: liveStatus } = useLiveStatus();
   // Current session data - fetched from API
   const [currentSession, setCurrentSession] = useState({
     id: null as number | null,
@@ -131,9 +125,10 @@ export const MeasurementPanel: React.FC<MeasurementPanelProps> = ({
     name: null as string | null,
     display_name: 'Loading...',
     started_at: null as string | null,
+    ended_at: null as string | null,
     operator_name: null as string | null,
   });
-  
+
   // Session editing state
   const [editState, setEditState] = useState<SessionEditState>({
     mode: 'none',
@@ -155,20 +150,21 @@ export const MeasurementPanel: React.FC<MeasurementPanelProps> = ({
   useEffect(() => {
     const fetchCurrentSession = async () => {
       try {
-        const response = await fetch('http://localhost:8050/api/live/status');
+        const response = await fetch(buildApiUrl('/api/live/status'));
         const data = await response.json();
-        
+
         if (data.current_session_id) {
           // Fetch session details to get the name and operator
-          const sessionResponse = await fetch(`http://localhost:8050/api/sessions/${data.current_session_id}`);
+          const sessionResponse = await fetch(buildApiUrl(`/api/sessions/${data.current_session_id}`));
           const sessionData = await sessionResponse.json();
-          
+
           setCurrentSession({
             id: sessionData.id,
             session_number: sessionData.id, // Using ID as session number for now
             name: sessionData.note,
             display_name: sessionData.note || `Session ${sessionData.id}`,
             started_at: sessionData.started_at,
+            ended_at: sessionData.ended_at,
             operator_name: sessionData.operator_name,
           });
         } else {
@@ -179,6 +175,7 @@ export const MeasurementPanel: React.FC<MeasurementPanelProps> = ({
             name: null,
             display_name: 'No active session',
             started_at: null,
+            ended_at: null,
             operator_name: null,
           });
         }
@@ -189,26 +186,26 @@ export const MeasurementPanel: React.FC<MeasurementPanelProps> = ({
     };
 
     fetchCurrentSession();
-    // Poll every 5 seconds to keep session info fresh
+    // Poll for metadata edits; session changes also trigger immediate refresh
     const interval = setInterval(fetchCurrentSession, 5000);
     return () => clearInterval(interval);
-  }, []);
+  }, [liveStatus?.current_session_id, liveStatus?.state]);
 
   // Validation: sanitize and validate session name
   const validateSessionName = (name: string): { valid: boolean; error: string | null; sanitized: string } => {
     const sanitized = name.trim().replace(/[<>:"/\\|?*]/g, '');
-    
+
     if (sanitized.length === 0) {
       return { valid: false, error: 'Session name cannot be empty', sanitized };
     }
-    
+
     if (sanitized.length > 50) {
       return { valid: false, error: 'Session name must be 50 characters or less', sanitized: sanitized.substring(0, 50) };
     }
-    
-    // TODO: Check uniqueness against backend
+
+    // Name uniqueness is validated by the backend.
     // For now, just validate locally
-    
+
     return { valid: true, error: null, sanitized };
   };
 
@@ -232,12 +229,12 @@ export const MeasurementPanel: React.FC<MeasurementPanelProps> = ({
       error: null,
     });
 
-    // TODO: Fetch next session number from API
+    // Display a suggestion; the backend assigns the actual session ID.
     // Mockup: simulate API call
     setTimeout(() => {
-      const nextNumber = currentSession.session_number + 1;
-      console.log('[MOCKUP] Fetched next session number:', nextNumber);
-      
+      const nextNumber = (currentSession.session_number ?? currentSession.id ?? 0) + 1;
+
+
       setEditState({
         mode: 'creating',
         editValue: `Session ${nextNumber}`,
@@ -250,7 +247,7 @@ export const MeasurementPanel: React.FC<MeasurementPanelProps> = ({
   // Handle confirming rename
   const handleRenameConfirm = async () => {
     const validation = validateSessionName(editState.editValue);
-    
+
     if (!validation.valid) {
       setEditState(prev => ({ ...prev, error: validation.error }));
       return;
@@ -260,7 +257,7 @@ export const MeasurementPanel: React.FC<MeasurementPanelProps> = ({
 
     try {
       // API call to rename session
-      const response = await fetch(`http://localhost:8050/api/sessions/${currentSession.id}/rename`, {
+      const response = await fetch(buildApiUrl(`/api/sessions/${currentSession.id}/rename`), {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -273,17 +270,16 @@ export const MeasurementPanel: React.FC<MeasurementPanelProps> = ({
         throw new Error(errorData.error || 'Failed to rename session');
       }
 
-      const result = await response.json();
-      console.log('[SUCCESS] Session renamed:', result);
-      
+      await response.json();
+
       // Update local state with new name
-      setCurrentSession(prev => ({ 
-        ...prev, 
+      setCurrentSession(prev => ({
+        ...prev,
         name: validation.sanitized,
         display_name: validation.sanitized
       }));
       setEditState({ mode: 'none', editValue: '', loading: false, error: null });
-      
+
       // Show success toast
       toast.success(`Session renamed to "${validation.sanitized}"`, {
         position: 'bottom-right',
@@ -292,13 +288,13 @@ export const MeasurementPanel: React.FC<MeasurementPanelProps> = ({
     } catch (error) {
       console.error('[ERROR] Failed to rename session:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to rename session';
-      
-      setEditState(prev => ({ 
-        ...prev, 
-        loading: false, 
+
+      setEditState(prev => ({
+        ...prev,
+        loading: false,
         error: errorMessage
       }));
-      
+
       // Show error toast
       toast.error(errorMessage, {
         position: 'bottom-right',
@@ -310,7 +306,7 @@ export const MeasurementPanel: React.FC<MeasurementPanelProps> = ({
   // Handle confirming new session
   const handleNewSessionConfirm = async () => {
     const validation = validateSessionName(editState.editValue);
-    
+
     if (!validation.valid) {
       setEditState(prev => ({ ...prev, error: validation.error }));
       return;
@@ -318,17 +314,18 @@ export const MeasurementPanel: React.FC<MeasurementPanelProps> = ({
 
     setEditState(prev => ({ ...prev, loading: true, error: null }));
 
-    // TODO: API call to create new session
-    console.log('[MOCKUP] Create new session with name:', validation.sanitized);
-    
-    // Simulate API call
-    setTimeout(() => {
-      console.log('[MOCKUP] New session created successfully');
+    try {
+      const response = await fetch(buildApiUrl('/api/sessions'), {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: validation.sanitized }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to create session');
       setEditState({ mode: 'none', editValue: '', loading: false, error: null });
-      // TODO: Show success toast
-      // TODO: Refresh current session data
-      // TODO: Update charts with new session
-    }, 500);
+      toast.success(validation.sanitized);
+    } catch (error) {
+      setEditState(prev => ({ ...prev, loading: false, error: error instanceof Error ? error.message : 'Request failed' }));
+    }
   };
 
   // Handle canceling edit
@@ -404,13 +401,13 @@ export const MeasurementPanel: React.FC<MeasurementPanelProps> = ({
   const measurement = state.measurement;
   const measurementDigits =
     measurement?.unit && measurement.unit.toLowerCase().includes('ph') ? 2 : 3;
-  
+
   // Check if device is in TIME mode
   // TIME mode is detected when valueText looks like time format (HH:MM) AND there's no numeric value
-  const isTimeMode = 
-    measurement?.mode?.toUpperCase() === 'TIME' || 
+  const isTimeMode =
+    measurement?.mode?.toUpperCase() === 'TIME' ||
     (measurement?.valueText && typeof measurement?.value !== 'number' && /^\d{1,2}:\d{2}(:\d{2})?$/.test(measurement.valueText.trim()));
-  
+
   const measurementValue =
     typeof measurement?.value === 'number'
       ? formatNumber(measurement.value, measurementDigits)
@@ -418,10 +415,6 @@ export const MeasurementPanel: React.FC<MeasurementPanelProps> = ({
       ? measurement.valueText
       : measurement?.valueText ?? '—';
   const measurementUnit = isTimeMode ? '' : (measurement?.unit ?? '').replace(/\s*rel\.?$/i, '');
-  const temperatureDisplay = formatTemperature(
-    measurement?.temperature?.value,
-    measurement?.temperature?.unit,
-  );
   // Always use PC capture time, not device timestamp (device clock may be wrong, especially in TIME mode)
   const lastUpdatedIso = measurement?.capturedAtIso ?? measurement?.timestampIso ?? null;
 
@@ -432,7 +425,7 @@ export const MeasurementPanel: React.FC<MeasurementPanelProps> = ({
         {isTimeMode && (
           <Alert severity="info">
             <Typography variant="body2">
-              <strong>Device in TIME mode:</strong> The meter is currently displaying time and is not sending measurement data. 
+              <strong>Device in TIME mode:</strong> The meter is currently displaying time and is not sending measurement data.
               Switch the device to measurement mode to resume data collection.
             </Typography>
           </Alert>
@@ -509,7 +502,7 @@ export const MeasurementPanel: React.FC<MeasurementPanelProps> = ({
                     <Typography variant="caption" color="text.secondary">
                       Session length: {(() => {
                         const start = new Date(currentSession.started_at).getTime();
-                        const now = Date.now();
+                        const now = currentSession.ended_at ? new Date(currentSession.ended_at).getTime() : Date.now();
                         const diffMs = now - start;
                         const hours = Math.floor(diffMs / 3600000);
                         const minutes = Math.floor((diffMs % 3600000) / 60000);
@@ -538,7 +531,7 @@ export const MeasurementPanel: React.FC<MeasurementPanelProps> = ({
             <Typography variant="subtitle1" fontWeight={600} gutterBottom>
               Session Settings
             </Typography>
-            
+
             <Stack spacing={2} sx={{ mt: 1.5 }}>
               {/* Session Management - Inline Editing */}
               {/* First Row: Rename button or input */}
@@ -549,8 +542,8 @@ export const MeasurementPanel: React.FC<MeasurementPanelProps> = ({
                     fullWidth
                     autoFocus
                     value={editState.editValue}
-                    onChange={(e) => setEditState(prev => ({ 
-                      ...prev, 
+                    onChange={(e) => setEditState(prev => ({
+                      ...prev,
                       editValue: e.target.value,
                       error: null
                     }))}
@@ -560,7 +553,7 @@ export const MeasurementPanel: React.FC<MeasurementPanelProps> = ({
                     error={!!editState.error}
                     helperText={editState.error}
                     inputProps={{ maxLength: 50 }}
-                    sx={{ 
+                    sx={{
                       flex: 1,
                       '& .MuiInputBase-root': {
                         height: '32px',
@@ -571,7 +564,7 @@ export const MeasurementPanel: React.FC<MeasurementPanelProps> = ({
                     variant="outlined"
                     onClick={handleRenameConfirm}
                     disabled={editState.loading}
-                    sx={{ 
+                    sx={{
                       minWidth: '32px',
                       width: '32px',
                       height: '32px',
@@ -594,7 +587,7 @@ export const MeasurementPanel: React.FC<MeasurementPanelProps> = ({
                     variant="outlined"
                     onClick={handleEditCancel}
                     disabled={editState.loading}
-                    sx={{ 
+                    sx={{
                       minWidth: '32px',
                       width: '32px',
                       height: '32px',
@@ -616,7 +609,7 @@ export const MeasurementPanel: React.FC<MeasurementPanelProps> = ({
                   fullWidth
                   onClick={handleRenameClick}
                   disabled={editState.mode === 'creating'}
-                  sx={{ 
+                  sx={{
                     textTransform: 'none',
                     height: '36px',
                   }}
@@ -635,8 +628,8 @@ export const MeasurementPanel: React.FC<MeasurementPanelProps> = ({
                     fullWidth
                     autoFocus
                     value={editState.editValue}
-                    onChange={(e) => setEditState(prev => ({ 
-                      ...prev, 
+                    onChange={(e) => setEditState(prev => ({
+                      ...prev,
                       editValue: e.target.value,
                       error: null
                     }))}
@@ -646,7 +639,7 @@ export const MeasurementPanel: React.FC<MeasurementPanelProps> = ({
                     error={!!editState.error}
                     helperText={editState.error}
                     inputProps={{ maxLength: 50 }}
-                    sx={{ 
+                    sx={{
                       flex: 1,
                       '& .MuiInputBase-root': {
                         height: '32px',
@@ -657,7 +650,7 @@ export const MeasurementPanel: React.FC<MeasurementPanelProps> = ({
                     variant="outlined"
                     onClick={handleNewSessionConfirm}
                     disabled={editState.loading}
-                    sx={{ 
+                    sx={{
                       minWidth: '32px',
                       width: '32px',
                       height: '32px',
@@ -680,7 +673,7 @@ export const MeasurementPanel: React.FC<MeasurementPanelProps> = ({
                     variant="outlined"
                     onClick={handleEditCancel}
                     disabled={editState.loading}
-                    sx={{ 
+                    sx={{
                       minWidth: '32px',
                       width: '32px',
                       height: '32px',
@@ -702,7 +695,7 @@ export const MeasurementPanel: React.FC<MeasurementPanelProps> = ({
                   fullWidth
                   onClick={handleNewSessionClick}
                   disabled={editState.mode === 'renaming'}
-                  sx={{ 
+                  sx={{
                     textTransform: 'none',
                     height: '36px',
                   }}
@@ -716,16 +709,16 @@ export const MeasurementPanel: React.FC<MeasurementPanelProps> = ({
               {/* Recording Toggle */}
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <FiberManualRecordIcon 
-                    color={recordingEnabled ? 'success' : 'default'} 
-                    sx={{ fontSize: 16 }} 
+                  <FiberManualRecordIcon
+                    color={recordingEnabled ? 'success' : 'disabled'}
+                    sx={{ fontSize: 16 }}
                   />
                   <Typography variant="h5" color="text.secondary" fontWeight={500}>
                     Recording
                   </Typography>
                 </Box>
-                <Switch 
-                  size="medium" 
+                <Switch
+                  size="medium"
                   checked={recordingEnabled ?? false}
                   onChange={onRecordingToggle}
                   disabled={!isLiveMode}

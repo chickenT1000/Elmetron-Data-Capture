@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { buildApiUrl, buildHealthUrl } from '../config';
+import { buildHealthUrl } from '../config';
 import {
   fetchHealthLogEvents,
   streamHealthLogsNdjson,

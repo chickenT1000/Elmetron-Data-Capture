@@ -1,0 +1,55 @@
+import { test, expect } from '@playwright/test';
+
+test('demo capture, archived chart, manual calibration and full export', async ({ page }) => {
+  const exceptions: string[] = [];
+  page.on('pageerror', error => exceptions.push(error.message));
+  await page.goto('/');
+  await page.getByRole('button', { name: /Start demo|Uruchom demonstrację/ }).click();
+  await expect.poll(async () => (await (await page.request.get('/health')).json()).frames).toBeGreaterThan(2);
+  await expect(page.getByText(/DEMO —/)).toBeVisible();
+  await expect(page.getByRole('switch')).toBeChecked();
+  await page.screenshot({ path: 'test-results/release-demo.png', fullPage: true });
+  await page.getByRole('button', { name: /^(Stop|Zatrzymaj)$/ }).click();
+  await expect.poll(async () => (await (await page.request.get('/health')).json()).state).toBe('stopped');
+  const sessions = (await (await page.request.get('/api/v1/sessions?order=desc')).json()).sessions;
+  const sid = sessions[0].id;
+  await page.goto('/sessions');
+  await expect(page.getByText('Saved Sessions')).toBeVisible();
+  await page.getByRole('checkbox').first().check();
+  await expect(page.locator('.recharts-surface').first()).toBeVisible();
+  await page.screenshot({ path: 'test-results/release-sessions.png', fullPage: true });
+  await page.goto('/calibrations');
+  await page.locator('main').getByRole('combobox').first().click();
+  await page.getByRole('option').last().click();
+  await page.getByLabel(/Reference \/ label|Wzorzec \/ opis/).fill('pH 7.00');
+  await page.getByLabel(/^Operator$/).fill('Zażółć Gęślą');
+  await page.getByLabel(/Note|Notatka/).fill('Manual test record');
+  await page.getByRole('button', { name: /Record calibration|Zapisz kalibrację/ }).click();
+  await expect(page.getByRole('alert').filter({hasText:'Manual test record'}).last()).toBeVisible();
+  await page.goto('/exports');
+  await page.locator('main').getByRole('combobox').first().click();
+  await page.getByRole('option').last().click();
+  await page.locator('main').getByRole('combobox').last().click();
+  await page.getByRole('option', { name: 'ZIP', exact: true }).click();
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: /Download export|Pobierz eksport/ }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toMatch(/session_\d+\.zip/);
+  await download.saveAs('test-results/release-export.zip');
+  const full = await (await page.request.get(`/api/v1/sessions/${sid}/export?format=json`)).json();
+  expect(full.measurements.length).toBe(sessions[0].counts.measurements);
+  expect(full.measurements.length).toBeGreaterThan(2);
+  await page.goto('/service');
+  await expect(page.getByText('Service Health & Diagnostics').first()).toBeVisible();
+  expect(exceptions).toEqual([]);
+});
+
+test('archive and read-only routes remain available without hardware', async ({ page }) => {
+  await page.goto('/settings');
+  await expect(page.getByText('Elmetron 1.0.0-beta.1')).toBeVisible();
+  const response = await page.request.get('/openapi.json');
+  expect(response.ok()).toBeTruthy();
+  expect((await response.json()).openapi).toBe('3.1.0');
+  const rejected = await page.request.post('/api/v1/capture/start', { data: { demo: true } });
+  expect(rejected.status()).toBe(403);
+});

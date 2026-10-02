@@ -1,3 +1,5 @@
+> Historical reference: this document describes the earlier experimental service. For the supported beta use README.md and docs/RELEASE_SPEC.md. Startup/scheduled remote commands and Windows service installation are outside beta scope.
+
 # Windows Service Deployment Guide
 
 ## Overview
@@ -21,7 +23,7 @@ Deploy the service under a dedicated account so USB access and file permissions 
    ```
    For domain environments, provision a domain account instead and ensure it can log on to the target workstation.
 2. Grant **Log on as a service**:
-   - Group Policy: `secpol.msc › Local Policies › User Rights Assignment`.
+   - Group Policy: `secpol.msc â€º Local Policies â€º User Rights Assignment`.
    - Or via command line (requires Microsoft `ntrights.exe`):
      ```powershell
      ntrights -u elmetron_svc +r SeServiceLogonRight
@@ -82,7 +84,7 @@ Adjust `/ru` and `/rp` to match the account that runs the capture service (use `
    ```
 3. Start it with `python elmetron\service\windows_service.py start`.
 4. Use `stop`/`remove` subcommands to manage lifecycle.
-5. Update Windows Services › Log On tab to switch the account if prompts change.
+5. Update Windows Services â€º Log On tab to switch the account if prompts change.
 
 ## Service Management
 - Logs: confirm `--health-log` or redirected output writes to `C:\Elmetron\logs`. Combine with the rotation script above.

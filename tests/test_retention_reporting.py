@@ -55,44 +55,14 @@ def test_retention_purge_logs_audit_event(tmp_path: Path) -> None:
     session.log_event("info", "test", "historic entry")
     session.close(datetime(2020, 1, 2, 0, 0, 0))
 
-    database.apply_retention(datetime(2025, 1, 1, 0, 0, 0))
-
-    conn = database.connect()
-    remaining_sessions = conn.execute("SELECT id, note FROM sessions").fetchall()
-
-    # original session should be purged, retention log session should remain
-    assert all(row[0] != session.id for row in remaining_sessions)
-    assert any(row[1] == "Retention log" for row in remaining_sessions)
-
-    retention_events = conn.execute(
-        "SELECT session_id, category, payload_json FROM audit_events WHERE category = 'retention'"
-    ).fetchall()
-    assert retention_events, "expected a retention audit event"
-
-    retention_event = retention_events[0]
-    retention_payload = json.loads(retention_event[2])
-
-    # ensure payload tracks removal counts
-    changes = retention_payload["changes"]
-    assert changes, "retention payload should list affected sessions"
-    summary = next(item for item in changes if item["session_id"] == session.id)
-    assert summary["removed_measurements"] == 1
-    assert summary["removed_derived_metrics"] == 1
-    assert summary["removed_annotations"] == 1
-    assert summary["removed_metadata"] == 1
-    assert summary["removed_audit_events"] == 1
-    assert summary["removed_frames"] == 1
-    assert summary["session_deleted"] is True
-
-    retention_session_id = retention_event[0]
-    retention_session_note = conn.execute(
-        "SELECT note FROM sessions WHERE id = ?",
-        (retention_session_id,),
-    ).fetchone()
-    assert retention_session_note is not None
-    assert retention_session_note[0] == "Retention log"
-
-    # ensure related tables are cleared
-    for table in ["measurements", "raw_frames", "derived_metrics", "annotations", "session_metadata"]:
-        count = conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
-        assert count == 0, f"expected {table} to be empty after retention"
+    database.append_system_audit_event(__import__('elmetron.storage.database', fromlist=['AuditEvent']).AuditEvent('info', 'system', 'old log', {}))
+    with conn:
+        conn.execute("UPDATE audit_events SET created_at='2020-01-01' WHERE session_id IS NULL")
+    database.apply_retention(datetime(2025, 1, 1))
+    for table in ('sessions','measurements','raw_frames','derived_metrics','annotations','session_metadata'):
+        assert conn.execute(f'SELECT COUNT(*) FROM {table}').fetchone()[0] == 1
+    assert conn.execute("SELECT COUNT(*) FROM audit_events WHERE session_id=?", (session.id,)).fetchone()[0] == 1
+    events = conn.execute("SELECT payload_json FROM audit_events WHERE category='retention'").fetchall()
+    assert len(events) == 1
+    assert json.loads(events[0][0])['deleted_system_logs'] == 1
+    database.close()

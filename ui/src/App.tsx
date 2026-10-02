@@ -2,38 +2,22 @@ import './App.css';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { AppLayout } from './layouts/AppLayout';
 import DashboardPage from './pages/DashboardPage';
-import SessionEvaluationPage from './pages/SessionEvaluationPage';
-import CalibrationsPage from './pages/CalibrationsPage';
-import ExportsPage from './pages/ExportsPage';
-import ServiceHealthPage from './pages/ServiceHealthPage';
-import SettingsPage from './pages/SettingsPage';
+const SessionEvaluationPage = lazy(() => import('./pages/SessionEvaluationPage'));
+const CalibrationsPage = lazy(() => import('./pages/CalibrationsPage'));
+const ExportsPage = lazy(() => import('./pages/ExportsPage'));
+const ServiceHealthPage = lazy(() => import('./pages/ServiceHealthPage'));
+const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 import { useConnectionMonitor } from './hooks/useConnectionMonitor';
 import { OfflineWarning } from './components/OfflineWarning';
 import { SettingsProvider } from './contexts/SettingsContext';
-import { useState, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
+import { lazy, Suspense, useState } from 'react';
+import { CircularProgress } from '@mui/material';
+
 
 function App() {
   const connectionStatus = useConnectionMonitor();
   const [warningDismissed, setWarningDismissed] = useState(false);
-  const { t } = useTranslation();
 
-  // Warn user before closing the tab
-  useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      // Show warning when user tries to close the tab
-      const message = t('warnings.closeTab');
-      e.preventDefault();
-      e.returnValue = message; // Standard for most browsers
-      return message; // For older browsers
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-    };
-  }, [t]);
 
   // Show warning when offline and not dismissed
   const showWarning = !connectionStatus.isOnline && !warningDismissed;
@@ -44,7 +28,7 @@ function App() {
 
   return (
     <SettingsProvider>
-      <Routes>
+      <Suspense fallback={<CircularProgress aria-label="Loading" />}><Routes>
         <Route path="/" element={<AppLayout />}>
           <Route index element={<DashboardPage />} />
           <Route path="sessions" element={<SessionEvaluationPage />} />
@@ -54,7 +38,7 @@ function App() {
           <Route path="settings" element={<SettingsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
-      </Routes>
+      </Routes></Suspense>
 
       {/* Offline Warning Modal */}
       <OfflineWarning open={showWarning} onClose={handleDismissWarning} />

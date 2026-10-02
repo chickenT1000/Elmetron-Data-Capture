@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import json
 from datetime import datetime
@@ -151,7 +151,7 @@ def seeded_session(tmp_path, monkeypatch) -> Iterator[tuple[Database, int]]:
             }
         }
 
-    monkeypatch.setattr(cx505_d2xx, '_decode_frame', fake_decode)
+    monkeypatch.setattr('elmetron.ingestion.pipeline.decode_frame', fake_decode)
     for _ in range(3):
         assert ingestor.handle_frame(b'\x00') is not None
 
@@ -256,9 +256,9 @@ def test_export_session_lims_xml_template(seeded_session, tmp_path) -> None:
     template_path.write_text(
         """<?xml version=\"1.0\" encoding=\"utf-8\"?>
 <SessionReport id=\"\">
-  
+
   <Measurements>
-    
+
   </Measurements>
 </SessionReport>
 """,

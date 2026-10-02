@@ -1,105 +1,46 @@
+# Elmetron Data Capture
 
-# Elmetron Data Acquisition and Analysis Suite
+Local CX-505 measurement capture and archives for Windows 10/11 x64. Browser UI,
+CSV/JSON/XML/PDF/ZIP exports, REST v1 and read-only MCP. GPL-3.0-only.
 
-This project modernises Elmetron CX-505 data capture by replacing the legacy S457s tooling with a modular, scriptable stack that spans transport, decoding, persistence, analytics, and reporting.
+**1.0.0-beta.1:** hardware acceptance and the elapsed 24-hour soak are separate
+release gates. See [validation](docs/VALIDATION.md) for actual results.
 
-## Architecture Overview
-- **Hardware (`elmetron.hardware`)** - wraps the FTDI D2XX bridge and optional BLE adapters, drives DTR/RTS control, and injects poll/handshake sequences from the protocol registry.
-- **Acquisition (`elmetron.acquisition`)** - supervises capture windows, reconnection, startup/scheduled command execution, and audit logging.
-- **Ingestion (`elmetron.ingestion`)** - decodes CX-505 frames into structured measurements, enriches metadata, and records decode failures for diagnostics.
-- **Storage (`elmetron.storage`)** - maintains the SQLite schema (instruments, sessions, raw frames, measurements, derived metrics, annotations, audit events).
-- **Protocols (`elmetron.protocols`)** - loads profile registries (TOML/JSON/YAML), validates command definitions, and normalises device defaults.
-- **Service Runtime (`elmetron.service`)** - hosts the capture supervisor, watchdog, health API, and Windows-service wrapper utilities.
-- **Reporting (`elmetron.reporting`)** - streams session data, runs analytics/export pipelines, and exposes CLI tooling for CSV/JSON/XML/PDF outputs.
+## Install and run
 
-Configuration lives under `config/`, capture artefacts go to `captures/`, and exports are written to `exports/`.
+1. Download the Windows x64 setup from [GitHub Releases](https://github.com/chickenT1000/Elmetron-Data-Capture/releases).
+2. Run setup for your Windows user and open **Elmetron** from the Start menu.
+3. Use **Start demo** to try synthetic measurements in a separate database.
+4. For real capture, install [FTDI's official D2XX driver](https://ftdichip.com/drivers/d2xx-drivers/), connect CX-505 and click **Start CX-505**.
+5. Use **Stop** before updating. **Close service** stops capture and the backend;
+   closing a browser tab alone leaves capture running.
 
-## Quick Start
-1. Install the FTDI D2XX drivers and confirm the CX-505 appears in Device Manager.
-2. Adjust `config/app.toml` for the workstation (device index, database path, startup/scheduled commands) and validate custom profiles with `python validate_protocols.py config/protocols.toml`.
-3. Launch continuous capture:
-```bash
-python cx505_capture_service.py \
-  --config config/app.toml \
-  --protocols config/protocols.toml \
-  --watchdog-timeout 30 \
-  --health-log \
-  --health-api-port 8050
-```
-   The supervisor opens the transport, applies the selected profile, executes startup commands, and streams raw frames plus analytics into `data/elmetron.sqlite`.
-4. Monitor `/health` (port 8050 by default) or the console watchdog output for status updates.
-   `/health/logs/stream` provides a Server-Sent Events feed for audit entries; the operator UI automatically falls back to `/health/logs` polling and surfaces a warning when streaming is unavailable.
-5. Export captured sessions with the reporting CLI (see Export Toolkit) and use `run_protocol_command.py` or `trigger_calibration.py` for ad-hoc protocol commands and calibration routines.
+No Python or Node installation is required by the Windows package. The local UI is
+`http://127.0.0.1:8050`. Installation is per user in `%LOCALAPPDATA%\Programs\Elmetron`.
+Data and config are separate in `%LOCALAPPDATA%\Elmetron`; uninstall preserves them.
+Only one service may use a data home. A port occupied by another app fails with a
+log location rather than silently launching an unrelated UI.
 
-## Operational Guides
-- `docs/OPERATOR_PLAYBOOK.md` - daily startup checklist, scheduled command monitoring, analytics exports, and troubleshooting steps for lab technicians.
-- `docs/WINDOWS_SERVICE_GUIDE.md` - Windows service deployment using NSSM or PyWin32, log routing, account permissions, and restart procedures.
-- `docs/EXPORT_TEMPLATES.md` - overview of the bundled PDF/LIMS templates and guidance for customising placeholders.
-- `docs/UI_DESIGN_SYSTEM.md` - technology stack, theming, and component strategy for the operator UI.
-- `docs/RELEASE_AUTOMATION.md` - CI/CD checklist for publishing exporter bundles.
-- The Service Health dashboard exposes `/health/logs/stream` plus a one-click diagnostic bundle download (`/health/bundle`) for support escalations.
+## Files to configure for your own application
 
-### Important Operational Notes
-⚠️ **Always stop services gracefully** - Never use `Stop-Process -Force` on the capture service as it can corrupt the SQLite database. Use the UI Stop button or `Ctrl+C` in terminal.
+**[Configuration and customization map](docs/CONFIGURATION.md)** explicitly labels
+user config, report templates, source customization and integration contracts.
+Start with `config/app.toml`, `config/protocols.toml`, `examples/read_api.py` and
+`examples/mcp-host.json`. Stop capture before changing user config.
 
-⚠️ **Before Git operations** - Stop capture service and React dev server before switching branches to avoid file lock conflicts.
+- [Correction specification and release gates](docs/RELEASE_SPEC.md)
+- [CX-505 frame grammar and USB example](docs/PROTOCOL_CX505.md)
+- [REST/OpenAPI](openapi.json) and [API/MCP guide](docs/INTEGRATIONS.md)
+- [Build and test instructions](docs/BUILD.md)
+- [Contribution guide](CONTRIBUTING.md), [security](SECURITY.md), [license](LICENSE)
+- [Beta release notes](docs/RELEASE_NOTES.md)
 
-ℹ️ **Archive Mode** - When the CX-505 device is not connected, the UI automatically switches to Archive Mode, allowing you to browse historical sessions while gracefully hiding live monitoring features. This provides a user-friendly experience for new users testing the system without hardware.
+Original values, units and device timestamps remain available. PC timestamps are
+UTC; device timezone is unknown. Read views normalize conductivity to µS/cm.
+Full exports use a consistent database snapshot. Large charts explicitly sample
+points while statistics and exported records remain complete. Calibration records
+refer to calibration performed manually on the meter.
 
-⚠️ **Troubleshooting** - See `TROUBLESHOOTING.md` for common issues and solutions, and `CHANGELOG.md` for version history.
-
-## Documentation
-
-### 📖 For Users & Operators
-- **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** - Common issues and solutions (start here!)
-- **[docs/user/QUICK_REFERENCE.md](docs/user/QUICK_REFERENCE.md)** - Quick reference for daily operations
-- **[docs/OPERATOR_PLAYBOOK.md](docs/OPERATOR_PLAYBOOK.md)** - Daily startup checklist and monitoring
-- **[docs/WINDOWS_SERVICE_GUIDE.md](docs/WINDOWS_SERVICE_GUIDE.md)** - Windows service deployment
-
-### 👩‍💻 For Developers
-- **[docs/developer/SPEC.md](docs/developer/SPEC.md)** - Technical specification
-- **[docs/developer/ARCHITECTURE_REDESIGN.md](docs/developer/ARCHITECTURE_REDESIGN.md)** - Architecture decisions
-- **[docs/developer/TESTING_*.md](docs/developer/)** - Test plans and procedures
-- **[docs/developer/AGENTS.md](docs/developer/AGENTS.md)** - AI agent documentation
-
-### 📦 Deployment & Operations
-- **[docs/EXPORT_TEMPLATES.md](docs/EXPORT_TEMPLATES.md)** - PDF/LIMS template customization
-- **[docs/UI_DESIGN_SYSTEM.md](docs/UI_DESIGN_SYSTEM.md)** - UI component strategy
-- **[docs/RELEASE_AUTOMATION.md](docs/RELEASE_AUTOMATION.md)** - CI/CD procedures
-
-### 📝 Project History
-- **[CHANGELOG.md](CHANGELOG.md)** - Version history and changes
-- **[Road_map.md](Road_map.md)** - Future roadmap
-- **[docs/archive/](docs/archive/)** - Historical session notes
-
-## Export Toolkit
-- Use `python scripts/build_release_bundle.py --latest 1` to generate release-ready archives (manifest, checksums, and zipped artefacts).
-- Drive exports via `python -m elmetron.reporting.exporters export-session --session <ID> --formats csv json xml pdf --outdir exports/<stamp>` (swap `--session` for `--sessions`, `--session-range`, or `--latest N` when batch processing).
-- Compact CSV exports are enabled by default (`export.csv_mode = "compact"`); use `--csv-mode full` to retain the raw JSON payload/analytics columns when needed.
-- Pass `--gzip` (and optionally `--gzip-level`) to emit compressed `.gz` artefacts for archival transfers.
-- Each export run writes a manifest (`<prefix>_manifest.json`) and checksum list (`<prefix>_sha256.txt`) covering all artefacts; customise with `--manifest-name` / `--checksum-name` or disable via `--no-manifest` / `--no-checksums`.
-- Supply `--config` / `--protocols` to embed configuration fingerprints and override manifest metadata via `--manifest-tool-name` / `--manifest-version` when packaging archives.
-- Add `--archive` to emit a zip containing the artefacts plus manifest/checksum, with `*_archive_summary.json` capturing checksum metadata for pipelines.
-- Default templates live in `config/templates/`; adjust `export.pdf_template` / `export.lims_template` or supply overrides via CLI flags (see `docs/EXPORT_TEMPLATES.md` for field references).
-- Use `--pdf-template` / `--lims-template` with `.tmpl` (string.Template) or `.jinja` files to render custom PDF/XML layouts; omit the flags to fall back to built-in summaries.
-
-## Development Notes
-- UI integration plan tracked in `docs/UI_INTEGRATION_PLAN.md`; see it for backend/API milestones.
-- Configuration dataclasses live in `elmetron.config`; use `AppConfig.from_dict()` for custom loaders and `AppConfig.to_dict()` when emitting diagnostics.
-- Archive manifest automation plan lives in `docs/EXPORT_ARCHIVE_PLAN.md` for pipeline integration work.
-- Run `python -m compileall elmetron cx505_capture_service.py` and `python -m pytest` before committing to catch syntax and regression issues.
-- Analytics controls (the `analytics` section in `config/app.toml`) tune moving averages, stability windows, and temperature compensation; derived metrics persist alongside each measurement and propagate into exports.
-- CSV behaviour honours the `export.csv_*` options, while PDF/LIMS exports read optional templates (`export.pdf_template`, `export.lims_template`).
-- Hardware runs require the FTDI D2XX runtime; BLE adapters can be enabled through the transport factory once compatible hardware is available.
-
-### Front-end workflow
-- Design tokens live in `ui/tokens.json` and are consumed by the MUI theme, global styles, and component contracts for measurement/dashboard widgets.
-- Start the Storybook component lab with `npm run storybook` (from `ui/`); the baseline stories cover typography plus `MeasurementPanel`, `CommandHistory`, `LogFeed`, and the full dashboard composition.
-- Run `npm run test:ui` to execute Playwright component screenshot tests and ensure visual diffs stay within the checked-in baselines.
-- Publish the current Storybook to Chromatic with `npm run chromatic` (requires `CHROMATIC_PROJECT_TOKEN`), or let the `UI Visual Checks` workflow handle it in CI.
-
-
-
-
-
-
+Historical scripts and specifications are not release instructions. Other meters,
+BLE and experimental remote commands are outside this beta's supported scope.
+This community project makes no regulatory certification claim; see [NOTICE](NOTICE).

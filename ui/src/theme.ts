@@ -13,7 +13,7 @@ const buildTypographyVariant = (variantKey: keyof typeof typeScale) => {
     fontSize: variant.size,
     lineHeight: variant.lineHeight,
     fontWeight: variant.weight,
-    letterSpacing: variant.tracking ?? '0em',
+    letterSpacing: 'tracking' in variant ? variant.tracking : '0em',
   };
 };
 
