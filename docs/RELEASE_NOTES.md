@@ -20,5 +20,6 @@ also identifies UI, protocol and integration customization points.
 
 Hardware acceptance and the 24 elapsed-hour soak are pending until actual results
 are recorded in [VALIDATION.md](https://github.com/chickenT1000/Elmetron-Data-Capture/blob/v1.0.0-beta.1/docs/VALIDATION.md). This is a prerelease, not stable
-1.0.0. Installer is unsigned; publisher authenticity is established by the GitHub
-release's artifact hashes. FTDI drivers are obtained separately from FTDI.
+1.0.0. Installer is unsigned; compare the release's SHA256SUMS to verify download
+integrity. Checksums do not replace a publisher signature. FTDI drivers are obtained
+separately from FTDI.
