@@ -20,7 +20,7 @@ jobs:
           python-version: '3.13'
       - uses: astral-sh/setup-uv@v6
       - run: uv sync --extra dev --locked
-      - run: uv run pytest -q
+      - run: uv run python -m pytest -q
       - run: uv run python -m elmetron.cli.app validate-config
   windows:
     needs: python

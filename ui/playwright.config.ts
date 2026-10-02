@@ -11,6 +11,8 @@ export default defineConfig({
   workers: process.env.CI ? 2 : undefined,
   reporter: [['list'], ['html', { open: 'never' }]],
   use: {
+    locale: 'en-US',
+    timezoneId: 'Europe/Warsaw',
     trace: 'on-first-retry',
     screenshot: 'off',
     video: 'off',

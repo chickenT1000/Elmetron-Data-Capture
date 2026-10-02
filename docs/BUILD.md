@@ -14,7 +14,7 @@ npx playwright install chromium
 npm run test:ui
 npm run test:acceptance
 cd ..
-uv run pytest
+uv run python -m pytest
 uv run python -m elmetron.cli.app validate-config --show-effective
 uv run python scripts/collect_licenses.py
 uv run pyinstaller --noconfirm packaging/elmetron.spec

@@ -13,7 +13,12 @@ First self-contained Windows beta with per-user installer and GPL-3.0-only sourc
 - Clear configuration/source file map and USB, REST and MCP examples.
 - Reproducible build, dependency locks, license inventory and CI.
 
+**Files for your own application:** `config/app.toml`, `config/protocols.toml` and
+`config/templates/session_report.fmt` are explicitly marked user configuration.
+The [configuration/source map](https://github.com/chickenT1000/Elmetron-Data-Capture/blob/v1.0.0-beta.1/docs/CONFIGURATION.md)
+also identifies UI, protocol and integration customization points.
+
 Hardware acceptance and the 24 elapsed-hour soak are pending until actual results
-are recorded in [VALIDATION.md](VALIDATION.md). This is a prerelease, not stable
+are recorded in [VALIDATION.md](https://github.com/chickenT1000/Elmetron-Data-Capture/blob/v1.0.0-beta.1/docs/VALIDATION.md). This is a prerelease, not stable
 1.0.0. Installer is unsigned; publisher authenticity is established by the GitHub
 release's artifact hashes. FTDI drivers are obtained separately from FTDI.

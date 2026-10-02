@@ -6,7 +6,7 @@ on both operating system versions or on a physical CX-505.
 
 | Check | Executed result |
 | --- | --- |
-| `uv run pytest -q` | 107 passed; three deprecation warnings in earlier analytics/acquisition code |
+| `uv run python -m pytest -q` | 107 passed; three deprecation warnings in earlier analytics/acquisition code |
 | UI production build and ESLint | Passed |
 | `npm test -- --run` | 9 passed |
 | Real backend browser acceptance | 2 passed: demo/start/stop/archive/chart/manual calibration/full export/settings/CSRF |
